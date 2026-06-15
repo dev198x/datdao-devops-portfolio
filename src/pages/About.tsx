@@ -6,17 +6,41 @@ import { Calendar, MapPin, Code, Zap } from 'lucide-react';
 export const About = () => {
 const timeline = [
   {
-    year: '2023 - Present',
-    title: 'DevOps Engineer',
+    year: '2020 - Present',
+    title: 'DevOps Engineer and Backend Developer',
     company: '',
     description:
-      'Building and managing cloud infrastructure, CI/CD pipelines, containerized workloads, and automation solutions across AWS and Google Cloud Platform (GCP) using Terraform, Docker, Kubernetes, and modern DevOps practices.',
+      'Building and managing cloud infrastructure, CI/CD pipelines, containerized workloads, and automation solutions across AWS and Linux using Terraform, Docker, Kubernetes, and modern DevOps practices. Developed and maintained backend systems, APIs, and services using Node.js, and other technologies, focusing on performance, scalability, and reliability.',
     icon: Code,
   },
   {
-    year: '2019 - 2023',
+    year: '2025 - 2025',
+    title: 'AWS Academy Solutions Architect',
+    company: 'AWS Academy',
+    description:
+      "Completed AWS Academy Solutions Architect course, gaining foundational knowledge in cloud architecture, AWS services, and best practices for designing scalable and secure cloud solutions. e.g: EC2, S3, RDS, Lambda, VPC, IAM, CloudFormation, and more.",
+    icon: Calendar,
+  },
+  {
+    year: '2017 - 2020',
+    title: 'PHP/Node.js Developer',
+    company: 'Evolable Asia Engineering',
+    description:
+      "Worked on developing and maintaining PHP and Node.js applications, focusing on backend development and database management.",
+    icon: Code,
+  },
+  {
+    year: '2007 - 2017',
+    title: 'PHP Developer',
+    company: 'S3Corp Engineering, Vitalify Asia, and Freelance',
+    description:
+      "Worked on developing and maintaining PHP applications, focusing on backend development and database management.",
+    icon: Code,
+  },
+  {
+    year: '2002 - 2007',
     title: 'Computer Science Graduate',
-    company: 'CVR College Of Engineering',
+    company: 'AnGiang University',
     description:
       "Bachelor's degree with focus on software engineering and cloud computing.",
     icon: Calendar,
@@ -69,23 +93,22 @@ const timeline = [
                 </div>
                 <div className="space-y-4 text-neutral-200 leading-relaxed">
                   <Typewriter
-                    text="Hello, I'm Neeraj Chandra Nakka, and I build reliable cloud platforms that transform ideas into production-ready systems."
+                    text="Hello, I'm DMD, and I build reliable cloud platforms that transform ideas into production-ready systems."
                     delay={30}
                     className="text-primary-500 font-semibold block mb-4"
                   />
                   <p>
                     I design, automate, and deploy systems that turn code into production-grade reality. 
-                    My journey began with full-stack development—building web apps with Java, React, and Node.js.
+                    My journey began with full-stack development—building web apps with Node.js, React, and PHP.
                   </p>
                   <p>
                     Over time, that foundation evolved into a passion for DevOps and Cloud Engineering, 
                     where I now focus on crafting scalable infrastructure, clean CI/CD pipelines, and resilient deployments.
                   </p>
                  <p>
-                    I work across AWS and Google Cloud Platform (GCP), orchestrate containers with Docker and Kubernetes,
+                    I work across AWS, Linux environments and Google Cloud Platform (GCP), orchestrate containers with Docker and Kubernetes,
                     and define infrastructure using Terraform and automation tooling. Behind the command line,
-                    I'm equally comfortable in version control and workflow automation, using Git, GitHub,
-                    GitLab CI/CD, and modern observability practices to bridge collaboration and delivery.
+                    I'm equally comfortable in version control and workflow automation, using Git, GitHub CI/CD, and modern observability practices to bridge collaboration and delivery.
                   </p>
                   <p className="text-primary-500 font-medium">
                     For me, DevOps isn't just about speed—it's about precision, repeatability, 
@@ -114,7 +137,7 @@ const timeline = [
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">Cloud Platforms</span>
-                    <span className="text-primary-500 font-mono">AWS, GCP</span>
+                    <span className="text-primary-500 font-mono">AWS, Linux</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">Projects</span>

@@ -14,7 +14,7 @@ export const SKILLS = [
     name: "Google Cloud",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/googlecloud/googlecloud-original.svg",
     category: "cloud",
-    level: 90,
+    level: 30,
   },
 
   // Containers
@@ -28,7 +28,7 @@ export const SKILLS = [
     name: "Kubernetes",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kubernetes/kubernetes-plain.svg",
     category: "containers",
-    level: 90,
+    level: 80,
   },
 
   // Infrastructure
@@ -48,7 +48,7 @@ export const SKILLS = [
     name: "AWS CloudFormation",
     icon: "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/awscloudformation.svg",
     category: "infrastructure",
-    level: 90,
+    level: 80,
   },
 
   // DevOps / SRE
@@ -58,24 +58,24 @@ export const SKILLS = [
     category: "devops",
     level: 90,
   },
-  {
-    name: "Jenkins",
-    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jenkins/jenkins-plain.svg",
-    category: "devops",
-    level: 90,
-  },
+  // {
+  //   name: "Jenkins",
+  //   icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jenkins/jenkins-plain.svg",
+  //   category: "devops",
+  //   level: 90,
+  // },
   {
     name: "GitHub Actions",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg",
     category: "devops",
     level: 90,
   },
-  {
-    name: "GitLab CI",
-    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/gitlab/gitlab-original.svg",
-    category: "devops",
-    level: 90,
-  },
+  // {
+  //   name: "GitLab CI",
+  //   icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/gitlab/gitlab-original.svg",
+  //   category: "devops",
+  //   level: 90,
+  // },
   {
     name: "Git",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg",
@@ -86,32 +86,32 @@ export const SKILLS = [
     name: "AWS CodePipeline",
     icon: "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/awscodepipeline.svg",
     category: "devops",
-    level: 90,
+    level: 70,
   },
   {
     name: "AWS CodeBuild",
     icon: "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/awscodebuild.svg",
     category: "devops",
-    level: 90,
+    level: 80,
   },
   {
     name: "Prometheus",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/prometheus/prometheus-original.svg",
     category: "devops",
-    level: 90,
+    level: 80,
   },
   {
     name: "Grafana",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/grafana/grafana-original.svg",
     category: "devops",
-    level: 90,
+    level: 80,
   },
-  {
-    name: "Dynatrace",
-    icon: "https://cdn.simpleicons.org/dynatrace",
-    category: "devops",
-    level: 90,
-  },
+  // {
+  //   name: "Dynatrace",
+  //   icon: "https://cdn.simpleicons.org/dynatrace",
+  //   category: "devops",
+  //   level: 90,
+  // },
   {
     name: "Bash Scripting",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bash/bash-original.svg",
@@ -120,38 +120,44 @@ export const SKILLS = [
   },
 
   // Development
-{
-  name: "Python",
-  icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg",
-  category: "development",
-  level: 90,
-},
-{
-  name: "Java",
-  icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg",
-  category: "development",
-  level: 90,
-},
-{
-  name: "JavaScript",
-  icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-plain.svg",
-  category: "development",
-  level: 90,
-},
-{
-  name: "Node.js",
-  icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-plain.svg",
-  category: "development",
-  level: 90,
-},
-{
-  name: "React",
-  icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg",
-  category: "development",
-  level: 90,
-},
+  {
+    name: "Python",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg",
+    category: "development",
+    level: 70,
+  },
+  {
+    name: "PHP",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg",
+    category: "development",
+    level: 70,
+  },
+  {
+    name: "JavaScript",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-plain.svg",
+    category: "development",
+    level: 90,
+  },
+  {
+    name: "Typescript",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg",
+    category: "development",
+    level: 90,
+  },
+  {
+    name: "Node.js",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-plain.svg",
+    category: "development",
+    level: 90,
+  },
+  {
+    name: "React",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg",
+    category: "development",
+    level: 70,
+  },
 
- // Databases
+  // Databases
   {
     name: "MongoDB",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mongodb/mongodb-original.svg",
@@ -161,6 +167,12 @@ export const SKILLS = [
   {
     name: "MySQL",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg",
+    category: "database",
+    level: 90,
+  },
+  {
+    name: "PostgreSQL",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg",
     category: "database",
     level: 90,
   },

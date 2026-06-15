@@ -8,7 +8,7 @@ import { HERO_CONTENT, SKILLS, PROJECTS } from '../data/portfolio';
 export const Home = () => {
   const stats = [
     { label: 'Years Experience', value: '1+' },
-    { label: 'Cloud Platforms', value: '3' },
+    { label: 'Cloud Platforms', value: '2' },
     { label: 'Projects Completed', value: '10+' },
     { label: 'Technologies', value: '19+' },
   ];
