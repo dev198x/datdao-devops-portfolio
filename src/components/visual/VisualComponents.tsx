@@ -43,15 +43,15 @@ const difficultyColors = {
 // Animated Background Component
 export const AnimatedBackground: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="relative min-h-screen bg-black text-green-400 overflow-hidden">
+    <div className="relative min-h-screen bg-white text-green-400 overflow-hidden">
       {/* Animated Grid */}
       <div className="fixed inset-0 opacity-10">
-        <div 
+        <div
           className="absolute inset-0 animate-grid-move"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(34, 197, 94, 0.3) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(34, 197, 94, 0.3) 1px, transparent 1px)
+              linear-gradient(rgba(31, 136, 61, 0.15) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(31, 136, 61, 0.15) 1px, transparent 1px)
             `,
             backgroundSize: '50px 50px'
           }}
@@ -166,7 +166,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-2xl font-bold text-white">{value}</p>
+          <p className="text-2xl font-bold text-neutral-200">{value}</p>
           {change && (
             <p className={`text-sm flex items-center gap-1 mt-1 ${
               trend === 'up' ? 'text-green-400' : 
@@ -252,7 +252,7 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <h4 className="text-white font-medium">{title}</h4>
+          <h4 className="text-neutral-200 font-medium">{title}</h4>
           {icon && <div className="text-green-400">{icon}</div>}
         </div>
         <p className="text-gray-400 text-sm mb-1">{description}</p>

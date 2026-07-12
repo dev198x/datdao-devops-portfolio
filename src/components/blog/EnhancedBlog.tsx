@@ -723,7 +723,7 @@ const EnhancedBlog: React.FC = () => {
                     <span className="text-xs text-yellow-400 font-medium">⭐ Featured</span>
                   </div>
                   
-                  <h3 className="text-xl font-bold text-white mb-3 group-hover:text-green-400 transition-colors">
+                  <h3 className="text-xl font-bold text-neutral-200 mb-3 group-hover:text-green-400 transition-colors">
                     {post.title}
                   </h3>
                   
@@ -772,7 +772,7 @@ const EnhancedBlog: React.FC = () => {
               placeholder="Search articles..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-400"
+              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-neutral-200 placeholder-gray-400 focus:outline-none focus:border-green-400"
             />
           </div>
           
@@ -787,7 +787,7 @@ const EnhancedBlog: React.FC = () => {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'date' | 'views' | 'likes')}
-            className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-400"
+            className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-neutral-200 focus:outline-none focus:border-green-400"
           >
             <option value="date">Latest</option>
             <option value="views">Most Viewed</option>
@@ -834,7 +834,7 @@ const EnhancedBlog: React.FC = () => {
                     </div>
                   </div>
                   
-                  <h3 className="text-lg font-bold text-white mb-3 group-hover:text-green-400 transition-colors line-clamp-2">
+                  <h3 className="text-lg font-bold text-neutral-200 mb-3 group-hover:text-green-400 transition-colors line-clamp-2">
                     {post.title}
                   </h3>
                   
@@ -900,7 +900,7 @@ const EnhancedBlog: React.FC = () => {
             <input
               type="email"
               placeholder="Enter your email"
-              className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-400"
+              className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-neutral-200 placeholder-gray-400 focus:outline-none focus:border-green-400"
             />
             <InteractiveButton variant="primary">
               Subscribe
@@ -946,14 +946,14 @@ const EnhancedBlog: React.FC = () => {
                     </div>
                     <button
                       onClick={() => setSelectedPost(null)}
-                      className="text-gray-400 hover:text-white transition-colors"
+                      className="text-gray-400 hover:text-neutral-200 transition-colors"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
                   </div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                  <h1 className="text-2xl md:text-3xl font-bold text-neutral-200 mb-2">
                     {selectedPost.title}
                   </h1>
                   <div className="flex items-center gap-4 text-sm text-gray-400">

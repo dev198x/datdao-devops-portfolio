@@ -46,7 +46,7 @@ export const SKILLS = [
   },
   {
     name: "AWS CloudFormation",
-    icon: "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/awscloudformation.svg",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
     category: "infrastructure",
     level: 80,
   },
@@ -84,13 +84,13 @@ export const SKILLS = [
   },
   {
     name: "AWS CodePipeline",
-    icon: "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/awscodepipeline.svg",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
     category: "devops",
     level: 70,
   },
   {
     name: "AWS CodeBuild",
-    icon: "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/awscodebuild.svg",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
     category: "devops",
     level: 80,
   },

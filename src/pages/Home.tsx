@@ -148,7 +148,7 @@ export const Home = () => {
                 <img
                   src={skill.icon}
                   alt={skill.name}
-                  className="w-8 h-8 mx-auto mb-3 filter brightness-0 invert opacity-70 group-hover:opacity-100 transition-opacity"
+                  className="w-8 h-8 mx-auto mb-3 opacity-80 group-hover:opacity-100 transition-opacity"
                 />
                 <div className="font-mono text-sm text-neutral-200 font-medium">
                   {skill.name}

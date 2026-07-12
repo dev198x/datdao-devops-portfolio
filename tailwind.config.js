@@ -21,36 +21,65 @@ module.exports = {
         sans: ['Inter', '-apple-system', 'system-ui', 'sans-serif'],
       },
       colors: {
+        // GitHub Light-inspired palette. Note: the "neutral" scale below does NOT follow
+        // the usual 50=lightest/950=darkest Tailwind convention — each step is pinned to
+        // preserve the semantic role components already reference (e.g. text-neutral-200
+        // is the primary body-text color, border-neutral-700 is the default card border),
+        // so no component class names had to change when flipping from dark to light.
         primary: {
-          50: '#E6FFF0',
-          100: '#B3FFD9',
-          500: '#00FF41',
-          700: '#00CC33',
-          900: '#008F26',
-          DEFAULT: '#00FF41',
+          50: '#DAFBE1',
+          100: '#ACEEBB',
+          500: '#1F883D',
+          700: '#1A7F37',
+          900: '#116329',
+          DEFAULT: '#1F883D',
         },
         accent: {
-          500: '#FFB800',
-          700: '#FF9500',
-          DEFAULT: '#FFB800',
+          500: '#0969DA',
+          700: '#0550AE',
+          DEFAULT: '#0969DA',
         },
         neutral: {
-          50: '#F5F7FA',
-          100: '#E8EDF2',
-          200: '#C5CDD3',
-          300: '#A2ADB6',
-          400: '#7A8894',
-          500: '#5A6873',
-          600: '#2D3841',
-          700: '#1E272E',
-          800: '#141B20',
-          900: '#0A0E11',
-          950: '#000000',
+          50: '#F6F8FA',
+          100: '#EAEEF2',
+          200: '#1F2328',
+          300: '#32383F',
+          400: '#57606A',
+          500: '#6E7781',
+          600: '#8B949E',
+          700: '#D0D7DE',
+          800: '#EAEEF2',
+          900: '#F6F8FA',
+          950: '#FFFFFF',
         },
         bg: {
-          page: '#000000',
-          surface: '#0A0E11',
-          elevated: '#141B20',
+          page: '#FFFFFF',
+          surface: '#F6F8FA',
+          elevated: '#FFFFFF',
+        },
+        // Blog and Case Studies components hardcode Tailwind's built-in gray/green scales
+        // directly (bg-gray-900, text-green-400, etc.) instead of the custom tokens above.
+        // Overriding those built-ins here recolors those pages without touching every class
+        // in EnhancedBlog.tsx / EnhancedCaseStudies.tsx. Same "semantic role over numeric
+        // lightness order" approach as the neutral scale above.
+        gray: {
+          50: '#F6F8FA',
+          100: '#EAEEF2',
+          200: '#D0D7DE',
+          300: '#1F2328',
+          400: '#57606A',
+          500: '#6E7781',
+          600: '#8B949E',
+          700: '#D0D7DE',
+          800: '#EAEEF2',
+          900: '#FFFFFF',
+        },
+        green: {
+          200: '#1A7F37',
+          300: '#3FB950',
+          400: '#2DA44E',
+          500: '#1F883D',
+          600: '#1A7F37',
         },
       },
       spacing: {
@@ -73,11 +102,11 @@ module.exports = {
         DEFAULT: '8px',
       },
       boxShadow: {
-        sm: '0 1px 2px rgba(0, 255, 65, 0.05)',
-        card: '0 4px 16px rgba(0, 0, 0, 0.4)',
-        'card-hover': '0 8px 32px rgba(0, 0, 0, 0.5)',
-        modal: '0 24px 48px rgba(0, 0, 0, 0.7)',
-        glow: '0 0 16px rgba(0, 255, 65, 0.3)',
+        sm: '0 1px 0 rgba(31, 35, 40, 0.04)',
+        card: '0 1px 3px rgba(31, 35, 40, 0.12), 0 1px 2px rgba(31, 35, 40, 0.08)',
+        'card-hover': '0 4px 12px rgba(31, 35, 40, 0.15)',
+        modal: '0 12px 28px rgba(31, 35, 40, 0.2)',
+        glow: '0 0 0 3px rgba(9, 105, 218, 0.15)',
       },
       keyframes: {
         'typewriter': {

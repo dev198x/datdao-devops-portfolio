@@ -13,8 +13,8 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background-color: #000000;
-  color: #C5CDD3;
+  background-color: #FFFFFF;
+  color: #1F2328;
   overflow-x: hidden;
 }
 
@@ -28,16 +28,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0A0E11;
+  background: #F6F8FA;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #00FF41;
+  background: #1F883D;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #00CC33;
+  background: #1A7F37;
 }
 
 /* Reduced Motion Support */
@@ -61,19 +61,19 @@ body {
 
 /* Selection Styling */
 ::selection {
-  background: #00FF41;
-  color: #0A0E11;
+  background: #1F883D;
+  color: #FFFFFF;
 }
 
 ::-moz-selection {
-  background: #00FF41;
-  color: #0A0E11;
+  background: #1F883D;
+  color: #FFFFFF;
 }
 
 /* Focus Styles */
 .focus\:ring-cyber:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #00FF41, 0 0 16px rgba(0, 255, 65, 0.3);
+  box-shadow: 0 0 0 2px #1F883D, 0 0 12px rgba(31, 136, 61, 0.25);
 }
 
 /* Terminal Cursor */
@@ -81,7 +81,7 @@ body {
   display: inline-block;
   width: 2px;
   height: 1.2em;
-  background-color: #00FF41;
+  background-color: #1F883D;
   animation: blink 1s infinite;
 }
 
@@ -100,7 +100,7 @@ body {
 /* Glitch Effect */
 .glitch {
   position: relative;
-  color: #00FF41;
+  color: #1F883D;
 }
 
 .glitch::before,

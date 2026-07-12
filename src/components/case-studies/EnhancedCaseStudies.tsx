@@ -599,7 +599,7 @@ const EnhancedCaseStudies: React.FC = () => {
                   )}
                 </div>
                 
-                <h3 className="text-white font-bold mb-1 text-sm line-clamp-2">
+                <h3 className="text-neutral-200 font-bold mb-1 text-sm line-clamp-2">
                   {study.title}
                 </h3>
                 
@@ -638,7 +638,7 @@ const EnhancedCaseStudies: React.FC = () => {
                         <span className="text-xs text-yellow-400 font-medium">⭐ Featured Project</span>
                       )}
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                    <h2 className="text-2xl md:text-3xl font-bold text-neutral-200 mb-2">
                       {selectedStudyData.title}
                     </h2>
                     <p className="text-green-400 text-lg">
@@ -827,7 +827,7 @@ const EnhancedCaseStudies: React.FC = () => {
                             <div key={key} className="bg-gray-800/50 rounded-lg p-4">
                               <div className="flex items-center gap-2 mb-3">
                                 {getIconForMetric(key)}
-                                <h4 className="font-bold text-white capitalize">
+                                <h4 className="font-bold text-neutral-200 capitalize">
                                   {key.replace(/([A-Z])/g, ' $1').trim()}
                                 </h4>
                               </div>

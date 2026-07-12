@@ -7,8 +7,8 @@ export const Grid3DBackground = () => {
           className="w-full h-full"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0, 255, 65, 0.1) 1px, transparent 1px)
+              linear-gradient(rgba(31, 136, 61, 0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(31, 136, 61, 0.06) 1px, transparent 1px)
             `,
             backgroundSize: '50px 50px',
             animation: 'gridMove 20s linear infinite',
@@ -19,7 +19,7 @@ export const Grid3DBackground = () => {
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'linear-gradient(0deg, transparent 0%, rgba(0, 255, 65, 0.1) 50%, transparent 100%)',
+            background: 'linear-gradient(0deg, transparent 0%, rgba(31, 136, 61, 0.06) 50%, transparent 100%)',
             animation: 'scanline 8s linear infinite',
           }}
         />
