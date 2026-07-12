@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ExternalLink, Github, Code2 } from 'lucide-react';
 import { Grid3DBackground } from '../components/Grid3D';
 import { Typewriter } from '../components/Typewriter';
-import { HERO_CONTENT, SKILLS, PROJECTS } from '../data/portfolio';
+import { HERO_CONTENT, SKILLS, PROJECTS, CONTACT } from '../data/portfolio';
 
 export const Home = () => {
   const stats = [
@@ -37,7 +37,7 @@ export const Home = () => {
 
             {/* Typewriter heading */}
             <div className="font-mono text-4xl md:text-6xl lg:text-8xl font-bold tracking-tight text-primary-500">
-              <Typewriter text="DevOps & Cloud Engineer" delay={80} />
+              <Typewriter text="DevOps & Solution Architecture" delay={80} />
               <span className="terminal-cursor ml-2" />
             </div>
 
@@ -200,7 +200,7 @@ export const Home = () => {
                 Start a Project
               </Link>
               <a
-                href="https://github.com/neerajnakka"
+                href={CONTACT.social.github}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-8 py-4 border-2 border-neutral-600 text-neutral-200 hover:border-primary-500 hover:text-primary-500 font-semibold rounded-lg transition-all duration-200"

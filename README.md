@@ -4,22 +4,18 @@
 > Built with **React + TypeScript**, featuring a cyber terminal design, interactive blog, case studies, and CI/CD-ready deployment on Vercel.
 
 <p align="center">
-  <a href="https://github.com/neerajnakka/devops-portfolio/stargazers">
-    <img src="https://img.shields.io/github/stars/neerajnakka/devops-portfolio?style=for-the-badge&color=00ff41&labelColor=0a0a0a" alt="GitHub Stars" />
+  <a href="https://github.com/dev198x/devops-portfolio/stargazers">
+    <img src="https://img.shields.io/github/stars/dev198x/devops-portfolio?style=for-the-badge&color=00ff41&labelColor=0a0a0a" alt="GitHub Stars" />
   </a>
-  <a href="https://github.com/neerajnakka/devops-portfolio/network/members">
-    <img src="https://img.shields.io/github/forks/neerajnakka/devops-portfolio?style=for-the-badge&color=00ff41&labelColor=0a0a0a" alt="GitHub Forks" />
+  <a href="https://github.com/dev198x/devops-portfolio/network/members">
+    <img src="https://img.shields.io/github/forks/dev198x/devops-portfolio?style=for-the-badge&color=00ff41&labelColor=0a0a0a" alt="GitHub Forks" />
   </a>
-  <a href="https://github.com/neerajnakka/devops-portfolio/blob/main/LICENSE">
+  <a href="https://github.com/dev198x/devops-portfolio/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-00ff41?style=for-the-badge&labelColor=0a0a0a" alt="MIT License" />
-  </a>
-  <a href="https://neeraj-devops.vercel.app">
-    <img src="https://img.shields.io/badge/Live%20Demo-Vercel-00ff41?style=for-the-badge&labelColor=0a0a0a&logo=vercel" alt="Live Demo" />
   </a>
 </p>
 
 <p align="center">
-  <b><a href="https://neeraj-devops.vercel.app">🔴 Live Demo</a></b> •
   <b><a href="#-quick-start">Quick Start</a></b> •
   <b><a href="#-customization-guide">Customization</a></b> •
   <b><a href="#-deployment">Deploy</a></b>
@@ -44,8 +40,6 @@ Recruiters spend an average of 6 seconds on a resume. A portfolio like this help
 
 ## 🖥️ Preview
 
-> Live at → **[neeraj-devops.vercel.app](https://neeraj-devops.vercel.app)**
-
 | Section | What You Get |
 |---|---|
 | 🏠 Home | Animated terminal hero, typewriter effect, neon aesthetic |
@@ -62,8 +56,8 @@ Recruiters spend an average of 6 seconds on a resume. A portfolio like this help
 **Fork → Customize → Deploy in under 10 minutes.**
 
 ```bash
-# Step 1 — Clone your fork
-git clone https://github.com/YOUR_USERNAME/devops-portfolio.git
+# Step 1 — Clone the repo
+git clone https://github.com/dev198x/devops-portfolio.git
 cd devops-portfolio
 
 # Step 2 — Install dependencies
@@ -79,7 +73,7 @@ npm run dev
 
 Then open [http://localhost:5173](http://localhost:5173) — you should see the full site.
 
-<a href="https://vercel.com/new/clone?repository-url=https://github.com/neerajnakka/devops-portfolio">
+<a href="https://vercel.com/new/clone?repository-url=https://github.com/dev198x/devops-portfolio">
   <img src="https://vercel.com/button" alt="Deploy with Vercel" />
 </a>
 
@@ -89,7 +83,7 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 
 ### 🎯 Portfolio Core
 - **Cyber Terminal Design** — Electric neon green theme, monospace fonts, authentic command-line aesthetic
-- **3D Animated Background** — Dynamic grid powered by Three.js
+- **Animated Terminal Background** — Dynamic CSS grid, scanlines, and floating particles
 - **Typewriter & Glitch Effects** — Smooth transitions powered by Framer Motion
 - **Fully Responsive** — Optimized for desktop, tablet, and mobile
 - **Interactive Skill Explorer** — Visual proficiency indicators for DevOps toolchain
@@ -125,7 +119,7 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 | Styling | Tailwind CSS |
 | Animations | Framer Motion |
 | Routing | React Router |
-| 3D Effects | Three.js |
+| Terminal Background | CSS/DOM grid & particle effects (no 3D engine) |
 | Icons | Lucide React |
 | Contact Form | Web3Forms (free, no backend) |
 | Deployment | Vercel |
@@ -268,11 +262,12 @@ Create a `netlify.toml` file in the project root:
 
 ```bash
 npm run dev          # Start development server (localhost:5173)
-npm run build        # Production build → dist/
+npm run build        # tsc typecheck + production build → dist/
 npm run preview      # Preview production build locally
 npm run lint         # Run ESLint
-npm run type-check   # TypeScript type checking
 ```
+
+There is no standalone `type-check` script — type checking only runs as part of `npm run build` (via `tsc`).
 
 ---
 
@@ -302,15 +297,14 @@ MIT — free to use, fork, and deploy for personal and commercial use.
 
 ## 👨‍💻 About This Project
 
-Originally built by **Neeraj Chandra Nakka** as a DevOps portfolio template for cloud, SRE, and infrastructure engineers.
+Originally built by **Neeraj Chandra Nakka** as an open-source DevOps portfolio template for cloud, SRE, and infrastructure engineers. This instance is maintained by **Dao Man Dat**, a Software Architect and Full-Stack Engineer expanding into DevOps, SRE, and GitOps.
 
 This portfolio is designed for DevOps engineers who want something that looks like it belongs in a terminal — not a Wix page. If you're targeting product-based companies, a portfolio like this helps recruiters quickly understand your technical depth and project experience.
 
 ## 🔗 Links
 
-- **Live Site**: [neeraj-devops.vercel.app](https://neeraj-devops.vercel.app)
-- **GitHub**: [github.com/neerajnakka](https://github.com/neerajnakka)
-- **LinkedIn**: [linkedin.com/in/neerajchandran](https://linkedin.com/in/neerajchandran)
+- **GitHub**: [github.com/dev198x](https://github.com/dev198x)
+- **LinkedIn**: [linkedin.com/in/dat-dao-db-ssa](https://www.linkedin.com/in/dat-dao-db-ssa/)
 
 ---
 

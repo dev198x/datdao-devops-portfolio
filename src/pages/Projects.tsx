@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TerminalHeader } from '../components/TerminalHeader';
 import { ExternalLink, Github, Filter } from 'lucide-react';
-import { PROJECTS_BY_CATEGORY } from '../data/portfolio';
+import { PROJECTS_BY_CATEGORY, CONTACT } from '../data/portfolio';
 
 export const Projects = () => {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -85,7 +85,7 @@ export const Projects = () => {
                   {/* Project Type Badge */}
                   <div className="absolute top-4 right-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-mono font-medium ${
-                      project.category === 'devops' 
+                      project.category === 'devops'
                         ? 'bg-green-500/20 text-green-500 border border-green-500/30'
                         : 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
                     }`}>
@@ -232,7 +232,7 @@ export const Projects = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="https://github.com/neerajnakka"
+                href={CONTACT.social.github}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-8 py-4 bg-primary-500 text-bg-surface font-semibold rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-glow hover:shadow-card-hover"

@@ -214,8 +214,8 @@ const EnhancedCaseStudies: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-green-400 to-green-300 bg-clip-text text-transparent">
-            CASE_STUDIES.EXE
+          <h1 className="text-2xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-green-400 to-green-300 bg-clip-text text-transparent font-mono">
+            docker images | grep -Ei 'term|study'
           </h1>
           <p className="text-green-200 text-lg max-w-3xl mx-auto">
             Real-world projects showcasing innovative solutions, measurable impact, and technical excellence across DevOps, Cloud Infrastructure, and Full-Stack Development

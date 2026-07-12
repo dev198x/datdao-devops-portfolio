@@ -337,10 +337,244 @@ class WebSocketServer {
 
 This architecture provides a solid foundation for building real-time applications that can scale to thousands of concurrent users.
     `
+  },
+  {
+    id: 5,
+    title: "A Practical Roadmap for Learning Amazon EKS",
+    category: "DevOps",
+    difficulty: "Intermediate",
+    readTime: "9 min read",
+    date: "2026-07-12",
+    featured: false,
+    views: "0",
+    likes: "0",
+    comments: "0",
+    excerpt: "A day-to-day, priority-ordered guide to learning Amazon EKS — from control plane architecture to IRSA, scaling, observability, and production deployment strategies.",
+    tags: ["AWS", "EKS", "Kubernetes", "IRSA", "DevOps"],
+    content: `
+# A Practical Roadmap for Learning Amazon EKS
+
+Since you're joining a DevOps team that uses **Amazon EKS**, don't try to learn every Kubernetes feature first. Instead, focus on the features you will use every day.
+
+Here's a recommended learning order.
+
+## Level 1. Understand the EKS Architecture (Most Important)
+
+Learn how EKS is built before learning YAML.
+
+\`\`\`
+                AWS Account
+                     |
+               +-------------+
+               |     VPC     |
+               +-------------+
+                     |
+     +--------------------------------+
+     |                                |
++------------+                +---------------+
+| EKS Control|                | Worker Nodes  |
+| Plane      |                | (EC2/Fargate) |
+| Managed by |                | You manage    |
+| AWS        |                +---------------+
++------------+                         |
+                                       |
+                             +-------------------+
+                             | Kubernetes Pods   |
+                             +-------------------+
+\`\`\`
+
+Understand:
+
+- What EKS manages
+- What your team manages
+- Difference between Control Plane and Worker Nodes
+- Pod, Node, and Cluster
+
+## Level 2. Core Kubernetes Resources
+
+These are the resources you'll see almost every day:
+
+| Resource    | Why                    |
+| ----------- | ---------------------- |
+| Deployment  | Deploy application     |
+| Service     | Expose Pods internally |
+| Ingress     | HTTP/HTTPS routing     |
+| ConfigMap   | Configuration          |
+| Secret      | Password/API keys      |
+| Namespace   | Separate environments  |
+| DaemonSet   | One Pod on every node  |
+| StatefulSet | Databases              |
+| Job         | One-time task          |
+| CronJob     | Scheduled task         |
+
+\`\`\`
+Namespace
+    |
+Deployment
+    |
+ReplicaSet
+    |
+Pods
+\`\`\`
+
+## Level 3. EKS Node Management
+
+\`\`\`
+EKS
+
+├── Managed Node Group
+│      EC2
+│
+├── Self Managed Node
+│
+└── Fargate
+\`\`\`
+
+Know: Managed Node Groups, EC2 nodes, Spot vs. On-demand Instances, node labels, node taints, and node groups.
+
+\`\`\`
+kubectl get nodes
+
+NAME          TYPE
+node-1        spot
+node-2        on-demand
+\`\`\`
+
+## Level 4. Networking
+
+Probably the hardest topic for beginners.
+
+\`\`\`
+Internet
+     |
+    ALB
+     |
+Ingress Controller
+     |
+  Service
+     |
+   Pods
+\`\`\`
+
+Important concepts: VPC, Subnet, Security Group, Internet Gateway, NAT Gateway, VPC CNI, Pod IP, Service IP, ClusterIP, NodePort, and LoadBalancer. Understand why every Pod has its own IP.
+
+## Level 5. IAM Integration
+
+One of the biggest EKS differences compared to self-managed Kubernetes.
+
+\`\`\`
+IAM Role -> Service Account -> Pod -> AWS API
+\`\`\`
+
+This is called **IAM Roles for Service Accounts (IRSA)**. Without IRSA, applications often relied on the node's IAM role, granting all Pods the same permissions. IRSA lets each application have its own least-privilege AWS permissions — e.g. a Pod assuming a role to reach S3, Secrets Manager, DynamoDB, SQS, or SNS.
+
+## Level 6. Storage
+
+\`\`\`
+Pod -> PVC -> PV -> EBS
+\`\`\`
+
+Learn: PV, PVC, StorageClass, EBS CSI Driver, EFS CSI Driver. Common use cases: PostgreSQL, Redis, Elasticsearch.
+
+## Level 7. Scaling
+
+Components: Horizontal Pod Autoscaler (HPA), KEDA (for queue/event-based scaling), and Cluster Autoscaler or Karpenter (add/remove worker nodes).
+
+\`\`\`
+More traffic -> HPA -> More Pods -> No capacity -> Cluster Autoscaler / Karpenter -> New EC2 Node
+\`\`\`
+
+## Level 8. Logging
+
+A common production setup:
+
+\`\`\`
+Application -> stdout -> Fluent Bit / Fluentd -> CloudWatch Logs -> OpenSearch
+\`\`\`
+
+## Level 9. Monitoring
+
+\`\`\`
+Pods -> Prometheus -> Grafana
+\`\`\`
+
+Metrics to understand: CPU, Memory, Disk, Network, Pod Restart Count, Node Pressure, OOMKilled, Request latency, and Error rate.
+
+## Level 10. Security
+
+Daily concepts: RBAC, ServiceAccount, NetworkPolicy, Security Groups, Secrets, Pod Security, and image scanning.
+
+## Level 11. Deployment
+
+\`\`\`
+GitHub -> CI -> Docker Image -> ECR -> kubectl / Helm / ArgoCD -> EKS
+\`\`\`
+
+Common deployment strategies: Rolling Update, Blue/Green, and Canary.
+
+## Level 12. Common AWS Integrations
+
+| AWS Service                        | Purpose                |
+| ---------------------------------- | ---------------------- |
+| Amazon Elastic Container Registry  | Store container images |
+| Elastic Load Balancing (ALB/NLB)   | Expose applications    |
+| Amazon Route 53                    | DNS                    |
+| AWS Certificate Manager            | TLS certificates       |
+| Amazon CloudWatch                  | Logs and metrics       |
+| AWS IAM                            | Permissions            |
+| Amazon S3                          | File storage           |
+| Amazon RDS                         | Databases              |
+| Amazon ElastiCache                 | Redis cache            |
+| Amazon SQS                         | Queues                 |
+
+## Typical Production Architecture
+
+\`\`\`text
+                Internet
+                    │
+               Route53 (DNS)
+                    │
+                 ALB Ingress
+                    │
+          AWS Load Balancer Controller
+                    │
+              Kubernetes Ingress
+                    │
+                 Kubernetes Service
+                    │
+              Deployment (3 replicas)
+            ┌────────┼────────┐
+            │        │        │
+          Pod      Pod      Pod
+            │
+        ConfigMap / Secret
+            │
+        IAM Role (IRSA)
+            │
+ ┌──────────┼─────────────┐
+ │          │             │
+S3        RDS           SQS
+
+Monitoring:
+Pods → Prometheus → Grafana
+
+Logging:
+Pods → Fluent Bit → CloudWatch → OpenSearch
+\`\`\`
+
+## Suggested Learning Roadmap (4 Weeks)
+
+1. **Week 1:** Kubernetes fundamentals (Pods, Deployments, Services, Namespaces, ConfigMaps, Secrets, Ingress).
+2. **Week 2:** EKS architecture, VPC networking, Managed Node Groups, IAM, IRSA, and storage (EBS/EFS).
+3. **Week 3:** Observability (logging with Fluent Bit, monitoring with Prometheus/Grafana), scaling (HPA, KEDA, Cluster Autoscaler/Karpenter), and troubleshooting (\`kubectl describe\`, \`kubectl logs\`, \`kubectl exec\`).
+4. **Week 4:** Production operations — Helm, GitOps (Argo CD), AWS Load Balancer Controller, cert-manager, rolling updates, and disaster recovery.
+
+This sequence works well for backend engineers moving into DevOps, building progressively from core Kubernetes concepts into the AWS-specific pieces that make EKS distinct from self-managed clusters.
+    `
   }
 ];
 
-const categories = ['All', 'DevOps', 'Cloud Infrastructure', 'Full-Stack'];
+const categories = ['DevOps', 'Cloud Infrastructure', 'Full-Stack'];
 
 const EnhancedBlog: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -416,8 +650,8 @@ const EnhancedBlog: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-green-400 to-green-300 bg-clip-text text-transparent">
-            TECH_BLOG.EXE
+          <h1 className="text-2xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-green-400 to-green-300 bg-clip-text text-transparent font-mono">
+            docker run -it --rm node bash -c 'echo "tech blog"'
           </h1>
           <p className="text-green-200 text-lg max-w-2xl mx-auto">
             Insights, tutorials, and best practices from the world of DevOps, Cloud Infrastructure, and Full-Stack Development
@@ -740,29 +974,41 @@ const EnhancedBlog: React.FC = () => {
                 
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
                   <div className="prose prose-invert prose-green max-w-none">
-                    {selectedPost.content.split('\n').map((paragraph, index) => {
-                      if (paragraph.startsWith('# ')) {
-                        return <h1 key={index} className="text-3xl font-bold text-green-400 mb-4">{paragraph.substring(2)}</h1>;
-                      } else if (paragraph.startsWith('## ')) {
-                        return <h2 key={index} className="text-2xl font-bold text-green-400 mb-3 mt-6">{paragraph.substring(3)}</h2>;
-                      } else if (paragraph.startsWith('### ')) {
-                        return <h3 key={index} className="text-xl font-bold text-green-400 mb-2 mt-4">{paragraph.substring(4)}</h3>;
-                      } else if (paragraph.startsWith('```')) {
-                        const isClosing = paragraph === '```';
-                        if (isClosing) {
-                          return <div key={index}></div>;
+                    {(() => {
+                      const lines = selectedPost.content.split('\n');
+                      const elements: React.ReactNode[] = [];
+                      let i = 0;
+                      while (i < lines.length) {
+                        const line = lines[i];
+                        if (line.startsWith('```')) {
+                          const codeLines: string[] = [];
+                          i++;
+                          while (i < lines.length && !lines[i].startsWith('```')) {
+                            codeLines.push(lines[i]);
+                            i++;
+                          }
+                          i++; // skip closing fence
+                          elements.push(
+                            <pre key={elements.length} className="bg-gray-800 p-4 rounded-lg mb-4 overflow-x-auto">
+                              <code className="text-green-400 whitespace-pre">{codeLines.join('\n')}</code>
+                            </pre>
+                          );
+                          continue;
+                        } else if (line.startsWith('# ')) {
+                          elements.push(<h1 key={elements.length} className="text-3xl font-bold text-green-400 mb-4">{line.substring(2)}</h1>);
+                        } else if (line.startsWith('## ')) {
+                          elements.push(<h2 key={elements.length} className="text-2xl font-bold text-green-400 mb-3 mt-6">{line.substring(3)}</h2>);
+                        } else if (line.startsWith('### ')) {
+                          elements.push(<h3 key={elements.length} className="text-xl font-bold text-green-400 mb-2 mt-4">{line.substring(4)}</h3>);
+                        } else if (line.trim()) {
+                          elements.push(<p key={elements.length} className="text-gray-300 leading-relaxed mb-4">{line}</p>);
+                        } else {
+                          elements.push(<br key={elements.length} />);
                         }
-                        const nextParagraph = selectedPost.content.split('\n')[index + 1];
-                        return (
-                          <pre key={index} className="bg-gray-800 p-4 rounded-lg mb-4 overflow-x-auto">
-                            <code className="text-green-400">{nextParagraph}</code>
-                          </pre>
-                        );
-                      } else if (paragraph.trim()) {
-                        return <p key={index} className="text-gray-300 leading-relaxed mb-4">{paragraph}</p>;
+                        i++;
                       }
-                      return <br key={index} />;
-                    })}
+                      return elements;
+                    })()}
                   </div>
                   
                   <div className="mt-6 pt-6 border-t border-gray-700">

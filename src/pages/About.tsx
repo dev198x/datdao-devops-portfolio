@@ -93,7 +93,7 @@ const timeline = [
                 </div>
                 <div className="space-y-4 text-neutral-200 leading-relaxed">
                   <Typewriter
-                    text="Hello, I'm DMD, and I build reliable cloud platforms that transform ideas into production-ready systems."
+                    text="Hello, I'm Dat Dao, and I build reliable cloud platforms that transform ideas into production-ready systems."
                     delay={30}
                     className="text-primary-500 font-semibold block mb-4"
                   />
