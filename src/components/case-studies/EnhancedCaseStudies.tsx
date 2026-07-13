@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FileText, 
-  Calendar, 
-  Clock, 
-  TrendingUp, 
-  Target, 
-  Users, 
-  Code, 
-  Database, 
+import {
+  FileText,
+  Calendar,
+  Clock,
+  TrendingUp,
+  Target,
+  Users,
+  Code,
+  Database,
   Cloud,
   Shield,
   Zap,
@@ -24,7 +24,8 @@ import {
   Lock,
   Cpu,
   Network,
-  Monitor
+  Monitor,
+  Search
 } from 'lucide-react';
 import { 
   AnimatedBackground, 
@@ -37,6 +38,46 @@ import {
   statusColors,
   difficultyColors
 } from '../visual/VisualComponents';
+
+const CODE_TOKEN_REGEX = /(\/\/[^\n]*)|(\/\*[\s\S]*?\*\/)|(#[^\n]*)|('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)|\b(\d+(?:\.\d+)?)\b|\b(const|let|var|function|async|await|return|if|else|new|require|class|this|true|false|null|undefined|typeof|for|while|of|in|export|import|from|default|try|catch|finally|throw|switch|case|break|continue|extends|super|static|yield|void|delete|instanceof|CREATE|ALTER|INSERT|SELECT|DROP|UPDATE|BEGIN|COMMIT|SET|WHERE|INTO|VALUES|ON|CONFLICT|DO|NOTHING|LOCK|TRANSACTION|ISOLATION|LEVEL|SERIALIZABLE|USING|INDEX|UNIQUE|PRIMARY|KEY|FOREIGN|REFERENCES|NOT|NULL|AND|OR|LIMIT|ORDER|BY|GROUP|HAVING|JOIN|LEFT|RIGHT|INNER|OUTER|AS|DESC|ASC)\b|\b([A-Za-z_$][A-Za-z0-9_$]*)(?=\s*\()/g;
+
+function highlightCode(code: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  CODE_TOKEN_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = CODE_TOKEN_REGEX.exec(code)) !== null) {
+    const [full, lineComment, blockComment, hashComment, str, num, keyword, funcCall] = match;
+
+    if (match.index > lastIndex) {
+      nodes.push(code.slice(lastIndex, match.index));
+    }
+
+    if (lineComment || blockComment || hashComment) {
+      nodes.push(<span key={key++} className="text-gray-500 italic">{full}</span>);
+    } else if (str) {
+      nodes.push(<span key={key++} className="text-amber-300">{full}</span>);
+    } else if (num) {
+      nodes.push(<span key={key++} className="text-orange-400">{full}</span>);
+    } else if (keyword) {
+      nodes.push(<span key={key++} className="text-purple-400 font-semibold">{full}</span>);
+    } else if (funcCall) {
+      nodes.push(<span key={key++} className="text-sky-400">{full}</span>);
+    } else {
+      nodes.push(full);
+    }
+
+    lastIndex = match.index + full.length;
+  }
+
+  if (lastIndex < code.length) {
+    nodes.push(code.slice(lastIndex));
+  }
+
+  return nodes;
+}
 
 interface CaseStudy {
   id: number;
@@ -479,6 +520,653 @@ const caseStudies: CaseStudy[] = [
         ["Example", "Bank account balance", "Email notifications"]
       ]
     }
+  },
+  {
+    id: 11,
+    title: "Dockerfile and How to Optimize It",
+    subtitle: "Reducing Image Size and Hardening Security, with Example Commands",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A naive Dockerfile copies the whole build toolchain, source, and dependencies into the final image, producing a bloated artifact (often 1GB+) that's slow to pull/deploy and runs as root with a large attack surface. Image size and security posture both need explicit optimization — Docker doesn't do either for you by default. On top of that, a Dockerfile written with shell-form CMD makes `/bin/sh` (not the app) PID 1, so `docker stop` sends SIGTERM to the wrong process — the app never gets a chance to close its HTTP server or database connections, and every deploy/restart silently drops in-flight requests until Docker gives up and sends an unstoppable SIGKILL.",
+    solution: [
+      "Use a Minimal Base Image — swap a full OS image for a slim or distroless one; fewer packages means fewer bytes and fewer CVEs to patch.\n```text\nFROM node:20-alpine AS base\n```\nQuery: docker images | grep myapp  # alpine image ~120MB vs node:20 ~1GB",
+      "Multi-Stage Build — build/compile in one stage with all the dev tooling, then copy only the compiled output into a clean final stage; the build stage (and its cache, compilers, dev deps) never ships.\n```text\nFROM node:20-alpine AS builder\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM node:20-alpine AS runner\nWORKDIR /app\nCOPY --from=builder /app/dist ./dist\nCOPY --from=builder /app/node_modules ./node_modules\n```\nQuery: docker build -t myapp:optimized .  # final image excludes devDependencies and build cache",
+      "Layer Caching Order — copy dependency manifests and install dependencies before copying source code, so code changes don't invalidate the (slow) dependency-install layer.\n```text\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY . .\n```\nQuery: # editing src/ only re-runs 'COPY . .' onward, not npm ci",
+      "Minimize Layers & Clean Up in the Same RUN — chain install + cleanup in one RUN so intermediate package-manager cache/state doesn't get baked into an earlier layer.\n```text\nRUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*\n```\nQuery: docker history myapp:latest  # inspect per-layer size contribution",
+      "`.dockerignore` — exclude .git, node_modules, test files, and local env files from the build context so they can't accidentally end up in a layer or slow down the build.\n```text\nnode_modules\n.git\n*.md\n.env\ncoverage/\n```\nQuery: docker build .  # smaller build context sent to the daemon, faster builds",
+      "Run as a Non-Root User — create and switch to an unprivileged user so a container breakout or RCE inside the app doesn't hand the attacker root inside the container.\n```text\nRUN addgroup -S appgroup && adduser -S appuser -G appgroup\nUSER appuser\n```\nQuery: docker run myapp:optimized whoami  # -> appuser, not root",
+      "Pin Exact Base Image Versions (avoid `latest`) — pinning to a digest or specific tag makes builds reproducible and stops an upstream base-image update from silently introducing a new CVE or breaking change.\n```text\nFROM node:20.11.1-alpine3.19@sha256:abcd1234...\n```\nQuery: docker inspect --format='{{.RepoDigests}}' myapp:optimized",
+      "Scan the Image for Vulnerabilities — catch known CVEs in the base image and installed packages before shipping, ideally as a CI gate.\n```text\ndocker scout cves myapp:optimized\n```\nQuery: trivy image myapp:optimized  # alternative open-source scanner, fails CI above a severity threshold",
+      "Use COPY over ADD — ADD has extra behavior (auto-extracting tarballs, fetching remote URLs) that's rarely needed and can introduce unexpected files or supply-chain risk; COPY is explicit and predictable.\n```text\nCOPY dist/ ./dist/\n```\nQuery: # ADD https://example.com/file.tar.gz /app/  <- avoid unless you specifically need auto-extraction",
+      "Set Explicit Resource/Runtime Hardening — drop unnecessary Linux capabilities and mark the filesystem read-only where the app allows it, shrinking what a compromised process can do.\nQuery: docker run --read-only --cap-drop=ALL --security-opt=no-new-privileges myapp:optimized",
+      "Use Exec Form for CMD/ENTRYPOINT so the App Becomes PID 1 — shell form (`CMD node server.js`) starts `/bin/sh` as PID 1 with `node` as a child, so Docker's SIGTERM goes to the shell and may never reach the app; exec form makes the app itself PID 1, receiving signals directly.\n```dockerfile\n# Good — exec form\nCMD [\"node\", \"server.js\"]\n\n# Bad — shell form\nCMD node server.js\n```\nQuery: docker top my-container  # good: '1  node server.js' — bad: '1  sh' with node as a separate child PID",
+      "Handle SIGTERM (and SIGINT for local dev) in the Application — close the HTTP server and disconnect external resources before exiting, with a forced fallback exit so a hung cleanup doesn't block shutdown forever.\n```javascript\nfunction shutdown(signal) {\n  console.log(`${signal} received`);\n\n  server.close(() => {\n    console.log('HTTP server closed');\n    // Close database here\n    // await prisma.$disconnect()\n    process.exit(0);\n  });\n\n  // Force exit after 10 seconds\n  setTimeout(() => {\n    console.error('Force shutdown');\n    process.exit(1);\n  }, 10000);\n}\n\nprocess.on('SIGTERM', () => shutdown('SIGTERM'));\nprocess.on('SIGINT', () => shutdown('SIGINT'));\n```\nQuery: // SIGTERM: sent by docker stop/kubectl delete pod/kill — SIGINT: sent by Ctrl+C in local dev — both should trigger the same graceful shutdown",
+      "Use tini as a Minimal Init Process — recommended in production, especially if the app spawns child processes; tini becomes PID 1, forwards signals correctly to the app, and reaps zombie processes.\n```dockerfile\nFROM node:22-alpine\n\nRUN apk add --no-cache tini\n\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install --omit=dev\nCOPY . .\n\nENTRYPOINT [\"/sbin/tini\", \"--\"]\nCMD [\"node\", \"server.js\"]\n```\nQuery: docker top api  # '1  tini' forwarding signals to '7  node server.js' underneath",
+      "Verify Graceful Shutdown End-to-End — a Dockerfile alone can't prove graceful shutdown works; confirm it by watching real shutdown logs and timing, not just reading the file.\n```bash\ndocker run --name api my-image\ntime docker stop api\n```\nQuery: // expect logs like 'SIGTERM received / Closing HTTP server / Shutdown complete' and a fast exit (e.g. real 0m2.1s) — a ~10s exit or a bare 'Killed' message means Docker had to force SIGKILL"
+    ],
+    impact: [
+      "Multi-stage builds are the single biggest size win — routinely cutting a naive 1GB+ image down to under 150MB by discarding the build toolchain entirely",
+      "Alpine/distroless base images shrink both attack surface and pull time — fewer installed packages means fewer CVEs to track and faster cold-start deploys/autoscaling",
+      "Ordering COPY package*.json before COPY . . turns 'every code change reinstalls all dependencies' into 'dependency layer stays cached until package.json actually changes' — often the difference between a 2-minute and a 20-second CI build",
+      "Running as non-root is a defense-in-depth control: it doesn't prevent an app vulnerability, but it limits blast radius if one is exploited inside the container",
+      "Pinning base image versions (instead of `latest`) prevents 'it worked yesterday, broke today' incidents caused by an unannounced upstream image update",
+      "Image scanning (Docker Scout, Trivy, Grype) in CI turns 'unknown CVEs shipped to prod' into a blocking gate before merge/deploy",
+      "Use case — Node.js API service: multi-stage build (builder installs + compiles, runner copies dist/ + prod node_modules only) + non-root user + alpine base is the standard production pattern",
+      "Use case — CI pipeline gate: `docker scout cves` or `trivy image` run right after build, failing the pipeline on HIGH/CRITICAL findings before the image is ever pushed to a registry",
+      "Use case — regulated/security-sensitive workload: add --read-only and --cap-drop=ALL at `docker run`/Kubernetes securityContext level on top of the image-level hardening above",
+      "Graceful shutdown is a system property, not just a Dockerfile property — it requires all three layers to cooperate: the Dockerfile (exec form or tini so signals are delivered), the application (a SIGTERM/SIGINT handler that closes the server and disconnects resources), and the infrastructure (Docker/Kubernetes granting a sufficient grace period)",
+      "Shell form vs. exec form is the single most common reason 'graceful shutdown isn't working' in practice — `docker top` immediately reveals it: PID 1 being `sh`/`bash` (shell form) means Docker's SIGTERM never reliably reaches the app, while PID 1 being the app itself or `tini` (exec form) means it does",
+      "SIGKILL cannot be caught — if the app hasn't exited by the end of Docker's default 10-second grace period (or `stop_grace_period`/`terminationGracePeriodSeconds` if configured), Docker/Kubernetes force-kills the process, skipping all cleanup code entirely; the app's own shutdown logic must complete well inside that window",
+      "In Kubernetes, the exact same sequence applies at Pod scope: Pod deletion sends SIGTERM, the app should stop accepting new traffic and finish in-flight requests within `terminationGracePeriodSeconds`, and only then does the container actually exit",
+      "Use case — reviewing an unfamiliar service for production-readiness: `docker top` (checking PID 1), `time docker stop` (checking exit speed), and hitting a slow endpoint right before stopping the container are three fast, concrete checks that reveal whether graceful shutdown actually works, rather than trusting that a SIGTERM handler in the code is sufficient on its own"
+    ],
+    technologies: ["Docker", "Dockerfile", "Multi-Stage Build", "Alpine", "Distroless", "Docker Scout", "Trivy", "Non-Root User", "Layer Caching", "tini", "SIGTERM", "Graceful Shutdown", "Kubernetes"],
+    impactMetrics: {
+      deploymentTime: { before: "~1GB image", after: "~120-150MB image", improvement: "85%" },
+      performance: { improvement: "Faster pulls, faster autoscaling cold-starts, cached dependency layers, dropped in-flight requests -> clean graceful shutdown" }
+    },
+    architecture: {
+      components: ["Builder Stage", "Runner Stage (final)", ".dockerignore", "Non-Root User", "Vulnerability Scanner (CI gate)", "Exec-Form CMD/ENTRYPOINT (PID 1)", "tini (init process)", "SIGTERM/SIGINT Handler"],
+      pattern: "Multi-Stage Build with Security Hardening and Graceful Shutdown"
+    },
+    comparisonTable: {
+      headers: ["Signal", "Sent By", "Can Be Caught?", "Typical Use"],
+      rows: [
+        ["SIGINT", "User pressing Ctrl+C", "Yes", "Stopping a program during local development"],
+        ["SIGTERM", "docker stop, kubectl delete pod, kill <pid>", "Yes", "Graceful shutdown in production"],
+        ["SIGKILL", "kill -9, or Docker/Kubernetes after the grace period expires", "No — cannot be caught", "Force-terminates a process that ignored SIGTERM in time"]
+      ]
+    }
+  },
+  {
+    id: 12,
+    title: "How to Upgrade Node.js",
+    subtitle: "A Step-by-Step Guide for Newbies: Upgrading Node Version and Related Packages",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A project pinned to an old Node.js version (e.g. Node 16, now end-of-life) needs to move to a current LTS release, but jumping versions blindly risks breaking dependencies that don't support the new engine, native modules that need rebuilding, and CI/deploy environments that still reference the old version — with no clear, safe order of operations for someone doing this for the first time.",
+    solution: [
+      "Step 1 — Check the Current Version and What the Project Expects — before changing anything, know your starting point and what the project itself declares as supported.\n```text\nnode -v\nnpm -v\ncat package.json | grep -A 2 '\"engines\"'\n```\nQuery: node -v  # e.g. v16.20.2 -> confirms the version being replaced",
+      "Step 2 — Install a Node Version Manager (nvm) — lets you install and switch between multiple Node versions safely, without touching the system Node install or affecting other projects.\n```text\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.zshrc\nnvm --version\n```\nQuery: nvm ls-remote --lts  # lists available LTS versions to pick from",
+      "Step 3 — Install the New Node Version Alongside the Old One — nvm keeps both installed, so you can switch back instantly if something breaks.\n```text\nnvm install 20\nnvm list\n```\nQuery: nvm use 20  # switches the current shell to Node 20 without uninstalling 16",
+      "Step 4 — Pin the Project to the New Version — record the intended version in the repo itself so nvm, CI, and teammates all pick up the same one automatically.\n```text\necho \"20\" > .nvmrc\n```\nQuery: nvm use  # reads .nvmrc in the project root and switches automatically",
+      "Step 5 — Update `package.json` engines Field — declares the supported Node range explicitly, so npm/CI can warn (or fail) if someone runs an unsupported version.\n```text\n\"engines\": {\n  \"node\": \">=20.0.0\"\n}\n```\nQuery: npm install  # npm prints an EBADENGINE warning if the running Node version falls outside this range",
+      "Step 6 — Clean Reinstall of Dependencies on the New Version — old lockfiles/node_modules may contain native bindings built against the old Node ABI; a clean install rebuilds everything against the new runtime.\n```text\nrm -rf node_modules package-lock.json\nnpm install\n```\nQuery: npm ls --depth=0  # confirms every top-level dependency reinstalled cleanly, no errors",
+      "Step 7 — Find and Upgrade Outdated / Incompatible Packages — some packages may have released newer major versions specifically to support the new Node LTS; check what's outdated before assuming everything just works.\n```text\nnpm outdated\nnpx npm-check-updates -u\nnpm install\n```\nQuery: npm outdated  # lists Current / Wanted / Latest columns per package so you know what actually needs bumping",
+      "Step 8 — Run the Test Suite and Manually Smoke-Test — the only real confirmation the upgrade didn't break anything; run automated tests first, then exercise the app's main flows by hand.\n```text\nnpm test\nnpm run build\nnpm run dev\n```\nQuery: npm test  # a red test suite here is much cheaper to catch than a broken prod deploy",
+      "Step 9 — Update CI/CD and Deployment Configs — the version bump has to be reflected everywhere Node is invoked outside your local machine, or CI will keep testing (and prod will keep running) the old version.\n```text\n# .github/workflows/ci.yml\nnode-version: '20'\n\n# Dockerfile\nFROM node:20-alpine\n```\nQuery: // keep the base image version in sync with .nvmrc",
+      "Step 10 — Commit the Upgrade as Its Own Change — isolates the Node/dependency bump from feature work, so if something regresses later, `git bisect`/rollback points straight at the upgrade commit.\n```text\ngit add .nvmrc package.json package-lock.json\ngit commit -m \"chore: upgrade Node.js 16 -> 20 LTS and update dependencies\"\n```\nQuery: git log --oneline -1  # a single, clean, revertable commit for the whole upgrade"
+    ],
+    impact: [
+      "Using nvm instead of overwriting the system Node install means the old version stays available — if the new version breaks something in production, `nvm use 16` rolls the local dev environment back in seconds",
+      "A `.nvmrc` file turns 'remember to switch Node versions' into an automatic, repo-enforced default — every teammate and every CI run picks up the exact same version with `nvm use`",
+      "The `engines` field in package.json converts a silent version mismatch into a visible npm warning (or a hard failure with `engine-strict=true` in `.npmrc`), catching the problem before code even runs",
+      "Deleting node_modules and the lockfile before reinstalling avoids the most common newbie mistake: keeping a lockfile/node_modules built against the old Node ABI, which can cause cryptic native-module errors (especially with packages like bcrypt, sharp, or sqlite3)",
+      "Running `npm outdated` before blindly running `npm update` shows exactly which packages have newer majors available — some may require their own migration steps (breaking API changes), not just a version bump",
+      "Keeping the CI workflow's node-version and the Dockerfile's base image in sync with .nvmrc prevents the classic 'works on my machine, fails in CI/prod' gap after an upgrade",
+      "Use case — newbie upgrading a personal/small project: nvm install -> .nvmrc -> clean reinstall -> npm test is the minimum safe path and covers 90% of real-world upgrades",
+      "Use case — team project with CI/CD: additionally update the CI workflow's Node version and any Dockerfile FROM node:X lines in the same commit as the .nvmrc change, so every environment upgrades together",
+      "Use case — a dependency breaks on the new Node version: check that package's CHANGELOG/GitHub issues for a Node-version-specific fix or required major-version bump before assuming the upgrade itself is at fault"
+    ],
+    technologies: ["Node.js", "nvm", "npm", "package.json", ".nvmrc", "npm-check-updates", "CI/CD"],
+    impactMetrics: {
+      deploymentTime: { before: "Node 16 (EOL)", after: "Node 20 LTS", improvement: "Active LTS support restored" },
+      performance: { improvement: "Newer V8 engine, security patches, dependency compatibility" }
+    },
+    architecture: {
+      components: [".nvmrc", "package.json engines", "Clean node_modules reinstall", "npm-check-updates", "CI Node version config", "Dockerfile base image"],
+      pattern: "Safe, Reversible Runtime Upgrade Path"
+    }
+  },
+  {
+    id: 13,
+    title: "Pre-Computed Data: Reducing Complex Aggregation Pipelines in MongoDB",
+    subtitle: "Strategy for Turning Expensive Aggregations into Fast Indexed Lookups",
+    category: "Database",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A dashboard needs per-user statistics (totalOrders, totalRevenue, avgOrderValue) computed from a millions-row `orders` collection. Running the same `$group` aggregation on every page load — 10,000+ times a day — recomputes identical results over and over, burning CPU on the database for data that barely changes between requests.",
+    solution: [
+      "Pre-Computed Collection via $merge — run the aggregation once (or on a schedule) and persist the result into its own `user_statistics` collection, the MongoDB equivalent of a materialized view. Dashboard reads become a single indexed `findOne` instead of a live aggregation.\ndb.orders.aggregate([{ $group: { _id: '$userId', totalOrders: { $sum: 1 }, totalRevenue: { $sum: '$amount' }, avgOrderValue: { $avg: '$amount' } } }, { $merge: { into: 'user_statistics', on: '_id', whenMatched: 'replace', whenNotMatched: 'insert' } }]);\nQuery: db.user_statistics.findOne({ _id: 1001 });",
+      "Batch Refresh (Scheduled) — a cron job re-runs the aggregation and $merge on an interval matched to how fresh the data needs to be vs. how expensive the aggregation is; every 5 minutes for sales dashboards, hourly for revenue reports, nightly for BI/monthly stats.\n```text\n*/5 * * * *  -> cron -> aggregation pipeline -> $merge -> user_statistics\n```\nQuery: // data may be up to 5 minutes stale, acceptable for most dashboards",
+      "Incremental Updates (Near Real-Time) — instead of recomputing the whole collection, update only the affected user's document the moment a new order is created; far cheaper than a full aggregation once volume is high and reads vastly outnumber writes.\ndb.orders.insertOne(order);\nQuery: db.user_statistics.updateOne({ _id: order.userId }, { $inc: { totalOrders: 1, totalRevenue: order.amount } });",
+      "Hybrid Approach (Real-Time + Nightly Reconciliation) — combine incremental $inc updates for immediate freshness with a full nightly $merge rebuild to repair any drift caused by application bugs, failed jobs, or missed events. This is the pattern most large systems settle on in production.\n```text\nOrder Created -> $inc user_statistics immediately -> Dashboard reads user_statistics\n0 2 * * *    -> full aggregation rebuild -> verify & repair user_statistics\n```\nQuery: // 2 AM nightly rebuild catches anything the real-time path missed"
+    ],
+    impact: [
+      "Turns a repeated O(n) aggregation over millions of orders into a single indexed lookup (findOne) — the dashboard query cost stops scaling with orders collection size",
+      "Trades extra storage and write complexity for much faster reads — the right trade-off whenever reads (dashboard views) greatly outnumber writes (new orders)",
+      "Decision rule by scale: <100k docs -> recompute on demand; 100k-10M docs -> cron + aggregation; 10M+ docs -> incremental $inc updates; 100M+ docs -> event-driven via Change Streams/Kafka",
+      "Trade-off to accept: pre-computed data duplicates information already in the source collection, needs synchronization logic, and can be slightly stale between refreshes — acceptable for dashboards, unacceptable for anything requiring strict real-time correctness",
+      "Use case — analytics dashboard: revenue by day/month, top customers, and product sales rankings are computed once into a summary collection instead of on every dashboard load",
+      "Use case — search/listing optimization: precomputing avgRating and reviewCount onto product documents avoids recalculating from a `reviews` array on every product page view",
+      "Use case — time-series/event reporting: billions of raw events get pre-aggregated into `daily_metrics` (pageViews, uniqueUsers per day), making report queries cheap regardless of how large the raw events collection grows",
+      "Use case — production architecture at scale: MongoDB Orders -> Change Stream/Kafka -> Aggregation Worker -> Summary Collection -> API Query is the standard shape for e-commerce sales dashboards, financial reports, and social media counters (likes, views, followers)"
+    ],
+    technologies: ["MongoDB", "$merge", "Aggregation Pipeline", "Materialized View", "Change Streams", "Cron", "Incremental Updates"],
+    impactMetrics: {
+      performance: { improvement: "Repeated aggregation -> single indexed findOne() lookup" },
+      scalability: { capacity: "10M+ orders, 100k+ users", improvement: "Batch/nightly aggregation -> incremental real-time updates" }
+    },
+    architecture: {
+      components: ["orders (source collection)", "user_statistics (pre-computed collection)", "$merge Stage", "Cron Scheduler", "Incremental $inc Updates", "Change Stream / Kafka Worker"],
+      pattern: "Pre-Computed Data / Materialized View"
+    },
+    comparisonTable: {
+      headers: ["Strategy", "Freshness", "Best For"],
+      rows: [
+        ["Recompute on demand", "Real-time", "Small datasets (<100k docs)"],
+        ["Scheduled batch ($merge)", "Minutes to nightly", "Sales dashboards, BI reports, monthly stats"],
+        ["Incremental updates ($inc)", "Near real-time", "Leaderboards, counters, high-write-volume systems"],
+        ["Hybrid (real-time + nightly rebuild)", "Real-time + nightly repair", "Large production systems needing both freshness and consistency"]
+      ]
+    }
+  },
+  {
+    id: 14,
+    title: "Tracing with AsyncLocalStorage in Node.js",
+    subtitle: "The async_hooks API for Storing Context Across an Async Call Chain",
+    category: "Full-Stack",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A request ID, user ID, or trace ID needs to be available deep inside a call chain — service -> repository -> logger — without manually threading it through every function signature. Plain closures only work for a single synchronous scope; once execution fans out across concurrent requests (each with async operations interleaving via the event loop), there's no built-in way to keep each request's context isolated without passing it explicitly everywhere.",
+    solution: [
+      "AsyncLocalStorage (built on async_hooks) — creates an invisible context 'bag' that automatically propagates through every async operation (Promises, setTimeout, TCP, HTTP, filesystem) spawned within it, so any function can read it later without receiving it as a parameter.\n```javascript\nconst { AsyncLocalStorage } = require('async_hooks');\nconst asyncLocalStorage = new AsyncLocalStorage();\n```\nQuery: // works like thread-local storage in multithreaded languages, but for Node's async call chains",
+      "run(store, callback) — enters a new async context; everything invoked (directly or indirectly, including nested async work) inside the callback inherits `store`.\n```javascript\nasyncLocalStorage.run({ requestId }, async () => {\n  await handleRequest();\n});\n```\nQuery: // two concurrent run() calls (req-1, req-2) never leak context into each other, even when their async operations interleave",
+      "Full Basic Example — two 'requests' fire back-to-back and their async operations (the setTimeout delays) interleave, yet each still logs its own correct requestId with zero manual threading.\n```javascript\nconst { AsyncLocalStorage } = require('async_hooks');\nconst asyncLocalStorage = new AsyncLocalStorage();\n\nfunction log(message) {\n  const store = asyncLocalStorage.getStore();\n  console.log({ requestId: store?.requestId, message });\n}\n\nfunction handleRequest(requestId) {\n  asyncLocalStorage.run({ requestId }, async () => {\n    log('start request');\n    await new Promise(resolve => setTimeout(resolve, 100));\n    log('finish request');\n  });\n}\n\nhandleRequest('req-1');\nhandleRequest('req-2');\n```\nQuery: // Output (interleaved, but each requestId stays correct):\n// { requestId: 'req-1', message: 'start request' }\n// { requestId: 'req-2', message: 'start request' }\n// { requestId: 'req-1', message: 'finish request' }\n// { requestId: 'req-2', message: 'finish request' }",
+      "getStore() — reads the current context from anywhere in the call chain, with no parameter passed down through intermediate functions.\n```javascript\nfunction logger(message) {\n  const store = asyncLocalStorage.getStore();\n  console.log({ requestId: store?.requestId, message });\n}\n```\nQuery: logger('query database'); // automatically tagged with the request's ID, no requestId argument needed",
+      "Express Middleware Pattern — generate a request ID at the edge and run the rest of the request lifecycle inside that context, so every downstream logger call across the whole request is automatically correlated.\n```javascript\napp.use((req, res, next) => {\n  const requestId = crypto.randomUUID();\n  asyncLocalStorage.run({ requestId }, () => next());\n});\n\napp.get('/', async (req, res) => {\n  logger('request start');\n  await db.query(...);\n  logger('query database');\n  res.send('ok');\n});\n```\nQuery: // logger() picks up the current requestId automatically inside the route handler"
+    ],
+    impact: [
+      "Eliminates parameter drilling — `service(userId, requestId, traceId)` across every layer collapses to `service()`, with context read on demand via getStore() wherever it's needed",
+      "Correct under concurrency by design — because context is scoped to the async chain started by run(), two requests processed concurrently (req-1, req-2) each keep their own isolated requestId even though their setTimeout/Promise callbacks interleave on the event loop",
+      "Foundational building block for observability — this is exactly how Winston/Pino auto-attach requestId to every log line, and how OpenTelemetry and APM tools propagate trace context across async boundaries without instrumenting every function call manually",
+      "Caveat — performance overhead: Node tracks async resources internally to make this work; usually negligible, but high-throughput services should benchmark before/after adopting it",
+      "Caveat — context loss: older callback-style libraries or native addons can break the async chain async_hooks relies on, silently losing context partway through a request",
+      "Caveat — memory leaks: store only lightweight metadata (IDs, small flags) in the context bag — running with a huge object attached keeps it alive for the full async chain and can bloat memory under load",
+      "Use case — multi-tenant SaaS backend: tenantId stored via AsyncLocalStorage lets every repository/query layer scope data access correctly without passing tenantId through every function signature",
+      "Use case — microservices request tracing: API Gateway -> Microservice -> Database -> Message Queue each log line carries the same correlationId automatically, making it possible to grep one request's full path across services",
+      "Use case — NestJS interceptors and request-scoped DI: NestJS, OpenTelemetry SDK, and enterprise logging systems build request-scoped behavior directly on top of AsyncLocalStorage rather than reinventing context propagation"
+    ],
+    technologies: ["Node.js", "async_hooks", "AsyncLocalStorage", "Express", "OpenTelemetry", "Winston", "Pino"],
+    impactMetrics: {
+      performance: { improvement: "Manual parameter threading -> automatic context propagation across async chains" }
+    },
+    architecture: {
+      components: ["AsyncLocalStorage.run()", "AsyncLocalStorage.getStore()", "Express Middleware (context entry)", "Logger (context consumer)", "async_hooks (underlying resource tracking)"],
+      pattern: "Request-Scoped Context Propagation (Thread-Local Storage equivalent)"
+    }
+  },
+  {
+    id: 15,
+    title: "REST API Design for a `product` Resource with Full Request Traceability",
+    subtitle: "Endpoints, Header Strategy, Middleware, and Structured Logging for Easy Debugging",
+    category: "Full-Stack",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A `product` REST API needs to support standard CRUD from web and mobile clients, but when something breaks in production, support/engineering need to trace 'this exact user report' back to 'this exact log line' in seconds — across gateway, service, and downstream calls. Naively logging plain-text messages, trusting client-sent identity headers, or logging raw request bodies makes debugging slow and risks leaking PII.",
+    solution: [
+      "Resource & Endpoint Design — version in the URL path (not just headers) for easier gateway routing/deprecation, plural nouns with no verbs, query-param pagination, and soft delete instead of hard delete for audit/recovery.\n```text\nGET    /v1/products          # list (with query params for filter/paging)\nGET    /v1/products/{id}     # get one\nPOST   /v1/products          # create\nPUT    /v1/products/{id}     # full update\nPATCH  /v1/products/{id}     # partial update\nDELETE /v1/products/{id}     # delete (soft-delete recommended)\n```\nQuery: GET /v1/products?page=1&limit=20  // or cursor-based: ?cursor=...",
+      "Header Strategy — split identity (server-derived, never client-trusted) from tracing (client- or edge-generated). X-Request-ID is unique per HTTP call; X-Correlation-ID persists across a whole user flow (e.g. checkout: create order -> charge -> update inventory).\n```text\nAuthorization: Bearer <JWT>          # source of truth for identity — decode server-side\nX-Client-App: ios | android | web\nX-Client-Version: 3.4.2\nX-Device-ID: <uuid, persisted per install>\nX-Request-ID: <uuid, per request>     # unique per HTTP call\nX-Correlation-ID: <uuid>              # same across a chain of calls / one user action\nUser-Agent: MyApp/3.4.2 (iOS 17.4; iPhone15,3)\n```\nQuery: // never trust a client-sent X-User-ID — derive user_id server-side from the verified JWT",
+      "Middleware Pattern — put context construction at the API gateway or a shared middleware layer once, not per endpoint, so every handler and log line automatically inherits the same request context (e.g. via Node's AsyncLocalStorage).\n```text\nIncoming request\n  -> generate X-Request-ID if missing\n  -> verify JWT -> extract user_id, roles\n  -> build request context: { request_id, correlation_id, user_id, client_app, client_version, device_id, ip, route, method, timestamp }\n  -> attach context to logger (structured, not string concat)\n  -> forward to handler\n  -> on response: log status_code, duration_ms, response_size\n```\nQuery: // if the client omits X-Request-ID, generate it server-side at the edge so no request is ever untraceable",
+      "Structured JSON Logging — log as indexable JSON fields (not plain text), log request-received and response-sent as two separate events joined by request_id, and hash/redact bodies instead of logging them raw.\n```json\n{\n  \"timestamp\": \"2026-07-13T10:22:31.402Z\",\n  \"level\": \"info\",\n  \"request_id\": \"a1b2c3d4-...\",\n  \"correlation_id\": \"e5f6g7h8-...\",\n  \"user_id\": \"usr_9981\",\n  \"client_app\": \"ios\",\n  \"client_version\": \"3.4.2\",\n  \"method\": \"PUT\",\n  \"route\": \"/v1/products/{id}\",\n  \"path_params\": { \"id\": \"prod_555\" },\n  \"status_code\": 200,\n  \"duration_ms\": 84,\n  \"request_body_hash\": \"sha256:...\"\n}\n```\nQuery: // duration_ms lets you spot 'all 3.4.2 iOS clients are slow' patterns per client version",
+      "Client Version Handling — use X-Client-Version for analytics segmentation, time-boxed backward-compat branching, and a hard force-upgrade gate checked early in middleware, before business logic runs.\n```javascript\nif (isBelowMinVersion(req.headers['x-client-version'])) {\n  return res.status(426).json({ error: { code: 'UPGRADE_REQUIRED' } });\n}\n```\nQuery: // 426 Upgrade Required — checked before touching product business logic",
+      "Response Envelope & Error Format — always return request_id in the response body (and/or header) so a user's bug report maps directly to one log line; use a stable internal error.code, since HTTP 404 alone doesn't say *why*.\n```json\n{\n  \"success\": false,\n  \"data\": null,\n  \"error\": {\n    \"code\": \"PRODUCT_NOT_FOUND\",\n    \"message\": \"Product prod_555 does not exist\",\n    \"request_id\": \"a1b2c3d4-...\"\n  }\n}\n```\nQuery: // PRODUCT_NOT_FOUND vs PRODUCT_ARCHIVED is alertable/dashboardable — a bare 404 status code is not"
+    ],
+    impact: [
+      "Turns 'a user says it broke' into a direct log lookup — returning request_id in every response is the single biggest win for fast support/debug loops, since support can hand that ID straight to engineering",
+      "Identity can't be spoofed — deriving user_id server-side from a verified JWT (instead of trusting a client-sent X-User-ID) closes an easy impersonation vector while still keeping it available to downstream services via the gateway-injected context",
+      "Two-ID tracing model scales from one call to a whole flow — X-Request-ID answers 'find this exact log line'; X-Correlation-ID answers 'show me every call in this checkout flow', without conflating the two",
+      "Centralizing context-building in gateway/shared middleware (rather than per endpoint) guarantees every handler and every log line gets the same fields for free — no endpoint can forget to log user_id or request_id",
+      "Structured JSON logs make fields queryable/indexable in ELK/Datadog/CloudWatch instead of relying on brittle regex over plain-text log lines",
+      "Hashing request bodies instead of logging them raw avoids leaking pricing/internal-cost/customer-specific-override data that a product object can carry, while still letting you detect 'did the payload change' via hash diff",
+      "duration_ms segmented by X-Client-Version turns 'the API feels slow' into a concrete finding like 'only iOS 3.4.2 clients are slow due to inefficient serialization on their side'",
+      "Use case — mobile force-upgrade: server checks X-Client-Version in middleware and returns 426 Upgrade Required before running any product business logic, protecting newer server-side contracts from old clients",
+      "Use case — checkout flow across services: create order -> charge -> update inventory all share one X-Correlation-ID, so a single trace reconstructs the full multi-call user action even though each call gets its own X-Request-ID"
+    ],
+    technologies: ["REST API", "JWT", "AsyncLocalStorage", "Structured Logging", "ELK", "Datadog", "CloudWatch", "API Gateway", "Correlation ID"],
+    impactMetrics: {
+      performance: { improvement: "Plain-text log search -> direct request_id lookup for support/debug loops" }
+    },
+    architecture: {
+      components: ["API Gateway / Edge Middleware", "JWT Verification", "Request Context Object", "Structured JSON Logger", "Response Envelope", "Error Code Registry"],
+      pattern: "Traceable REST API with Context-Propagating Middleware"
+    },
+    comparisonTable: {
+      headers: ["Concern", "Solution"],
+      rows: [
+        ["Who called", "JWT-derived user_id (never trust client-sent user id)"],
+        ["What app/version", "X-Client-App, X-Client-Version"],
+        ["Trace one request", "X-Request-ID, generated server-side if missing"],
+        ["Trace a user flow", "X-Correlation-ID, reused across related calls"],
+        ["Central log searchability", "Structured JSON logs, indexed fields"],
+        ["Don't leak PII in logs", "Hash/redact bodies, log field diffs not raw payloads"],
+        ["Old client versions breaking", "Version gate + 426 responses + version-based dashboards"],
+        ["Fast support/debug loop", "Return request_id in every response so users/support can report it"]
+      ]
+    }
+  },
+  {
+    id: 16,
+    title: "Backend Trust Proxy",
+    subtitle: "Why Node.js/Express/NestJS Behind Nginx or an ALB Needs `trust proxy` Enabled",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A Node.js backend deployed behind Nginx, an AWS ALB, or CloudFront only ever sees the proxy's own connection — not the real client. Without telling the framework to trust the proxy's forwarded headers, `req.ip` returns the proxy's internal IP (e.g. 10.0.1.5) for every single user, and `req.secure` reports `false` even when the user connected over HTTPS. This silently breaks per-IP rate limiting, audit logging, geo-location, IP blocking, and HTTPS-only security checks — all while looking like it works in local dev, where there's no proxy in front.",
+    solution: [
+      "Root Cause — Express/NestJS terminates the TCP connection from Nginx, not from the browser, so by default `req.ip` reflects the proxy hop, not the original client.\n```text\nInternet User (203.113.10.20) -> Nginx (10.0.1.5) -> Node.js/Express/NestJS\n```\nQuery: req.ip // returns '10.0.1.5' (Nginx) instead of the real user IP, until trust proxy is enabled",
+      "Nginx Forwards the Original Client Info via Headers — the reverse proxy must explicitly set these on every proxied request; without them there's nothing for the backend to trust in the first place.\n```nginx\nproxy_set_header Host $host;\nproxy_set_header X-Real-IP $remote_addr;\nproxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\nproxy_set_header X-Forwarded-Proto $scheme;\n```\nQuery: // resulting request headers: X-Forwarded-For: 203.113.10.20, X-Forwarded-Proto: https, Host: api.example.com",
+      "Enable trust proxy in Express — tells Express to read `X-Forwarded-For`/`X-Forwarded-Proto` instead of the raw socket address, restoring the real client IP and protocol.\n```javascript\napp.set('trust proxy', true);\n```\nQuery: req.ip // now returns '203.113.10.20' (the real client) instead of the Nginx hop",
+      "Same Setting in NestJS — set it once on the underlying Express instance during bootstrap, before the app starts listening.\n```typescript\nconst app = await NestFactory.create(AppModule);\napp.set('trust proxy', true);\nawait app.listen(3000);\n```\nQuery: // or app.enable('trust proxy'), depending on NestJS/Express version",
+      "Verification Endpoint — a small debug route confirms the whole chain (Nginx config + trust proxy setting) is actually working end-to-end in a given environment, rather than assuming it from code alone.\n```typescript\n@Get('debug')\ndebug(@Req() req) {\n  return {\n    ip: req.ip,\n    ips: req.ips,\n    protocol: req.protocol,\n    secure: req.secure,\n    forwardedFor: req.headers['x-forwarded-for'],\n  };\n}\n```\nQuery: curl https://api.example.com/debug // expect { \"ip\": \"203.113.10.20\", \"protocol\": \"https\", \"secure\": true }"
+    ],
+    impact: [
+      "Rate limiting fails silently without this — with every request appearing to originate from Nginx's IP (10.0.1.5), a per-IP limiter like ThrottlerModule sees one 'super client' hitting the limit, blocking unrelated real users (User B, User C) while User A's traffic is what actually tripped it",
+      "After enabling trust proxy, each real client IP (203.113.10.20, 115.78.22.10, 14.161.88.5) is distinguished correctly, and rate limiting, audit logs, and IP-based security rules work as designed",
+      "HTTPS detection breaks the same way: Nginx/ALB terminates TLS and forwards to Node over plain HTTP internally, so `req.secure` reports `false` even for a legitimately HTTPS user — until trust proxy lets Express honor `X-Forwarded-Proto: https`",
+      "This is not a local-dev problem — it only surfaces once a reverse proxy or load balancer sits in front of the app, so it's easy to ship code that 'works fine' locally and silently misbehaves in staging/production",
+      "Security-relevant behavior (cookie `secure` flags, redirect-to-HTTPS logic, IP allowlists/denylists, geo-blocking) all depend on `req.secure`/`req.ip` being correct — trust proxy is a prerequisite, not an optional tuning knob, for any of these to function behind a proxy",
+      "Use case — AWS production stack: CloudFront -> ALB -> Nginx -> NestJS is a common multi-hop chain; NestJS still only needs `trust proxy` enabled once, as long as each hop in front of it correctly forwards X-Forwarded-For/X-Forwarded-Proto",
+      "Use case — debugging 'rate limiting blocks the wrong users' incidents: the `/debug` endpoint pattern above is the fastest way to confirm whether the real IP is reaching the app, before assuming the rate limiter logic itself is broken",
+      "Use case — compliance/audit logging: security audit trails that log 'which IP performed this action' are meaningless (all showing the proxy's IP) until trust proxy is correctly configured end-to-end"
+    ],
+    technologies: ["Node.js", "Express", "NestJS", "Nginx", "AWS ALB", "CloudFront", "X-Forwarded-For", "X-Forwarded-Proto", "Rate Limiting"],
+    impactMetrics: {
+      performance: { improvement: "Proxy IP masking all clients -> correct per-client IP and protocol detection" }
+    },
+    architecture: {
+      components: ["Nginx / ALB (X-Forwarded-* headers)", "app.set('trust proxy', true)", "req.ip / req.secure", "Rate Limiter (per-IP)", "Debug Verification Endpoint"],
+      pattern: "Reverse Proxy Header Trust Configuration"
+    },
+    comparisonTable: {
+      headers: ["Setting", "req.ip", "req.secure", "Rate limiting behavior"],
+      rows: [
+        ["trust proxy disabled (default)", "Proxy IP (e.g. 10.0.1.5) for every request", "false, even over HTTPS", "All clients look identical -> one user's traffic blocks everyone"],
+        ["trust proxy enabled", "Real client IP from X-Forwarded-For", "true, when X-Forwarded-Proto: https", "Each client tracked independently -> limits apply correctly"]
+      ]
+    }
+  },
+  {
+    id: 17,
+    title: "Accept Temporary Inconsistency",
+    subtitle: "Designing High-Traffic REST APIs Around Eventual Consistency Instead of Synchronous Aggregation",
+    category: "Database",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A feature like 'total likes on a post' seems trivial until traffic scales — at 100K requests/sec, computing `SELECT COUNT(*) FROM likes WHERE post_id = ...` (or updating a running total) synchronously on every write becomes a database bottleneck: lock contention, hotspot rows, slow responses, and eventually outright failure under load. The naive synchronous design simply cannot survive high-scale write traffic.",
+    solution: [
+      "The Wrong Design (Synchronous) — insert the like, then COUNT(*) and update the total, all inside the request/response cycle. This ties response latency directly to aggregation cost and creates a single hot row every client fights over.\n```text\nPOST /posts/:id/like\n  1. Insert like into DB\n  2. COUNT(*) all likes\n  3. Update total\n  4. Return response\n```\nQuery: // at 100K req/sec, step 2/3 becomes a DB bottleneck with lock contention and hotspot rows",
+      "Write Fast, Read Eventually Consistent — acknowledge the write immediately without computing any global total; the API's only guarantee is that the request was accepted, not that the counter is already updated.\n```http\nPOST /posts/p100/likes\n{ \"userId\": \"u100\" }\n```\n```json\n{ \"success\": true, \"status\": \"accepted\" }\n```\nQuery: // HTTP 202 Accepted — the counter update happens asynchronously afterward",
+      "Event-Driven Architecture — the like action becomes an event published to a broker; a separate consumer updates the counter out-of-band, decoupling write throughput from aggregation cost entirely.\n```json\n{\n  \"event\": \"POST_LIKED\",\n  \"postId\": \"p100\",\n  \"userId\": \"u22\",\n  \"timestamp\": 1747882800\n}\n```\nQuery: // published to Kafka / RabbitMQ / Amazon SQS, consumed independently of the write path",
+      "Materialized Counter in Redis — maintain a precomputed, atomic counter instead of ever running COUNT(*) live; O(1), memory-based, and safe under concurrent increments.\n```bash\nINCR post:p100:likes\n```\nQuery: GET /posts/p100 // returns { likeCount: 1523401 } read straight from the Redis counter, not from a live aggregation",
+      "Idempotency Key — client retries (network blips, double-taps) must not create duplicate likes; enforce this at the API layer and/or with a DB constraint.\n```http\nPOST /posts/p100/likes\nIdempotency-Key: abc-123\n```\n```sql\nUNIQUE(user_id, post_id)\n```\nQuery: // retrying the same Idempotency-Key or violating the unique constraint is a safe no-op, not a duplicate like",
+      "Sharded Counter for Hotspot Posts — a single Redis key becomes a write hotspot once a celebrity post gets millions of likes; splitting the counter into shards and summing at read time spreads the write contention.\n```text\npost:p100:likes:1\npost:p100:likes:2\npost:p100:likes:3\n```\nQuery: // likeCount = SUM(all shards) at read time, instead of every write contending for one key",
+      "Transactional Outbox Pattern — guards against 'like saved but event publish failed' leaving the counter permanently wrong; write the like and an outbox event in the same DB transaction, then let a background worker publish from the outbox.\n```sql\nCREATE TABLE likes (\n  post_id VARCHAR(50),\n  user_id VARCHAR(50),\n  created_at TIMESTAMP,\n  PRIMARY KEY(post_id, user_id)\n);\n```\nQuery: // likes + outbox_events written atomically; a worker publishes outbox rows to Kafka safely, even after a crash"
+    ],
+    impact: [
+      "Removes the database as a synchronous bottleneck — write latency no longer depends on aggregating a fast-growing likes table, so throughput scales independently of total like count",
+      "Temporary inconsistency (like recorded, counter not yet incremented) is explicitly acceptable here — social systems like Facebook, Instagram, and X tolerate a likeCount that's a few seconds stale; this trade-off would NOT be acceptable for a banking balance, which is the key judgment call in this pattern",
+      "Idempotency keys / unique constraints turn client retries from a duplicate-like bug into a safe no-op, which matters more (not less) once the write path is asynchronous and retries are more likely to happen invisibly",
+      "Sharded counters solve the 'celebrity post' hotspot problem that a single INCR key can't — this is the same sharding instinct as horizontally partitioning any high-write-volume aggregate, applied to a counter instead of a table",
+      "The transactional outbox pattern is what prevents 'Kafka publish failed' from silently corrupting counters forever — without it, a single broker hiccup during a write creates permanent, undetected drift",
+      "This architecture is naturally CQRS: a command side optimized for high-throughput append-only writes (POST /likes), and a query side optimized for cached, denormalized reads (GET /posts) — the two paths don't have to share performance characteristics",
+      "API consistency contracts matter as documentation, not just code: explicitly stating 'likeCount is eventually consistent and may be delayed by several seconds' sets correct expectations for API consumers instead of leaving it as an undocumented surprise",
+      "Use case — viral/celebrity content: sharded Redis counters plus async aggregation are what let a single post accumulate millions of likes without single-key write contention taking down the counter path",
+      "Use case — social feed like/view/follower counts: this exact write-fast/read-eventually-consistent + Kafka + Redis counter + periodic DB sync stack is the standard pattern at Facebook/Instagram/X scale"
+    ],
+    technologies: ["REST API", "Kafka", "Redis", "CQRS", "Event-Driven Architecture", "Idempotency", "Transactional Outbox", "PostgreSQL", "Eventual Consistency"],
+    impactMetrics: {
+      performance: { improvement: "Synchronous COUNT(*) per write -> O(1) Redis INCR + async aggregation" },
+      scalability: { capacity: "100K+ requests/sec", improvement: "DB-bottlenecked writes -> event-driven, horizontally sharded counters" }
+    },
+    architecture: {
+      components: ["API Gateway", "Like Service (Command Side)", "Kafka / RabbitMQ / SQS", "Counter Consumer", "Redis Counter (sharded)", "Outbox Table + Background Publisher", "Read Model (Query Side)"],
+      pattern: "CQRS + Event-Driven Eventual Consistency"
+    },
+    comparisonTable: {
+      headers: ["Aspect", "Synchronous Design", "Eventually Consistent Design"],
+      rows: [
+        ["Write path", "Insert + live COUNT(*) + update, in one request", "Insert like + publish event, respond immediately (202 Accepted)"],
+        ["Counter reads", "Recomputed on every request", "Precomputed in Redis, O(1) read"],
+        ["Failure mode at scale", "DB lock contention, hotspot rows, slow/failed responses", "Async consumer lag; corrected via outbox + retry"],
+        ["Hotspot handling", "None — single row/table bears all writes", "Sharded counters, summed at read time"],
+        ["Best for", "Low-traffic, strict-correctness domains (banking balances)", "High-traffic, staleness-tolerant domains (likes, views, followers)"]
+      ]
+    }
+  },
+  {
+    id: 18,
+    title: "Idempotency-Key: Preventing Duplicate Processing",
+    subtitle: "Making POST /posts/{id}/likes Safe to Retry Without Creating Duplicate Resources",
+    category: "Full-Stack",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Networks are unreliable — a client can send `POST /posts/p100/likes`, have the server successfully create the Like, and then never receive the response due to a dropped connection or timeout. The client, seeing no response, retries the exact same request. Without any safeguard, that retry creates a second Like resource — a duplicate the client never intended and the server has no way to distinguish from a genuinely new request.",
+    solution: [
+      "Client Generates a Unique Idempotency-Key per Logical Operation — a UUID generated once when the user takes the action (e.g. clicking Like), then reused on every retry of that same attempt.\n```http\nPOST /posts/p100/likes\nIdempotency-Key: abc-123\nAuthorization: Bearer <access_token>\n\n{}\n```\nQuery: // if the user later unlikes and likes again, that's a NEW logical operation — a fresh UUID is generated, not abc-123 reused",
+      "Server Flow — Check Before Processing — on every request, look up the Idempotency-Key first; if it's already been processed, return the stored response instead of re-running the operation.\n```text\nReceive request\n  -> Read Idempotency-Key\n  -> Already processed?\n       Yes -> Return previous response\n       No  -> Create Like, save response, save key\n```\nQuery: SELECT * FROM idempotency WHERE key = 'abc-123'; // found -> return 201 Created without inserting another Like",
+      "Idempotency Store (Database Example) — persist the key alongside the response that was returned, so a retry can be answered identically without touching business logic again.\n```text\nlikes table:        L1 | p100 | u5\nidempotency table:   abc-123 | 201 Created\n```\nQuery: // retry with the same Idempotency-Key returns 201 Created from the idempotency table, with zero new rows in likes",
+      "Typical Backend Logic — the pattern is check-store-first, process-second, save-result-third; any framework implements this the same shape regardless of language.\n```typescript\nconst key = req.headers['Idempotency-Key'];\n\n// 1. Check cache/database\nconst previous = await idempotencyRepository.find(key);\n\nif (previous) {\n  return previous.response;\n}\n\n// 2. Process request\nconst like = await likeService.create(postId, userId);\n\n// 3. Save result\nawait idempotencyRepository.save({\n  key,\n  response: { status: 201, body: like },\n});\n\n// 4. Return response\nreturn like;\n```\nQuery: // idempotencyRepository.find(key) is the single gate that makes retries safe",
+      "Unique Constraint Backs the Business Rule Independently — the Idempotency-Key protects against network retries, but a separate unique constraint enforces 'one user can like one post only once' even if a client sends two different requests (e.g. a UI bug firing twice without reusing the key).\n```sql\nUNIQUE(postId, userId)\n```\nQuery: // retry without an Idempotency-Key still can't create a duplicate Like — the unique constraint rejects the second insert"
+    ],
+    impact: [
+      "Two independent safeguards, two independent failure modes: Idempotency-Key solves the *network retry* problem (same operation, resent request); UNIQUE(postId, userId) solves the *business rule* problem (this exact like should only ever exist once) — losing either one reopens a different duplicate-creation path",
+      "The full behavior matrix: first Like inserts; retry with the same Idempotency-Key returns the cached response; retry without an Idempotency-Key is still blocked by the unique constraint; a different user or a different post always inserts normally",
+      "Choosing `POST /posts/p100/likes` (collection) over `POST /posts/p100/like` (singular action) keeps the resource model RESTful — Likes is a collection under Post, and POST creates a new member of it, which is what makes idempotency-by-key a natural fit here",
+      "This exact pattern (Idempotency-Key header + server-side idempotency store) is standard for payments, orders, and bookings — anywhere a duplicate side effect (double charge, double booking) is materially harmful, not just cosmetically wrong",
+      "The idempotency store itself needs a retention/expiry policy in practice — keeping every key forever is unnecessary; a TTL long enough to cover realistic retry windows (seconds to minutes, not months) is the common real-world tuning",
+      "Client discipline matters as much as server logic: a new UUID must be generated per logical user action, and reused only across retries of that same action — generating a fresh key on every retry defeats the entire mechanism",
+      "Use case — payment processing: a client retrying a charge request after a timeout must not double-charge the card; Idempotency-Key + a stored response is the industry-standard mitigation (this is literally how Stripe's API works)",
+      "Use case — like/upvote/reaction buttons: combining an Idempotency-Key with UNIQUE(postId, userId) covers both the retry case and the double-click/double-submit UI case with two independent, complementary guards"
+    ],
+    technologies: ["REST API", "Idempotency-Key", "Unique Constraint", "PostgreSQL", "HTTP", "Retry Safety"],
+    impactMetrics: {
+      performance: { improvement: "Unsafe retries creating duplicates -> retries returning cached, correct responses" }
+    },
+    architecture: {
+      components: ["Idempotency-Key (client-generated UUID)", "Idempotency Store (key -> response)", "Like Service", "UNIQUE(postId, userId) Constraint", "likes Table (source of truth)"],
+      pattern: "Idempotent Write API with Dual Safeguards"
+    },
+    comparisonTable: {
+      headers: ["Situation", "Result"],
+      rows: [
+        ["First Like", "Insert succeeds"],
+        ["Retry with same Idempotency-Key", "Return cached response, no new insert"],
+        ["Retry without Idempotency-Key", "Unique constraint prevents duplicate Like"],
+        ["Different user likes", "Insert succeeds"],
+        ["Same user likes another post", "Insert succeeds"]
+      ]
+    }
+  },
+  {
+    id: 19,
+    title: "Treat Third-Party Inputs as Untrusted at Runtime",
+    subtitle: "Validating Data from Databases, Redis, Message Queues, and HTTP in TypeScript",
+    category: "Full-Stack",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "TypeScript's type system only guarantees correctness at compile time — but data coming from a database, Redis, RabbitMQ/Kafka, or an external HTTP call arrives at runtime with no such guarantee. An old document with a missing field, a malformed queue message, or a wrong-typed cache value can crash the process or silently corrupt state, even though the TypeScript types around it claim everything is safe. Required-field and type checks need to happen for real, not just be assumed from a type annotation.",
+    solution: [
+      "Core Idea — treat every external system's output as untrusted input, even data from your own microservices or your own database, since schemas drift and messages can be malformed in transit.\n```text\nDatabase (MongoDB, SQL)  -> old schema, missing fields\nCache (Redis)            -> missing key, wrong type (string vs object)\nMessage Queue (RabbitMQ) -> malformed message, wrong payload type\nHTTP (REST/GraphQL)      -> missing parameters, invalid formats\n```\nQuery: // the fix is always the same: validate at the boundary, before business logic ever sees the value",
+      "Runtime Validation with Zod — define a schema once, then use safeParse to check required fields/types before processing; on failure, fail loudly instead of letting invalid data flow further (e.g. into a Dead Letter Queue).\n```typescript\nimport { z } from 'zod';\n\n// Define schema\nconst PaymentSchema = z.object({\n  transactionId: z.string().min(1),\n  amount: z.number().positive(),\n  card: z.string().optional(),\n});\n\n// Example external data\nconst messageFromQueue = {\n  transactionId: 'abc123',\n  amount: 100,\n};\n\n// Validate before processing\nconst result = PaymentSchema.safeParse(messageFromQueue);\n\nif (!result.success) {\n  console.error('Invalid payload:', result.error.errors);\n  throw new Error('Validation failed');\n}\n\nconst payment = result.data; // fully typed and safe\n```\nQuery: // result.data is both runtime-validated AND has the correct inferred TypeScript type — no separate interface needed",
+      "Runtime Validation with class-validator (NestJS style) — DTO classes with decorators double as both the validation schema and the reusable type, and integrate directly with NestJS pipes/guards.\n```typescript\nimport { IsString, IsNumber, IsOptional, Min } from 'class-validator';\nimport { plainToInstance } from 'class-transformer';\nimport { validateOrReject } from 'class-validator';\n\nclass PaymentDto {\n  @IsString()\n  transactionId: string;\n\n  @IsNumber()\n  @Min(0)\n  amount: number;\n\n  @IsOptional()\n  @IsString()\n  card?: string;\n}\n\nasync function processMessage(raw: any) {\n  const dto = plainToInstance(PaymentDto, raw);\n  await validateOrReject(dto);\n  // safe to use dto\n  console.log('Processing:', dto);\n}\n```\nQuery: // the same PaymentDto class validates HTTP bodies, queue messages, and DB reads consistently",
+      "Defensive Programming — wrap external calls in try/catch, and use nullish coalescing/default values so a missing Redis key or empty string doesn't crash JSON.parse or downstream logic.\n```typescript\ntry {\n  const data = await someExternalService();\n  const valid = Schema.parse(data);\n} catch (err) {\n  console.error('External data error', err);\n  // handle gracefully\n}\n\nconst value = redisValue ?? '{}';\nconst parsed = JSON.parse(value || '{}');\n```\nQuery: // ?? and || here stop 'undefined' or an empty string from ever reaching JSON.parse unguarded",
+      "Schema Versioning — stamp a version field on messages/documents so consumers can branch on shape instead of guessing, letting you evolve a schema without breaking older producers/consumers still in flight.\n```json\n{\n  \"version\": 2,\n  \"transactionId\": \"abc\",\n  \"amount\": 100\n}\n```\nQuery: // consumer checks payload.version to pick the right parsing/migration path for older messages still in the queue",
+      "Centralized Validation Utility — wrap the schema.safeParse pattern in one reusable helper so every call site validates and throws consistently, instead of re-implementing the same check-and-throw logic everywhere.\n```typescript\n// utils/validate.ts\nimport { ZodSchema } from 'zod';\n\nexport function validate<T>(schema: ZodSchema<T>, data: unknown): T {\n  const parsed = schema.safeParse(data);\n  if (!parsed.success) {\n    throw new Error(\n      `Validation failed: ${JSON.stringify(parsed.error.errors)}`\n    );\n  }\n  return parsed.data;\n}\n```\nQuery: const payment = validate(PaymentSchema, externalData); // one call site, consistent error format everywhere"
+    ],
+    impact: [
+      "Runtime validation is what TypeScript's compile-time types can never provide — a `: Payment` type annotation says nothing about what a RabbitMQ consumer actually receives at 3am when a producer ships a bad message; only a runtime check (Zod/class-validator) catches that",
+      "Fail-fast beats fail-silent — throwing on invalid input (and optionally routing to a Dead Letter Queue) surfaces a bad message immediately instead of letting `undefined.amount` crash somewhere three function calls deeper with a confusing stack trace",
+      "Zod's biggest practical win is type inference from the schema itself — `result.data` is both validated AND correctly typed, eliminating the class of bugs where a hand-written interface silently drifts out of sync with the actual runtime check",
+      "class-validator DTOs are reusable validation contracts — the same PaymentDto class can validate an HTTP request body, a queue message, and a value read back from the database, keeping all three consistent instead of three separate ad-hoc checks",
+      "Defensive defaults (`?? '{}'`, `value || '{}'`) turn 'Redis key doesn't exist yet' from an unhandled exception into an intentional, handled empty-state case",
+      "Schema versioning is what makes rolling deploys safe — during a deploy, old and new message shapes can be in the queue simultaneously; a version field lets consumers branch correctly instead of assuming everyone upgraded atomically",
+      "A centralized validate() utility means every team/module gets the same error message shape and the same fail-fast behavior, instead of validation quality varying by whoever wrote that particular consumer",
+      "Use case — payment message from RabbitMQ: safeParse(messageFromQueue) rejects a payload missing transactionId or with a negative amount before it ever reaches payment-processing logic, instead of trusting the producer blindly",
+      "Use case — Redis cache read: a cache value that's missing, expired, or holds a stringified object of the wrong shape is caught by the same Schema.parse() used for HTTP/queue inputs, rather than assuming cached data is always well-formed"
+    ],
+    technologies: ["TypeScript", "Zod", "class-validator", "class-transformer", "RabbitMQ", "Redis", "NestJS", "Runtime Validation"],
+    impactMetrics: {
+      performance: { improvement: "Unvalidated external input -> fail-fast runtime validation with typed, safe data" }
+    },
+    architecture: {
+      components: ["Zod Schema / class-validator DTO", "safeParse() / validateOrReject()", "Centralized validate() Utility", "Dead Letter Queue (on failure)", "Schema Version Field"],
+      pattern: "Runtime Validation at Every External Boundary"
+    },
+    comparisonTable: {
+      headers: ["Technique", "Purpose"],
+      rows: [
+        ["Zod / class-validator", "Validate runtime data"],
+        ["try/catch", "Graceful error handling"],
+        ["TypeScript types", "Compile-time correctness"],
+        ["Schema versioning", "Evolve safely across deploys"],
+        ["Centralized validation utility", "Reuse and consistency across call sites"]
+      ]
+    }
+  },
+  {
+    id: 20,
+    title: "Tech Concerns: Single vs. Multiple Instances",
+    subtitle: "A Cheat Sheet for 'Will This Still Work if I Have 10 Instances Instead of 1?'",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Code that works perfectly on a single instance often breaks silently the moment it's scaled horizontally — in-memory sessions get lost, cron jobs fire once per instance instead of once total, local file uploads vanish when a request lands on a different instance, and rate limiters stop limiting anything because each instance counts independently. None of these show up in local dev or on a single-replica deployment; they only surface under real production load balancing, and by then they look like flaky bugs rather than an architecture mismatch.",
+    solution: [
+      "Application State & Sessions — anything held in process memory (session data, in-memory counters, local cache) is invisible to every other instance; move it to a shared store so any instance can serve any request.\n```text\nMemory / MemoryStore sessions -> works fine on 1 instance\n                              -> broken on N instances (session lands on the wrong instance)\n```\nQuery: // fix: JWT (stateless) or Redis-backed sessions/cache instead of in-process memory",
+      "Background Jobs & Cron Jobs — a `setInterval()` or naive cron handler that's safe alone becomes N duplicate executions once N instances all run the same code on the same schedule.\n```text\nsetInterval(() => sendDailyDigest(), ONE_DAY)  // fine on 1 instance\n// on N instances: the digest fires N times, once per instance\n```\nQuery: // fix: move scheduling to Kubernetes CronJob, a queue (BullMQ/SQS), or gate execution with leader election / a Redis lock",
+      "File Uploads & Temporary Files — writing to local disk or `/tmp` only makes that file visible to the instance that wrote it; a later request routed to a different instance simply can't find it.\n```text\nfs.writeFileSync('/tmp/upload-123.png', buffer)  // only exists on this instance\n```\nQuery: // fix: write to S3/EFS/NFS instead of local disk — every instance reads/writes the same shared location",
+      "Database Migrations & Distributed Locks — running a migration at app startup is safe with one instance, but N instances starting simultaneously race to apply the same migration; a distributed lock (or a dedicated migration job) prevents that.\n```text\n// unsafe: every instance runs migrations on boot -> race condition\n// safe: a single CI/CD step or Kubernetes Job runs migrations once, before instances start\n```\nQuery: // Redis Redlock or a DB-level advisory lock also works for any 'only one instance should do this' operation",
+      "WebSockets & Idempotency — a Socket.IO emit only reaches clients connected to that same instance unless a Pub/Sub adapter fans it out; and requests that were safe to process once (no retries possible) need explicit idempotency once retries can hit any instance.\n```text\nio.emit('message', payload)  // reaches only clients connected to THIS instance\n```\nQuery: // fix: Redis Pub/Sub adapter for Socket.IO so an emit on instance A reaches clients connected to instance B/C too"
+    ],
+    impact: [
+      "The five-question mental model scales to any framework: (1) State — is anything in memory? (2) Storage — is anything on local disk? (3) Scheduling — can this run more than once? (4) Communication — how do instances talk to each other? (5) Operations — can instances be deployed/restarted safely?",
+      "Every '❌ broken on multiple instances' row in the cheat sheet has the same fix shape: move the concern out of the instance and into something shared — Redis/DB for state, S3/EFS for files, a queue/lock for scheduling, Pub/Sub for cross-instance messaging",
+      "This isn't NestJS-specific — the exact same failure modes (lost sessions, duplicate cron runs, missing uploaded files) hit Express, Spring Boot, ASP.NET Core, Django, Flask, Laravel, and Go services identically, since the root cause is 'instance-local state', not a framework quirk",
+      "Health checks and graceful shutdown move from 'nice to have' to 'required' once there's a load balancer and rolling deploys in play — an instance that doesn't respond to SIGTERM cleanly can drop in-flight requests during every deploy",
+      "Rate limiting and distributed locks are two sides of the same problem: a per-instance in-memory counter can't enforce a global limit, and 'only run this once' logic can't rely on single-process assumptions once N processes exist",
+      "Centralized configuration/secrets (ConfigMap, Secrets Manager, Parameter Store) exist specifically so all N instances stay in sync — a local `.env` file that's manually copied per instance is a drift risk waiting to happen",
+      "Use case — scaling a NestJS API from 1 to 5 pods in Kubernetes: session storage, rate limiting, and any setInterval-based background job are the first three things that silently break and need to move to Redis/BullMQ before the scale-out is safe",
+      "Use case — rolling deployment during a release: graceful shutdown (SIGTERM handling) plus `/health`/`/ready` endpoints are what let the load balancer drain an old instance's in-flight requests before killing it, avoiding dropped requests mid-deploy"
+    ],
+    technologies: ["Redis", "Kubernetes", "BullMQ", "SQS", "RabbitMQ", "Kafka", "S3", "JWT", "Prometheus", "OpenTelemetry"],
+    impactMetrics: {
+      scalability: { capacity: "1 -> N instances", improvement: "In-memory/local-disk assumptions -> shared state, storage, and coordination" }
+    },
+    architecture: {
+      components: ["Load Balancer (ALB/NGINX)", "Redis (state, cache, locks, rate limiting)", "Shared Object Storage (S3/EFS)", "Message Queue (SQS/RabbitMQ/Kafka/BullMQ)", "Centralized Config/Secrets", "Centralized Logging/Metrics/Tracing"],
+      pattern: "Horizontal Scaling Readiness Checklist"
+    },
+    comparisonTable: {
+      headers: ["Concern", "Single Instance", "Multiple Instances", "Common Technology"],
+      rows: [
+        ["Application State", "Memory is OK", "Shared state required", "Redis, Database"],
+        ["HTTP Sessions", "MemoryStore works", "Session lost", "JWT, Redis Session"],
+        ["Cache", "Local cache works", "Cache inconsistency", "Redis, Memcached"],
+        ["Rate Limiting", "Local counter works", "Limit bypassed", "Redis"],
+        ["WebSocket / Socket.IO", "Emit reaches all clients", "Only local clients", "Redis Pub/Sub Adapter"],
+        ["Background Jobs", "setInterval() works", "Duplicate execution", "BullMQ, SQS, RabbitMQ, Kafka"],
+        ["Cron Jobs", "One execution", "Executes on every instance", "Kubernetes CronJob, Leader Election, Redis Lock"],
+        ["Distributed Lock", "Not needed", "Prevent duplicate processing", "Redis Redlock, DB Lock"],
+        ["File Uploads", "Local disk works", "Files unavailable on other instances", "S3, EFS, NFS"],
+        ["Database Migration", "Run at startup", "Multiple instances race", "CI/CD Pipeline, Kubernetes Job"],
+        ["Idempotency", "Less critical", "Prevent duplicate requests", "Redis, Database"],
+        ["Configuration / Secrets", "Local .env", "All instances must match", "ConfigMap, Secrets Manager"],
+        ["Logging / Metrics / Tracing", "Local file / one source acceptable", "Must aggregate & correlate", "ELK, Prometheus, OpenTelemetry"],
+        ["Graceful Shutdown", "Less important", "Required during rolling updates", "SIGTERM, NestJS Shutdown Hooks"]
+      ]
+    }
+  },
+  {
+    id: 21,
+    title: "Dead-Letter Queue: Retry Strategies with BullMQ",
+    subtitle: "Distinguishing Transient Failures from Permanent Ones in Background Job Processing",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Background jobs fail for different reasons — a transient network blip or a temporarily-down database should be retried, but invalid payloads (e.g. a deleted user) or a job that has already exhausted every retry attempt should not keep silently disappearing or endlessly retrying. Without an explicit retry strategy and a place for permanently-failed jobs to land, failures either get lost entirely (no one notices a job died) or hammer a struggling downstream dependency forever.",
+    solution: [
+      "Retry Strategy Configuration — set `attempts` and a `backoff` policy per job so transient errors get retried automatically without any custom retry loop in application code.\n```typescript\nimport { Queue } from 'bullmq';\n\nconst myQueue = new Queue('emailQueue', {\n  connection: { host: 'localhost', port: 6379 },\n});\n\n// Add a job with retry strategy\nawait myQueue.add(\n  'sendEmail',\n  { userId: 'u123', email: 'user@example.com' },\n  {\n    attempts: 5, // max retry count\n    backoff: {\n      type: 'exponential', // delay increases exponentially\n      delay: 3000, // initial delay (ms)\n    },\n    removeOnComplete: true,\n    removeOnFail: false,\n  }\n);\n```\nQuery: // exponential backoff: delay = delay * 2^n — spaces retries out instead of hammering a struggling dependency immediately",
+      "Handling Failures in the Worker — the worker just throws on failure; BullMQ handles the retry scheduling automatically based on the job's configured attempts/backoff.\n```typescript\nimport { Worker } from 'bullmq';\n\nconst worker = new Worker(\n  'emailQueue',\n  async (job) => {\n    console.log(`Processing job ${job.id}`);\n    // Simulate failure\n    if (Math.random() < 0.7) throw new Error('Temporary error');\n    console.log('Email sent successfully!');\n  },\n  { connection: { host: 'localhost', port: 6379 } }\n);\n\nworker.on('failed', (job, err) => {\n  console.error(`Job ${job.id} failed: ${err.message}`);\n});\n```\nQuery: // BullMQ retries automatically according to the queue's backoff policy — no manual retry loop needed",
+      "Dead-Letter Queue Setup — once a job has exhausted its configured attempts, move it into a separate queue instead of letting it vanish, so it's available for analysis or manual reprocessing.\n```typescript\nimport { Queue, Worker } from 'bullmq';\n\nconst failedQueue = new Queue('failedEmailQueue');\n\nconst mainWorker = new Worker('emailQueue', async (job) => {\n  // process job...\n  throw new Error('Permanent failure');\n});\n\nmainWorker.on('failed', async (job, err) => {\n  if (job.attemptsMade >= job.opts.attempts) {\n    console.log(`Moving job ${job.id} to DLQ`);\n    await failedQueue.add('failedEmail', {\n      jobId: job.id,\n      data: job.data,\n      reason: err.message,\n    });\n  }\n});\n```\nQuery: // job.attemptsMade >= job.opts.attempts is the exact gate that distinguishes 'still retrying' from 'permanently failed'",
+      "Optional DLQ Processor — run a dedicated worker on the dead-letter queue itself, so permanently-failed jobs get handled deliberately (alerting, manual retry) instead of just sitting unread.\n```typescript\nconst dlqWorker = new Worker(\n  'failedEmailQueue',\n  async (job) => {\n    console.log('Handling DLQ job', job.data);\n    // Optionally: notify admin or retry manually\n  },\n  { connection: { host: 'localhost', port: 6379 } }\n);\n```\nQuery: // this is the difference between a DLQ that's actually monitored and one that's a silent graveyard",
+      "Retry vs. DLQ Flow — every job follows the same lifecycle: attempt, fail, retry with backoff until attempts are exhausted, then move permanently to the DLQ.\n```text\nJob Added\n  -> attempt #1\n  -> Job Failed\n  -> retry until attempts exhausted (backoff between each)\n  -> Move to DLQ\n```\nQuery: // this flow is the same whether the underlying broker is BullMQ/Redis, SQS, or RabbitMQ"
+    ],
+    impact: [
+      "Retries and DLQ solve two different problems that must not be conflated: retries assume the error is transient and will resolve itself (network blip, DB briefly down); DLQ assumes it won't, and the job needs a human or a separate process to look at it",
+      "Exponential backoff prevents a retry storm from making a struggling dependency worse — a fixed, tight retry loop can turn a brief outage into a self-inflicted denial-of-service against your own downstream service",
+      "The `job.attemptsMade >= job.opts.attempts` check is the precise, correct boundary for 'this job is now permanently failed' — checking anything looser risks moving a job to the DLQ before its legitimate retries are exhausted",
+      "A DLQ without its own worker/dashboard is just a queue nobody reads — pairing it with a DLQ processor (or a UI like bull-board/Arena) is what actually turns permanent failures into an actionable alert instead of silent data loss",
+      "Choosing fixed vs. exponential backoff is a judgment call: fixed backoff suits predictable, short-lived retry windows; exponential backoff suits third-party API rate limits and unpredictable outage durations",
+      "Limiting `attempts` isn't just about giving up gracefully — it also protects Redis (or whatever backs the queue) from being flooded by jobs that retry indefinitely",
+      "Use case — transactional email sending: a temporary SMTP provider outage retries with exponential backoff for a few minutes; if it still fails after 5 attempts, the job lands in failedEmailQueue for a human to investigate rather than silently dropping the email",
+      "Use case — third-party payment webhook processing: a rate-limited downstream API benefits from exponential backoff between retries, while a DLQ ensures a payment event that never succeeds gets flagged for manual reconciliation instead of disappearing"
+    ],
+    technologies: ["BullMQ", "Redis", "Dead-Letter Queue", "Exponential Backoff", "Node.js", "bull-board", "Queue", "Worker"],
+    impactMetrics: {
+      performance: { improvement: "Silent job loss / retry storms -> controlled backoff with a monitored dead-letter queue" }
+    },
+    architecture: {
+      components: ["Main Queue (emailQueue)", "Worker (processor)", "Backoff Policy (fixed/exponential)", "Dead-Letter Queue (failedEmailQueue)", "DLQ Worker/Processor", "Monitoring Dashboard (bull-board/Arena)"],
+      pattern: "Retry-with-Backoff + Dead-Letter Queue"
+    },
+    comparisonTable: {
+      headers: ["Backoff Type", "Behavior", "Best For"],
+      rows: [
+        ["Fixed", "Constant delay between every retry", "Predictable, short-lived transient errors"],
+        ["Exponential", "Delay doubles each attempt (delay * 2^n)", "Third-party API rate limits, unpredictable outages"],
+        ["Custom", "App-defined delay logic per attempt", "Domain-specific retry rules (e.g. respecting a Retry-After header)"]
+      ]
+    }
+  },
+  {
+    id: 22,
+    title: "Infrastructure as Code with Terraform",
+    subtitle: "Core Concepts and Example Commands for Defining and Managing Cloud Infrastructure",
+    category: "Cloud Infrastructure",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Manually provisioning infrastructure by clicking through a cloud console (AWS/Azure/GCP) doesn't scale — it's error-prone, impossible to reliably repeat across environments (dev/staging/prod), and leaves no version history of what changed, when, or why. As infrastructure grows, teams need a way to describe the desired end state as code, track every change in Git, and apply it predictably and repeatably instead of by hand.",
+    solution: [
+      "Write Configuration Files (HCL) — describe the desired infrastructure declaratively in `.tf` files; Terraform figures out how to make reality match this description, rather than scripting each individual step.\n```hcl\nresource \"aws_instance\" \"example\" {\n  ami           = \"ami-123456\"\n  instance_type = \"t2.micro\"\n}\n```\nQuery: # \"Create an AWS EC2 instance with these properties\" — declarative, not a sequence of imperative steps",
+      "terraform init — downloads the providers (plugins) referenced in the config and prepares the working directory; this is the first command run in any new or cloned Terraform project.\n```bash\nterraform init\n```\nQuery: # downloads provider plugins (e.g. the AWS provider) and initializes the local .terraform directory",
+      "terraform plan — a dry run that shows exactly what will change before anything is touched, letting you catch unintended creates/modifies/deletes before they hit real infrastructure.\n```bash\nterraform plan\n```\nQuery: # example output: '+ create instance', '~ modify network', '- delete resource'",
+      "terraform apply — actually creates/updates the infrastructure to match the config, prompting for confirmation (or accepting -auto-approve in CI) before executing.\n```bash\nterraform apply\n```\nQuery: # asks 'Do you want to perform these actions?' before making any real changes, unless run with -auto-approve",
+      "State File (terraform.tfstate) — Terraform's record of what infrastructure actually exists and how it maps to your config; this is what makes incremental updates (only touching what changed) possible instead of recreating everything on every run.\n```text\nterraform.tfstate\n```\nQuery: # tracks the real-world resource IDs behind each 'resource' block in your .tf files",
+      "Providers, Resources, and Modules — providers are plugins for a target platform (AWS, Azure, GCP, Kubernetes); resources are the actual infrastructure building blocks (VMs, networks, databases, load balancers); modules are reusable, parameterized Terraform configs — the equivalent of a function.\n```hcl\nmodule \"vpc\" {\n  source = \"./modules/vpc\"\n  cidr_block = \"10.0.0.0/16\"\n}\n```\nQuery: # a module packages a group of resources (e.g. a whole VPC) so it can be reused across environments without copy-pasting",
+      "Full Workflow, End to End — the standard cycle for any change: write/update config, preview it, apply it, and let Terraform persist state for the next change.\n```bash\n# 1. Write config (e.g., EC2 + VPC)\nterraform init\nterraform plan\nterraform apply\n# Terraform saves state and manages updates going forward\n```\nQuery: # this same init -> plan -> apply loop repeats for every future infrastructure change, not just the first one"
+    ],
+    impact: [
+      "Consistency across environments — the same .tf config applied to dev, staging, and prod produces identical infrastructure, eliminating the classic 'works in staging, broken in prod because someone clicked something different' class of incident",
+      "Every infrastructure change is version-controlled in Git — a pull request against a .tf file gives the same review/audit trail as an application code change, instead of infrastructure changes living only in someone's console click history",
+      "terraform plan as a mandatory pre-apply step turns 'accidentally deleted the production database' into a caught-before-it-happens diff review — this is the single biggest safety net Terraform provides over manual changes",
+      "Resource Drift is a real operational risk: if someone modifies a Terraform-managed resource directly in the AWS Console (bypassing Terraform), the state file falls out of sync with reality, and the next plan/apply may try to 'correct' a change that was actually intentional — drift detection/reconciliation needs to be a deliberate practice, not an afterthought",
+      "Modules turn repeated infrastructure patterns (a standard VPC, a standard ECS service) into reusable, parameterized building blocks — the same discipline as extracting a function to avoid copy-pasting logic, applied to infrastructure",
+      "Multi-cloud support (AWS, Azure, GCP, Kubernetes providers) means the same tool and the same workflow apply regardless of which cloud a given resource lives in, reducing the tooling surface area a team needs to maintain",
+      "Use case — spinning up a new environment: instead of manually recreating a VPC, subnets, security groups, and an EC2 instance by hand for a new staging environment, running `terraform apply` against the same module with different variables reproduces the exact same topology in minutes",
+      "Use case — deploying a static website to S3: a small Terraform config (S3 bucket + bucket policy + optional CloudFront distribution) turns a manual multi-step console process into a single repeatable `terraform apply`, and rollback is just reverting the Git commit and re-applying"
+    ],
+    technologies: ["Terraform", "HCL", "AWS", "Azure", "GCP", "Kubernetes", "Infrastructure as Code", "Terraform State", "Terraform Modules"],
+    impactMetrics: {
+      deploymentTime: { before: "Manual console clicks per environment", after: "terraform apply, minutes per environment", improvement: "Repeatable, auditable infrastructure changes" },
+      scalability: { capacity: "Multi-cloud (AWS/Azure/GCP/Kubernetes)", improvement: "Manual, per-console setup -> single declarative workflow" }
+    },
+    architecture: {
+      components: ["Provider (AWS/Azure/GCP/Kubernetes plugin)", "Resource (VM, network, database, load balancer)", "Module (reusable config)", "State File (terraform.tfstate)", "terraform init / plan / apply workflow"],
+      pattern: "Declarative Infrastructure as Code"
+    },
+    comparisonTable: {
+      headers: ["Aspect", "Manual Setup", "Terraform"],
+      rows: [
+        ["How it's done", "Click in UI", "Write code"],
+        ["Repeatability", "Hard to repeat", "Easily repeatable"],
+        ["Error rate", "Error-prone", "Predictable"],
+        ["Change history", "No history", "Version-controlled in Git"]
+      ]
+    }
+  },
+  {
+    id: 23,
+    title: "package.json: Everything You Need to Know",
+    subtitle: "Field Reference, Version Symbols, Docker/K8s Optimization, and Monorepo Structure",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "package.json looks like a simple config file, but a poorly written one causes real production problems: unpinned `\"latest\"` versions make builds unpredictable, `npm install` (instead of `npm ci`) in a Dockerfile produces non-deterministic images, bundling devDependencies into a runtime image bloats it and widens the attack surface, and a build step hidden inside the `start` script slows every pod's startup — directly hurting Kubernetes autoscaling (HPA) behavior. Most of these mistakes are invisible until the app is actually deployed at scale.",
+    solution: [
+      "Dependency Fields — pick the right bucket per package: dependencies ship to production, devDependencies are build/test-only tools, peerDependencies are the consumer's responsibility (for libraries), optionalDependencies can fail to install without breaking the app.\n```json\n{\n  \"dependencies\": { \"express\": \"^4.18.2\" },\n  \"devDependencies\": { \"typescript\": \"^5.0.0\", \"jest\": \"^29.0.0\" },\n  \"peerDependencies\": { \"react\": \">=17.0.0\" },\n  \"optionalDependencies\": { \"fsevents\": \"^2.3.0\" }\n}\n```\nQuery: # devDependencies are excluded from production images via `npm ci --only=production`",
+      "Version Symbols — understand exactly what range each prefix allows before trusting a lockfile-less install; pin exact versions for critical production dependencies.\n```text\n^4.18.2  -> 4.x.x   (minor + patch updates allowed)\n~4.18.2  -> 4.18.x  (patch updates only)\n4.18.2   -> 4.18.2  (exact, most stable for production)\nlatest   -> never use (unpredictable)\n```\nQuery: # \"latest\" in a dependency range is the single most common cause of \"it worked yesterday, broke today\" builds",
+      "Multi-Stage Dockerfile Pattern — build in one stage with full devDependencies, then copy only the compiled output and production dependencies into a clean runtime stage.\n```dockerfile\n# Stage 1: Build\nFROM node:18 AS builder\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\n# Stage 2: Runtime (clean + small)\nFROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production --ignore-scripts\nCOPY --from=builder /app/dist ./dist\n\nCMD [\"node\", \"dist/main.js\"]\n```\nQuery: # --ignore-scripts blocks postinstall supply-chain attacks from running during CI/CD installs",
+      "The 6 Docker/Kubernetes Optimization Rules — a bad package.json becomes a slow build, a bloated image, and unstable pod scaling; these six rules are the concrete fix.\n```text\n1. Use npm ci        -> deterministic install (not npm install)\n2. --only=production -> exclude devDependencies from final image\n3. Multi-stage build -> build in one stage, run in another\n4. Pin versions      -> \"4.18.2\" not \"^4.18.2\" for critical deps\n5. Fewer deps        -> lighter image, faster pull, smaller attack surface\n6. Lazy init         -> fast pod startup = good HPA behavior in K8s\n```\nQuery: # a minimal `start` script (no build step inside it) is what makes rule #6 possible",
+      "Monorepo Structure & Dependency Direction — apps/ holds deployable services, libs/ holds shared code; the one hard rule is that dependency direction only flows one way.\n```text\napps  -> libs   allowed\nlibs  -> apps   never\napps  -> apps   never (use HTTP or message queue)\n```\n```json\n{\n  \"private\": true,\n  \"workspaces\": [\"apps/*\", \"libs/*\"]\n}\n```\nQuery: # importing one service directly from another (apps -> apps) breaks microservice boundaries — communicate over HTTP/queue instead",
+      "CI/CD Commands — the exact install/audit commands that make CI reproducible and secure, as opposed to `npm install` (which can silently update the lockfile).\n```bash\n# Install (CI environment — fast, deterministic)\nnpm ci\n\n# Install production only (Docker runtime stage)\nnpm ci --only=production\n\n# Install and block postinstall scripts (security)\nnpm ci --only=production --ignore-scripts\n\n# Security audit\nnpm audit --production\n```\nQuery: # npm ci fails fast if package.json and package-lock.json are out of sync — exactly the safety net CI needs"
+    ],
+    impact: [
+      "npm ci vs. npm install is not a style preference — npm ci installs exactly what's in package-lock.json and fails if it's out of sync, while npm install can silently update the lockfile, making 'works on my machine' drift a real risk in CI",
+      "Multi-stage builds plus --only=production directly shrink the image and the attack surface — devDependencies (compilers, test runners, linters) never need to exist in a running production container",
+      "A build step hidden inside the `start` script is a common but costly mistake: it slows every single pod startup, which directly hurts Kubernetes HPA (Horizontal Pod Autoscaler) responsiveness during a traffic spike — builds belong at image-build time, not container-start time",
+      "package-lock.json existing but not committed to Git is one of the most common and most damaging mistakes — without it, `npm ci` has nothing deterministic to install from, and production reproducibility is lost silently",
+      "The apps -> libs (never libs -> apps, never apps -> apps) dependency direction rule is what keeps a monorepo from silently turning into a distributed monolith — violating it (direct imports between services) breaks the microservice boundary the folder structure was meant to enforce",
+      "NODE_ENV is a convention, not something Node.js itself enforces — Express/AdonisJS/Next.js/React each change real behavior (stack traces, minification, caching, HMR) based on its value, but NestJS notably does NOT auto-configure based on it and requires manual `NODE_ENV` checks in exception filters and loggers",
+      "Build tools (Webpack, Vite) bake NODE_ENV into the bundle at build time — setting it differently at runtime afterward has zero effect on already-built client code, a common source of confusion when debugging a 'production build still shows dev warnings' issue",
+      "Use case — production Node.js API in Kubernetes: `engines`, pinned dependency versions, a multi-stage Dockerfile using `npm ci --only=production`, and a minimal `start` script together are what make a rolling deployment fast and predictable instead of slow and flaky",
+      "Use case — monorepo with multiple microservices: workspaces + a strict apps/libs/infra folder layout + the one-way dependency rule keeps shared code (auth, database clients, utils) reusable without services quietly coupling to each other's internals"
+    ],
+    technologies: ["Node.js", "npm", "package.json", "package-lock.json", "Docker", "Kubernetes", "Monorepo", "Workspaces", "NODE_ENV", "Semantic Versioning"],
+    impactMetrics: {
+      deploymentTime: { before: "npm install, single-stage image, build-in-start", after: "npm ci, multi-stage image, prebuilt artifact", improvement: "Deterministic installs, smaller images, faster pod startup" },
+      scalability: { capacity: "Kubernetes HPA-driven scaling", improvement: "Slow pod startup -> fast, predictable rolling deploys" }
+    },
+    architecture: {
+      components: ["package.json (dependencies/scripts/engines)", "package-lock.json", "Multi-Stage Dockerfile", "Workspaces (apps/ + libs/ + infra/)", "CI/CD (npm ci + npm audit)"],
+      pattern: "Optimized Node.js Package Manifest for Docker/Kubernetes"
+    },
+    comparisonTable: {
+      headers: ["Mistake", "Consequence"],
+      rows: [
+        ["Not committing package-lock.json", "Breaks production reproducibility"],
+        ["Using \"latest\" version", "Unpredictable / unstable builds"],
+        ["Mixing dev + prod dependencies", "Larger image, security risk"],
+        ["npm install in Dockerfile", "Non-deterministic builds"],
+        ["Build step inside start script", "Slow pod startup in K8s"],
+        ["Importing across services directly", "Breaks microservice boundaries"],
+        ["Skipping npm audit in CI", "Undetected vulnerable dependencies"]
+      ]
+    }
   }
 ];
 
@@ -490,10 +1178,27 @@ const EnhancedCaseStudies: React.FC = () => {
 
   const categories = ['All', 'DevOps', 'Cloud Infrastructure', 'Full-Stack', 'Database'];
   const [selectedCategory, setSelectedCategory] = useState('All');
-  
-  const filteredStudies = selectedCategory === 'All' 
-    ? caseStudies 
-    : caseStudies.filter(study => study.category === selectedCategory);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredStudies = useMemo(() => {
+    let filtered = caseStudies;
+
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter(study => study.category === selectedCategory);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(study =>
+        study.title.toLowerCase().includes(term) ||
+        study.subtitle.toLowerCase().includes(term) ||
+        study.challenge.toLowerCase().includes(term) ||
+        study.technologies.some(tech => tech.toLowerCase().includes(term))
+      );
+    }
+
+    return filtered;
+  }, [selectedCategory, searchTerm]);
 
   const getIconForMetric = (metric: string) => {
     switch (metric) {
@@ -561,6 +1266,17 @@ const EnhancedCaseStudies: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="mb-8"
         >
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search case studies..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-neutral-200 placeholder-gray-400 focus:outline-none focus:border-green-400"
+            />
+          </div>
+
           <div className="flex flex-wrap gap-2 mb-6">
             {categories.map((category) => (
               <motion.button
@@ -616,6 +1332,14 @@ const EnhancedCaseStudies: React.FC = () => {
               </motion.div>
             ))}
           </div>
+
+          {filteredStudies.length === 0 && (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">No case studies found</p>
+              <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+            </div>
+          )}
         </motion.div>
 
         {/* Selected Study Details */}
@@ -779,7 +1503,7 @@ const EnhancedCaseStudies: React.FC = () => {
                                       i++; // skip closing fence
                                       elements.push(
                                         <pre key={elements.length} className="bg-gray-900 border border-gray-700 rounded px-3 py-2 overflow-x-auto">
-                                          <code className="text-sm text-green-400 font-mono whitespace-pre">{blockLines.join('\n')}</code>
+                                          <code className="text-sm text-green-400 font-mono whitespace-pre">{highlightCode(blockLines.join('\n'))}</code>
                                         </pre>
                                       );
                                       continue;
@@ -793,7 +1517,7 @@ const EnhancedCaseStudies: React.FC = () => {
                                           className="block bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-green-400 font-mono overflow-x-auto"
                                         >
                                           {isQuery && <span className="text-gray-500">Query: </span>}
-                                          {isQuery ? line.replace(/^Query:\s*/, '') : line}
+                                          {highlightCode(isQuery ? line.replace(/^Query:\s*/, '') : line)}
                                         </code>
                                       );
                                     } else {

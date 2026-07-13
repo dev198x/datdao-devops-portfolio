@@ -16,6 +16,30 @@ export const SKILLS = [
     category: "cloud",
     level: 30,
   },
+  {
+    name: "AWS Compute (EC2, ECS, Lambda)",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
+    category: "cloud",
+    level: 85,
+  },
+  {
+    name: "AWS Storage & Database (S3, CloudFront, RDS)",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
+    category: "cloud",
+    level: 85,
+  },
+  {
+    name: "AWS Networking (VPC, Route53)",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
+    category: "cloud",
+    level: 80,
+  },
+  {
+    name: "AWS Messaging (SQS, SES)",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
+    category: "cloud",
+    level: 75,
+  },
 
   // Containers
   {
