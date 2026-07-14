@@ -1167,6 +1167,72 @@ const caseStudies: CaseStudy[] = [
         ["Skipping npm audit in CI", "Undetected vulnerable dependencies"]
       ]
     }
+  },
+  {
+    id: 24,
+    title: "Common Features of Nginx",
+    subtitle: "A Practical Reverse-Proxy Reference: Rate Limiting, CORS, TLS, API Gateway, and Load Balancing",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A production reverse proxy in front of an API needs to handle more than just forwarding requests: it must survive traffic spikes and brute-force attempts, terminate TLS securely, pass the real client IP through when sitting behind a load balancer/CDN, allow cross-origin requests safely instead of with a blanket wildcard, and stream large uploads without buffering them entirely in memory. Beyond a single-service proxy, the same nginx install often also needs to act as an API gateway — routing different URL paths to separate backend microservices and centralizing auth — and as a load balancer, spreading traffic across multiple identical instances of a service while automatically routing around one that fails. Getting any one of these wrong either breaks functionality or opens a security gap.",
+    solution: [
+      "Rate Limiting (per-IP + stricter per-endpoint) — define a shared-memory zone once, then apply it per location; a separate stricter zone protects auth endpoints from brute-force attempts.\nlimit_req_zone $binary_remote_addr zone=req_limit_per_ip:10m rate=10r/s;\nlimit_req_zone $binary_remote_addr zone=login_limit:10m rate=1r/s;\nQuery: location /auth/login { limit_req zone=login_limit burst=3 nodelay; limit_req_status 429; }",
+      "Per-IP Connection Limiting — caps concurrent connections from a single client, independent of request rate, guarding against connection-exhaustion abuse.\nlimit_conn_zone $binary_remote_addr zone=conn_limit_per_ip:10m;\nQuery: limit_conn conn_limit_per_ip 20;  # applied inside the server block",
+      "CORS via a Centralized map — keeps allowed origins in one place instead of repeating/hardcoding them in every location, and avoids the unsafe combination of `Access-Control-Allow-Origin: *` with credentialed requests.\nmap $http_origin $cors_origin {\n    default \"\";\n    \"https://app.example.com\"   $http_origin;\n    \"https://admin.example.com\" $http_origin;\n}\nQuery: if ($request_method = OPTIONS) { add_header Access-Control-Allow-Origin $cors_origin always; return 204; }",
+      "Trusted Proxy / Real IP — required whenever nginx sits behind a load balancer or CDN (ALB, Cloudflare), so `$remote_addr` reflects the actual client instead of the LB's IP; `real_ip_recursive` walks the X-Forwarded-For chain to find it.\nset_real_ip_from 10.0.0.0/8;\nreal_ip_header X-Forwarded-For;\nreal_ip_recursive on;\nQuery: proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  # forwards the resolved chain to the backend too",
+      "TLS Hardening — modern protocols only, session reuse to cut handshake cost, OCSP stapling for faster cert validation, and HSTS to force HTTPS for the domain going forward.\nssl_protocols TLSv1.2 TLSv1.3;\nssl_session_cache shared:SSL:10m;\nssl_stapling on;\nQuery: add_header Strict-Transport-Security \"max-age=63072000; includeSubDomains; preload\" always;",
+      "Client Body / Upload Size Limits (global + per-location override) — a conservative global cap protects the server by default, overridden higher only where large uploads are expected; `proxy_request_buffering off` streams the body to the upstream instead of buffering the whole file in nginx first.\nclient_max_body_size 20m;  # global default\nQuery: location /upload { client_max_body_size 100m; proxy_request_buffering off; }",
+      "Upstream Load Balancing with Keepalive — `least_conn` balances based on active connections (better than round-robin for uneven request times), and `keepalive` avoids a fresh TCP handshake to the backend on every request.\nupstream backend_api {\n    least_conn;\n    server 10.0.1.10:3000 max_fails=3 fail_timeout=30s;\n    server 10.0.1.11:3000 max_fails=3 fail_timeout=30s;\n    keepalive 64;\n}\nQuery: proxy_pass http://backend_api; proxy_http_version 1.1; proxy_set_header Connection \"\";",
+      "Security Basics — hide the nginx version from headers/error pages, deny access to dotfiles (.env, .git), and skip logging/rate-limiting on cheap health checks.\nserver_tokens off;\nQuery: location ~ /\\. { deny all; }  location /healthz { access_log off; proxy_pass http://backend_api; }",
+      "Full Reference Config — all of the above combined into one working reverse-proxy setup (nginx.conf globals, upstream block, and the server block tying together rate limiting, CORS, TLS, and trusted-proxy handling). Kept as a standalone, downloadable file rather than inline here so it stays easy to read and copy in full.\nFILE:/examples/nginx-reverse-proxy.conf",
+      "Validate Before Reloading — always check syntax before applying a config change to a live server; a bad reload can take the whole proxy down.\nQuery: sudo nginx -t && sudo systemctl reload nginx",
+      "Debug Tip — Export the Full Effective Config — nginx.conf plus every included conf.d/*.conf file only shows what's on disk, not what's actually active; `nginx -T` merges all includes and prints the config nginx is really running with, which is what you actually want when debugging unexpected behavior on a live server.\nQuery: sudo nginx -T > nginx_all_config.conf",
+      "Nginx as an API Gateway — route by URL path prefix to different backend microservices instead of one monolithic upstream, strip the prefix before forwarding, and reject unauthenticated requests before they ever reach a service.\n```nginx\n# /etc/nginx/conf.d/api-gateway.conf\nserver {\n    listen 443 ssl http2;\n    server_name gateway.example.com;\n\n    ssl_certificate     /etc/letsencrypt/live/gateway.example.com/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/gateway.example.com/privkey.pem;\n\n    # ---- Auth service ----\n    location /api/auth/ {\n        rewrite ^/api/auth/(.*)$ /$1 break;\n        proxy_pass http://auth_service;\n        proxy_set_header Host $host;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n\n    # ---- Orders service (requires a validated JWT) ----\n    location /api/orders/ {\n        auth_request /_validate_jwt;\n        auth_request_set $auth_user_id $upstream_http_x_user_id;\n\n        rewrite ^/api/orders/(.*)$ /$1 break;\n        proxy_pass http://orders_service;\n        proxy_set_header X-User-Id $auth_user_id;\n        proxy_set_header Host $host;\n    }\n\n    # ---- Inventory service ----\n    location /api/inventory/ {\n        rewrite ^/api/inventory/(.*)$ /$1 break;\n        proxy_pass http://inventory_service;\n        proxy_set_header Host $host;\n    }\n\n    # Internal-only endpoint used by auth_request above; never called directly by clients\n    location = /_validate_jwt {\n        internal;\n        proxy_pass http://auth_service/validate;\n        proxy_pass_request_body off;\n        proxy_set_header Content-Length \"\";\n        proxy_set_header X-Original-URI $request_uri;\n    }\n}\n```\nQuery: curl https://gateway.example.com/api/orders/42  # gateway validates the JWT via auth_request, then routes to orders_service with the prefix stripped",
+      "Nginx as a Load Balancer — distribute traffic across multiple identical backend instances using an upstream block; choose the algorithm to match the workload, and use passive health checks (max_fails/fail_timeout) so a dead node is automatically taken out of rotation.\n```nginx\n# /etc/nginx/conf.d/load-balancer.conf\nupstream app_cluster {\n    # ---- Choose ONE algorithm ----\n    # (default) round-robin — even distribution, good for uniform request cost\n    # least_conn;            — sends to the server with the fewest active connections\n    # ip_hash;                — same client always hits the same server (session stickiness)\n\n    server 10.0.2.10:8080 weight=3 max_fails=3 fail_timeout=30s;  # bigger instance, gets 3x traffic\n    server 10.0.2.11:8080 weight=1 max_fails=3 fail_timeout=30s;\n    server 10.0.2.12:8080 weight=1 max_fails=3 fail_timeout=30s;\n    server 10.0.2.13:8080 backup;  # only used when all primary servers are down\n\n    keepalive 32;\n}\n\nserver {\n    listen 80;\n    server_name lb.example.com;\n\n    location / {\n        proxy_pass http://app_cluster;\n        proxy_http_version 1.1;\n        proxy_set_header Connection \"\";\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\n        # Retry the next server automatically if one is down/times out\n        proxy_next_upstream error timeout http_502 http_503;\n        proxy_next_upstream_tries 2;\n    }\n}\n```\nQuery: watch 'curl -s -o /dev/null -w \"%{http_code} from upstream\\n\" http://lb.example.com/'  # confirm requests keep succeeding while manually stopping one backend instance"
+    ],
+    impact: [
+      "burst + nodelay lets short legitimate traffic spikes through immediately instead of queuing or rejecting them, while the base rate still caps sustained abuse — nodelay processes the burst allowance right away rather than delaying/spacing requests out",
+      "A stricter, separate limit_req_zone for /auth/login (1r/s vs. 10r/s globally) turns a generic rate limiter into real brute-force protection on the one endpoint attackers actually target",
+      "Centralizing CORS origins in a map block means adding a new trusted frontend origin is a one-line change instead of hunting through every location block that sets Access-Control-Allow-Origin",
+      "Skipping set_real_ip_from behind a load balancer silently breaks every IP-based control downstream — rate limiting, connection limiting, and access logs all key off the LB's IP instead of the real client's, making abuse invisible and per-IP limits meaningless",
+      "TLSv1.2/1.3-only plus HIGH:!aNULL:!MD5 ciphers closes off downgrade attacks to older, broken TLS/cipher combinations that legacy configs often still allow by default",
+      "proxy_request_buffering off on the /upload location is what prevents a large file upload from being fully buffered in nginx's memory/disk before it even reaches the backend — critical once client_max_body_size is raised for uploads",
+      "Use case — API behind an ALB or Cloudflare: set_real_ip_from + real_ip_header X-Forwarded-For is the single fix for 'why does every request in my access log show the load balancer's IP instead of the client's'",
+      "Use case — public API with a login endpoint: two limit_req_zones (general + login-specific) is the standard pattern — generous enough for normal API usage, strict enough to blunt credential-stuffing attempts",
+      "Use case — SPA calling an API on a different subdomain: the CORS map + explicit OPTIONS preflight handling replaces a wildcard `*` origin, which is required anyway once Access-Control-Allow-Credentials is true",
+      "Use case — API gateway in front of microservices: path-prefix routing (/api/auth/, /api/orders/, /api/inventory/) plus `auth_request` lets nginx centralize JWT/session validation once, instead of every backend service re-implementing its own auth check",
+      "`internal;` on the /_validate_jwt location is what prevents clients from calling the auth-check endpoint directly — it's only reachable via nginx's own auth_request subrequest",
+      "Use case — load balancer across identical app instances: weight= lets an unevenly-sized instance (e.g. a bigger EC2 type) take proportionally more traffic, while max_fails/fail_timeout automatically routes around an instance that starts failing health checks",
+      "proxy_next_upstream lets a single failed/timed-out request transparently retry on the next healthy backend, turning one bad instance into a brief blip instead of a user-facing error",
+      "backup marks a server as standby-only — it only receives traffic once every primary server in the upstream is marked down, useful for a disaster-recovery instance kept warm but idle"
+    ],
+    technologies: ["Nginx", "Reverse Proxy", "API Gateway", "Load Balancer", "Rate Limiting", "CORS", "TLS/SSL", "Real IP", "auth_request", "OCSP Stapling", "HSTS"],
+    impactMetrics: {
+      performance: { improvement: "Unbounded traffic spikes/brute-force -> rate-limited, connection-capped, keepalive-backed proxying" },
+      availability: { uptime: "Automatic failover via passive health checks", improvement: "Single point of failure -> self-healing upstream pool" }
+    },
+    architecture: {
+      components: ["limit_req_zone (rate limiting)", "limit_conn_zone (connection limiting)", "CORS map", "real_ip module (trusted proxy)", "API Gateway (path routing + auth_request)", "Upstream Load Balancer (weighted + health checks)", "TLS termination (OCSP + HSTS)"],
+      pattern: "Hardened Reverse-Proxy, API Gateway, and Load Balancer Configuration"
+    },
+    comparisonTable: {
+      headers: ["Feature", "Directive", "Purpose"],
+      rows: [
+        ["Rate limiting", "limit_req_zone / limit_req", "Cap requests per IP, allow controlled bursts"],
+        ["Connection limiting", "limit_conn_zone / limit_conn", "Cap concurrent connections per IP"],
+        ["CORS", "map + add_header", "Allow specific cross-origin frontends safely"],
+        ["Real client IP", "set_real_ip_from / real_ip_header", "Recover true client IP behind an LB/CDN"],
+        ["TLS hardening", "ssl_protocols / ssl_stapling / HSTS", "Modern-only TLS, faster + safer HTTPS"],
+        ["Upload streaming", "proxy_request_buffering off", "Avoid buffering large uploads in nginx"],
+        ["API gateway routing", "location prefix + rewrite + auth_request", "Route to microservices, centralize auth"],
+        ["Load balancing", "upstream + weight/least_conn/ip_hash", "Distribute traffic, auto-remove failed nodes"]
+      ]
+    }
   }
 ];
 
@@ -1506,6 +1572,23 @@ const EnhancedCaseStudies: React.FC = () => {
                                           <code className="text-sm text-green-400 font-mono whitespace-pre">{highlightCode(blockLines.join('\n'))}</code>
                                         </pre>
                                       );
+                                      continue;
+                                    }
+                                    if (line.startsWith('FILE:')) {
+                                      const filePath = line.slice('FILE:'.length);
+                                      elements.push(
+                                        <a
+                                          key={elements.length}
+                                          href={filePath}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-green-400 font-mono hover:border-green-500 hover:text-green-300 transition-colors"
+                                        >
+                                          <FileText className="w-4 h-4" />
+                                          View full config: {filePath}
+                                        </a>
+                                      );
+                                      i++;
                                       continue;
                                     }
                                     const isQuery = line.startsWith('Query:');
