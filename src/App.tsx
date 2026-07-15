@@ -7,6 +7,7 @@ import { Skills } from './pages/Skills';
 import { Projects } from './pages/Projects';
 import Blog from './pages/Blog';
 import CaseStudies from './pages/CaseStudies';
+import Sandbox from './pages/Sandbox';
 import { Contact } from './pages/Contact';
 import './App.css';
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="/projects" element={<Projects />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/case-studies" element={<CaseStudies />} />
+            <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>

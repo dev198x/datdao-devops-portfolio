@@ -1233,6 +1233,161 @@ const caseStudies: CaseStudy[] = [
         ["Load balancing", "upstream + weight/least_conn/ip_hash", "Distribute traffic, auto-remove failed nodes"]
       ]
     }
+  },
+  {
+    id: 25,
+    title: "\"Distroless\" Container Images",
+    subtitle: "Stripping the OS Out of the Final Image: What Google's distroless Base Images Actually Remove, and the Trade-offs",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Even an Alpine-based final image still ships a shell, a package manager, and dozens of Linux userland utilities the running application never actually calls — every one of them is extra attack surface (a shell an attacker can drop into after an RCE, a package manager that can fetch and run more code) and extra CVEs a scanner has to report and a team has to triage. Reference: https://github.com/GoogleContainerTools/distroless",
+    solution: [
+      "What \"Distroless\" Means — a base image that contains only the application and its runtime dependencies (libc, language runtime, CA certificates, timezone data) and explicitly nothing else: no shell (/bin/sh), no package manager (apt/apk), no coreutils (ls, cat, ps).\n```dockerfile\nFROM gcr.io/distroless/base-debian12\n```\nQuery: docker run gcr.io/distroless/base-debian12 sh  # -> \"OCI runtime exec failed: exec: \\\"sh\\\": executable file not found in $PATH\"",
+      "Language-Specific Variants — distroless ships a base image per runtime, each including only that language's needed shared libraries; picking the matching variant avoids either missing a required lib or bundling an unused one.\n```dockerfile\nFROM gcr.io/distroless/java17-debian12\nFROM gcr.io/distroless/python3-debian12\nFROM gcr.io/distroless/nodejs20-debian12\nFROM gcr.io/distroless/cc-debian12   # C/C++ or Rust binaries needing libc/libssl but no language runtime\nFROM gcr.io/distroless/static-debian12  # for fully static binaries (Go with CGO_ENABLED=0) — smallest, no libc at all\n```\nQuery: docker images | grep distroless  # static-debian12 ~2MB, base-debian12 ~20MB vs. a full OS base at 100MB+",
+      "Multi-Stage Build Pairing — distroless has no compiler/toolchain, so it is always the final stage only; a normal full-featured image builds/compiles first, then only the compiled artifact is copied across.\n```dockerfile\nFROM golang:1.22 AS builder\nWORKDIR /app\nCOPY . .\nRUN CGO_ENABLED=0 go build -o server .\n\nFROM gcr.io/distroless/static-debian12\nCOPY --from=builder /app/server /server\nENTRYPOINT [\"/server\"]\n```\nQuery: docker build -t myapp:distroless .  # final image = binary + CA certs, nothing else",
+      "Full Example — Node.js 24 Distroless Dockerfile — build stage uses a full node:24 image to install dependencies (including native modules) and run the app's build step; the runner stage copies only production node_modules + compiled output onto distroless/nodejs24, dropping npm, the shell, and the entire build toolchain from the shipped image.\n```dockerfile\n# ---- Build stage ----\nFROM node:24-bookworm-slim AS builder\nWORKDIR /app\n\nCOPY package*.json ./\nRUN npm ci\n\nCOPY . .\nRUN npm run build\n\n# Drop devDependencies now, in the build stage, so only prod deps get copied below\nRUN npm prune --omit=dev\n\n# ---- Runtime stage ----\nFROM gcr.io/distroless/nodejs24-debian12:nonroot AS runner\nWORKDIR /app\n\nCOPY --from=builder --chown=nonroot:nonroot /app/dist ./dist\nCOPY --from=builder --chown=nonroot:nonroot /app/node_modules ./node_modules\nCOPY --from=builder --chown=nonroot:nonroot /app/package.json ./package.json\n\nENV NODE_ENV=production\nEXPOSE 3000\n\n# distroless/nodejs images set the entrypoint to `node` already —\n# only the script to run needs to be supplied here\nCMD [\"dist/server.js\"]\n```\nQuery: docker build -t myapp:node24-distroless . && docker run -p 3000:3000 myapp:node24-distroless  # runs as UID 65532 (nonroot), no shell, no npm inside the final image",
+      "The `:debug` Tag — every distroless image ships a `-debug` variant that adds BusyBox (a shell + basic utilities) purely for local troubleshooting; production still runs the shell-less tag, but developers aren't left blind when something goes wrong.\n```dockerfile\nFROM gcr.io/distroless/base-debian12:debug\n```\nQuery: docker run -it gcr.io/distroless/base-debian12:debug sh  # works here, but never ship this tag to production",
+      "Debugging Without a Shell in Production — since `docker exec ... sh` doesn't work against a real distroless container, use an ephemeral debug container attached to the same process/network namespace instead.\n```text\nkubectl debug -it my-pod --image=busybox --target=my-container\n```\nQuery: # attaches a temporary BusyBox container sharing the pod's namespaces, without modifying or restarting the distroless container itself",
+      "Nonroot Variant — most distroless images ship a `nonroot` tag that runs as UID 65532 by default, so the Dockerfile doesn't need its own `USER` directive to avoid running as root.\n```dockerfile\nFROM gcr.io/distroless/static-debian12:nonroot\n```\nQuery: docker run gcr.io/distroless/static-debian12:nonroot id  # -> uid=65532(nonroot) gid=65532(nonroot)",
+      "Vulnerability Scanning Still Applies — distroless removes attack surface, it doesn't remove the need to scan; libc, OpenSSL, and the language runtime itself can still carry CVEs, so scanning stays part of the CI pipeline regardless of base image choice.\nQuery: trivy image myapp:distroless  # scans the remaining libs/runtime, typically reports far fewer findings than an Alpine/Debian-based equivalent"
+    ],
+    impact: [
+      "Removing the shell and package manager closes off the single most common post-exploitation step after an RCE — an attacker who gets code execution inside the container has no `sh` to pop, no `apt`/`apk` to pull in more tooling, and no coreutils to explore the filesystem with",
+      "Smaller image = smaller CVE count almost by definition — a scanner has far fewer packages/binaries to check against a CVE database, which in practice means far fewer findings a security team has to triage or accept-risk on every release",
+      "Trade-off to accept: the same shell-less property that improves security removes the standard `docker exec -it container sh` debugging workflow — teams must adopt `:debug` tags locally and ephemeral debug containers (`kubectl debug`) in cluster environments instead",
+      "Distroless vs. Alpine is not just 'smaller vs. bigger' — Alpine still has a shell and apk by design (for base-image flexibility); distroless removes them by design (for a locked-down final artifact), so the choice is really 'do you need shell access in prod' more than raw megabytes",
+      "The `nonroot` tag variant removes an entire class of Dockerfile mistakes (forgetting `USER` entirely, or creating the user incorrectly) by making non-root the default rather than something every team has to remember to configure",
+      "Use case — Go/Rust microservice with no runtime dependencies beyond libc: `static-debian12` (or fully static + `scratch`) gives the smallest possible attack surface and image size in the entire lineup",
+      "Use case — Java/Node/Python service that still needs its language runtime: the matching `javaXX`/`nodejsXX`/`python3` distroless variant keeps the image minimal without hand-rolling a custom minimal base",
+      "Use case — regulated environment requiring provable minimal attack surface (PCI-DSS, SOC 2, FedRAMP): distroless's explicit lack of a shell/package manager is often easier to justify to an auditor than 'we removed most things from Alpine ourselves'",
+      "Use case — debugging a shell-less pod in production without weakening the image itself: `kubectl debug -it <pod> --image=busybox --target=<container>` attaches tooling alongside the distroless container instead of baking a shell into the shipped image"
+    ],
+    technologies: ["Distroless", "Docker", "Multi-Stage Build", "Google Container Tools", "Kubernetes", "Trivy", "Non-Root User", "Attack Surface Reduction"],
+    impactMetrics: {
+      deploymentTime: { before: "Alpine/Debian final image (~50-120MB)", after: "distroless final image (~2-20MB)", improvement: "Smaller image, fewer CVEs to triage" },
+      performance: { improvement: "Removed shell + package manager -> closed off standard post-RCE attacker toolchain" }
+    },
+    architecture: {
+      components: ["Builder Stage (full toolchain)", "Distroless Final Stage", "static/base/cc/language variants", ":debug tag (BusyBox, dev-only)", "nonroot tag (UID 65532)", "kubectl debug (ephemeral debug container)"],
+      pattern: "Minimal Runtime-Only Final Image"
+    },
+    comparisonTable: {
+      headers: ["Aspect", "Alpine-based Image", "Distroless Image"],
+      rows: [
+        ["Shell (/bin/sh)", "Present", "Absent (present only in :debug tag)"],
+        ["Package manager", "apk present", "Absent"],
+        ["Typical size", "~40-120MB", "~2-20MB depending on variant"],
+        ["docker exec ... sh debugging", "Works directly", "Requires :debug tag or ephemeral debug container"],
+        ["Attack surface after RCE", "Shell + apk + coreutils available", "No shell, no package manager, no coreutils"],
+        ["Default user", "root unless explicitly changed", "root by default, nonroot with the :nonroot tag"],
+        ["Best for", "General-purpose images needing occasional shell access", "Production final-stage images in security-sensitive deployments"]
+      ]
+    }
+  },
+  {
+    id: 26,
+    title: "Node.js secure-kit — Easy to Use",
+    subtitle: "A Lightweight Crypto Toolkit on Top of Node's Native `crypto` Module",
+    category: "Security",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Node's built-in `crypto` module can do everything (hashing, HMAC, AES-GCM, RSA, password KDFs, secure randomness) but the API is low-level and easy to misuse: comparing HMAC signatures with `===` instead of a timing-safe compare, hashing passwords with a fast general-purpose hash instead of a memory-hard KDF, forgetting to propagate the GCM auth tag alongside ciphertext, or reusing an IV. `@datdm198x/secure-kit` wraps the common cases behind a small, hard-to-misuse API so day-to-day crypto needs don't require re-deriving the correct native `crypto` incantation every time.\nReference: https://www.npmjs.com/package/@datdm198x/secure-kit",
+    solution: [
+      "Install — a single dependency, no native bindings to compile.\n```bash\nnpm install @datdm198x/secure-kit\n```",
+      "Hash & HMAC — one-way hashing for arbitrary data, plus HMAC for verifying a payload came from a party that holds a shared secret (e.g. a webhook signature). Always compare signatures with `timingSafeEqual`, never `===`.\n```javascript\nimport { hash, hmac } from '@datdm198x/secure-kit';\nimport { timingSafeEqual } from 'crypto';\n\nconst hashed = hash('my data'); // hex string\n\nconst expectedSignature = hmac(payload, 'mySecretKey');\nconst isVerified = timingSafeEqual(\n  Buffer.from(receivedSignature, 'hex'),\n  Buffer.from(expectedSignature, 'hex')\n);\n```",
+      "Password Hashing (scrypt) — hashes and verifies passwords with scrypt, a memory-hard KDF, instead of a fast general-purpose hash that's cheap for an attacker to brute-force offline.\n```javascript\nimport { hashPassword, verifyPassword } from '@datdm198x/secure-kit';\n\nconst hashedPassword = hashPassword(password); // '$scrypt$n=16384...' — store this string as-is\nconst isMatch = verifyPassword(password, hashedPassword);\n```",
+      "Symmetric Encryption (AES-256-GCM) — authenticated encryption for data at rest; the returned JSON envelope bundles `iv`, `content`, and `authTag` together and must be stored/transmitted as one unit, never split or truncated.\n```javascript\nimport { generateAESKey, encrypt, decrypt } from '@datdm198x/secure-kit';\n\nconst key = generateAESKey(); // Buffer, 256-bit\nconst keyHex = key.toString('hex'); // store as hex in env/secrets manager\n\nconst keyBuffer = Buffer.from(keyHex, 'hex');\nconst encrypted = encrypt('my secret data', keyBuffer); // '{\"iv\":\"...\",\"content\":\"...\",\"authTag\":\"...\"}'\nconst decrypted = decrypt(encrypted, keyBuffer);\n```",
+      "Asymmetric Encryption (RSA-OAEP) — for securely sharing data between two parties that have never exchanged a symmetric key; the sender only ever needs the recipient's public key.\n```javascript\nimport { generateRSA, encryptAsymmetric, decryptAsymmetric } from '@datdm198x/secure-kit';\n\nconst { publicKey, privateKey } = generateRSA();\nconst encrypted = encryptAsymmetric(data, publicKey);\nconst decrypted = decryptAsymmetric(encrypted, privateKey);\n```",
+      "Digital Signatures (RSA + SHA-256) — proves data authenticity and integrity: the signer proves they hold the private key, and anyone with the public key can verify the data hasn't been tampered with.\n```javascript\nimport { generateRSA, sign, verify } from '@datdm198x/secure-kit';\n\nconst { publicKey, privateKey } = generateRSA();\nconst signature = sign(data, privateKey);\nconst isValid = verify(data, signature, publicKey);\n```",
+      "Secure Random Generation — CSPRNG-backed (`crypto.randomBytes` under the hood) helpers for tokens, IDs, and random integers, instead of `Math.random()` which is not cryptographically secure.\n```javascript\nimport { generateBytes, generateHex, generateUUID, generateInt } from '@datdm198x/secure-kit';\n\ngenerateBytes(16);      // Buffer\ngenerateHex(16);        // hex string\ngenerateUUID();         // UUID v4 string\ngenerateInt(1, 100);    // random int in [min, max] inclusive\n```",
+      "Full Example — Webhook Verification + Encrypted-at-Rest Storage — a webhook receiver that verifies the payload's HMAC signature in constant time before trusting it, then encrypts the verified payload with AES-256-GCM before writing it to storage; the AES key itself is pulled from an environment variable rather than hardcoded.\n```javascript\n// webhook.controller.js\nimport { hmac, encrypt } from '@datdm198x/secure-kit';\nimport { timingSafeEqual } from 'crypto';\n\nconst WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;\nconst AES_KEY = Buffer.from(process.env.PAYLOAD_AES_KEY_HEX, 'hex');\n\nexport async function handleWebhook(req, res) {\n  const rawBody = req.rawBody; // captured by a raw-body middleware upstream\n  const receivedSignature = req.headers['x-signature'];\n\n  const expectedSignature = hmac(rawBody, WEBHOOK_SECRET);\n  const isVerified = timingSafeEqual(\n    Buffer.from(receivedSignature, 'hex'),\n    Buffer.from(expectedSignature, 'hex')\n  );\n\n  if (!isVerified) {\n    return res.status(401).json({ error: 'invalid signature' });\n  }\n\n  const encryptedPayload = encrypt(rawBody.toString('utf8'), AES_KEY);\n  await db.webhookEvents.insertOne({\n    receivedAt: new Date(),\n    encryptedPayload, // '{\"iv\":\"...\",\"content\":\"...\",\"authTag\":\"...\"}' — stored as one unit\n  });\n\n  res.status(200).json({ ok: true });\n}\n```\n```javascript\n// reading it back later\nimport { decrypt } from '@datdm198x/secure-kit';\n\nconst AES_KEY = Buffer.from(process.env.PAYLOAD_AES_KEY_HEX, 'hex');\n\nasync function readWebhookEvent(id) {\n  const event = await db.webhookEvents.findOne({ _id: id });\n  const payload = JSON.parse(decrypt(event.encryptedPayload, AES_KEY));\n  return payload;\n}\n```"
+    ],
+    impact: [
+      "Wrapping `timingSafeEqual` behind the intended usage pattern (rather than leaving it to each call site to remember) removes the single most common HMAC-verification bug: comparing signatures with `===`, which leaks timing information an attacker can exploit to forge a valid signature byte-by-byte",
+      "Defaulting password hashing to scrypt (memory-hard) instead of a fast hash (MD5/SHA-256 alone) makes offline brute-force meaningfully more expensive per guess — the same property bcrypt/argon2 are chosen for in other stacks",
+      "Returning the AES-GCM output as a single JSON envelope (iv + content + authTag) prevents the common mistake of storing/transmitting ciphertext and auth tag separately and having them drift out of sync — GCM's authentication guarantee only holds if all three travel together",
+      "Keys are generated with Node's CSPRNG (`randomBytes`), which is safe to trust — but the package intentionally leaves key *storage* to the caller; keys must go in environment variables or a secrets manager (Vault, AWS KMS), never hardcoded in source, per the org's security & confidentiality guidance",
+      "Use case — webhook receiver (Stripe-style): compute `hmac(rawBody, webhookSecret)` and compare against the `X-Signature` header with `timingSafeEqual` before trusting the payload",
+      "Use case — user authentication: `hashPassword` at signup, `verifyPassword` at login — never store or compare plaintext passwords",
+      "Use case — encrypting PII/secrets at rest in a database column: `encrypt(value, keyBuffer)` before writing, `decrypt(envelope, keyBuffer)` after reading, with the AES key itself pulled from a secrets manager rather than checked into the repo",
+      "Use case — two services exchanging a one-off secret without a pre-shared key (e.g. onboarding a new partner integration): `generateRSA()` once, share the public key, and use `encryptAsymmetric`/`decryptAsymmetric` for that exchange",
+      "Use case — verifying a downloaded artifact or signed API response hasn't been tampered with: `sign` at publish time, `verify` at consume time, using RSA + SHA-256",
+      "Use case — generating session tokens, password-reset tokens, or API keys: `generateHex`/`generateUUID` instead of `Math.random().toString(36)`, which is neither unpredictable nor collision-resistant enough for security-sensitive tokens"
+    ],
+    technologies: ["Node.js", "TypeScript", "crypto", "AES-256-GCM", "RSA-OAEP", "scrypt", "HMAC", "Digital Signatures", "CSPRNG"],
+    impactMetrics: {
+      performance: { improvement: "Low-level, misuse-prone crypto module calls -> small, hard-to-misuse wrapper API" }
+    },
+    architecture: {
+      components: ["hash / hmac", "hashPassword / verifyPassword (scrypt)", "generateAESKey / encrypt / decrypt (AES-256-GCM)", "generateRSA / encryptAsymmetric / decryptAsymmetric", "sign / verify (RSA + SHA-256)", "generateBytes / generateHex / generateUUID / generateInt"],
+      pattern: "Native `crypto` Module Wrapper for Common Cryptographic Operations"
+    },
+    comparisonTable: {
+      headers: ["Operation", "Primitive Used", "Typical Use Case"],
+      rows: [
+        ["hash / hmac", "SHA-256 hashing / HMAC-SHA256", "Data fingerprinting, webhook signature verification"],
+        ["hashPassword / verifyPassword", "scrypt (memory-hard KDF)", "User authentication credential storage"],
+        ["encrypt / decrypt", "AES-256-GCM (authenticated encryption)", "Encrypting data at rest (DB fields, files)"],
+        ["encryptAsymmetric / decryptAsymmetric", "RSA-OAEP", "Sharing data between parties without a pre-shared key"],
+        ["sign / verify", "RSA + SHA-256", "Proving data authenticity/integrity"],
+        ["generateBytes / generateHex / generateUUID / generateInt", "CSPRNG (crypto.randomBytes)", "Tokens, session/reset IDs, unpredictable random values"]
+      ]
+    }
+  },
+  {
+    id: 27,
+    title: "Node.js safe-logger — Masking Sensitive Data Before Logs",
+    subtitle: "Recursively Redacting Passwords, Tokens, API Keys, and PII Before They Ever Reach a Log Line",
+    category: "Security",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Request/response payloads, config objects, and error contexts are logged constantly for debugging — but the same objects routinely carry passwords, API keys, tokens, credit card numbers, and PII (emails, phone numbers) nested arbitrarily deep inside them. Ad-hoc redaction (`delete obj.password`, a one-off regex, manually stripping fields per call site) is easy to forget on one endpoint, doesn't handle nested objects, and creates a new gap every time a new sensitive field is added anywhere in the codebase.\nReference: https://www.npmjs.com/package/@datdm198x/safe-logger",
+    solution: [
+      "Install — a single dependency, no config required to start masking common fields out of the box.\n```bash\nnpm install @datdm198x/safe-logger\n```",
+      "Basic Usage — `safeLog` recursively walks an object (including deeply nested structures) and automatically detects common sensitive fields by key name — passwords, tokens, API keys, credit cards, PII, AWS credentials (both camelCase and snake_case), SMTP credentials, and more — masking each in place.\n```javascript\nimport { safeLog } from '@datdm198x/safe-logger';\n\nconst sensitiveData = {\n  username: 'john_doe',\n  password: 'my-super-secret-password',\n  api_key: 'sk_live_1234567890abcdef',\n  email: 'john.doe@gmail.com'\n};\n\nconsole.log(safeLog(sensitiveData));\n/*\n{\n  username: 'john_doe',\n  password: '********',\n  api_key: '********cdef',\n  email: 'j******e@gmail.com'\n}\n*/\n```",
+      "Registering Custom Field Maskers — app-specific sensitive fields (internal codes, custom secret formats) aren't covered by default detection; register them once at startup instead of hand-redacting at every call site.\n```javascript\nimport { safeLog, registerFieldMasker } from '@datdm198x/safe-logger';\n\n// Default masker applied to a custom field name\nregisterFieldMasker('internalCode');\n\n// Custom masking function\nregisterFieldMasker('customSecret', (value) => `[MASKED:${value.substring(0, 3)}...]`);\n\nconst payload = { internalCode: 'ABC-123456789', customSecret: '123456789' };\nconsole.log(safeLog(payload));\n// { internalCode: '*********6789', customSecret: '[MASKED:123...]' }\n```",
+      "Full Example — Express Logging Middleware — registers an app-specific field once at startup, then wraps every incoming request's headers/body in `safeLog` before it's written to the access log, so Authorization headers, cookies, and any password/token fields in the body are masked before the log line ever exists.\n```javascript\n// logger-setup.js — run once at service startup\nimport { registerFieldMasker } from '@datdm198x/safe-logger';\nimport winston from 'winston';\n\nregisterFieldMasker('internalAccountId');\n\nexport const logger = winston.createLogger({\n  level: 'info',\n  format: winston.format.json(),\n  transports: [new winston.transports.Console()],\n});\n```\n```javascript\n// request-logger.middleware.js\nimport { safeLog } from '@datdm198x/safe-logger';\nimport { logger } from './logger-setup.js';\n\nexport function requestLogger(req, res, next) {\n  logger.info('incoming request', safeLog({\n    method: req.method,\n    path: req.path,\n    headers: req.headers,\n    body: req.body,\n  }));\n\n  res.on('finish', () => {\n    logger.info('request completed', safeLog({\n      path: req.path,\n      statusCode: res.statusCode,\n    }));\n  });\n\n  next();\n}\n```\n```javascript\n// app.js\nimport express from 'express';\nimport { requestLogger } from './request-logger.middleware.js';\n\nconst app = express();\napp.use(express.json());\napp.use(requestLogger);\n\napp.post('/login', (req, res) => {\n  // req.body.password logged above is already masked, never the raw value\n  res.json({ ok: true });\n});\n\napp.listen(3000);\n```",
+      "Edge Cases Already Handled — deep nesting, `null`/`undefined`/non-string values, empty containers, and both camelCase and UPPER_SNAKE_CASE/snake_case key naming are handled without extra configuration, so mixed-convention codebases (e.g. a service that receives both a JS object and env-var-style keys) don't need separate masking logic.\n```javascript\nsafeLog({\n  AWS_SECRET_ACCESS_KEY: 'wJalrXUtnFEMI...',\n  nested: { user: { password: 'hunter2' } },\n});\n// both keys detected and masked regardless of naming convention or nesting depth\n```"
+    ],
+    impact: [
+      "Turns 'did every endpoint remember to redact its logs' into 'does the object headed for the log pass through safeLog' — a single wrapping convention instead of an audit of every log call site in the codebase",
+      "Automatic detection by key name (not by an allowlist someone has to maintain) means a new field named `password` or `apiKey` added anywhere in the codebase is masked by default the moment it's logged, without anyone updating a redaction list",
+      "Registering custom field maskers once at startup (rather than inline redaction per call site) keeps app-specific sensitive-field knowledge in one place, consistent with how the org's security guidance treats credentials/PII as something that must never reach logs",
+      "Handling both camelCase and snake_case out of the box matters in practice because request bodies, env vars, and third-party API payloads (AWS, SMTP) rarely agree on a single naming convention within the same service",
+      "Use case — API request/response logging middleware: wrap `req.headers`/`req.body` and `res.body` in `safeLog` before writing an access log line, so Authorization headers and password fields in form submissions never land in log storage",
+      "Use case — error reporting (Sentry/Datadog-style context objects): wrap the error context payload in `safeLog` before attaching it to an exception report, so a stack trace's captured local variables don't leak a user's password or a live API key",
+      "Use case — config/env dump on service startup: wrap `process.env` (or a parsed config object) in `safeLog` before logging 'service started with config: ...', so AWS/SMTP credentials never appear in startup logs",
+      "Use case — audit logging a domain event that embeds a full user record: `safeLog(userRecordAtTimeOfAction)` keeps the audit trail useful (who did what) without duplicating the user's password hash or stored tokens into a separate log store with its own retention/access policy"
+    ],
+    technologies: ["Node.js", "TypeScript", "Logging", "Data Masking", "PII Redaction", "Winston", "Pino"],
+    impactMetrics: {
+      performance: { improvement: "Manual per-endpoint redaction -> single safeLog() wrapping convention" }
+    },
+    architecture: {
+      components: ["safeLog (recursive object walker)", "Built-in field detectors (passwords, tokens, API keys, credit cards, PII, AWS/SMTP credentials)", "registerFieldMasker (custom field rules)", "Logging pipeline (console/Winston/Pino)"],
+      pattern: "Recursive Sensitive-Field Masking Before Log Output"
+    },
+    comparisonTable: {
+      headers: ["Approach", "Coverage", "Maintenance Burden"],
+      rows: [
+        ["Manual redaction (delete/regex per call site)", "Only fields a developer remembers to strip, at that one call site", "High — repeated at every logging point, easy to miss nested fields"],
+        ["Allowlist-based redaction config", "Only fields explicitly listed", "Medium — list must be updated whenever a new sensitive field is introduced"],
+        ["safeLog() automatic detection", "Passwords, tokens, API keys, credit cards, PII, AWS/SMTP credentials, deeply nested, both naming conventions", "Low — one wrapping convention; custom fields registered once at startup"]
+      ]
+    }
   }
 ];
 
@@ -1242,7 +1397,7 @@ const EnhancedCaseStudies: React.FC = () => {
 
   const selectedStudyData = caseStudies.find(study => study.id === selectedStudy);
 
-  const categories = ['All', 'DevOps', 'Cloud Infrastructure', 'Full-Stack', 'Database'];
+  const categories = ['All', 'DevOps', 'Cloud Infrastructure', 'Full-Stack', 'Database', 'Security'];
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
