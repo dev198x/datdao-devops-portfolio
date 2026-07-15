@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { runCommand } from './commands';
 import { createInitialFs, formatPath, HOME_SEGMENTS, FSDir, cloneFs, getParent, basename } from './virtualFs';
 import { VimEditor } from './VimEditor';
+import { K9sView } from './K9sView';
 
 interface Line {
   type: 'input' | 'output';
@@ -21,6 +22,7 @@ export const LinuxTerminal: React.FC = () => {
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const [editing, setEditing] = useState<{ fileSegs: string[]; filename: string; content: string } | null>(null);
+  const [k9sOpen, setK9sOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -67,6 +69,9 @@ export const LinuxTerminal: React.FC = () => {
 
     if (result.openEditor) {
       setEditing(result.openEditor);
+    }
+    if (result.openK9s) {
+      setK9sOpen(true);
     }
   };
 
@@ -144,7 +149,7 @@ export const LinuxTerminal: React.FC = () => {
             onKeyDown={onKeyDown}
             spellCheck={false}
             autoComplete="off"
-            disabled={!!editing}
+            disabled={!!editing || k9sOpen}
             className="flex-1 bg-transparent outline-none text-green-400 caret-green-400 disabled:opacity-0"
           />
         </div>
@@ -156,6 +161,16 @@ export const LinuxTerminal: React.FC = () => {
             initialContent={editing.content}
             onExit={(finalContent, saved) => {
               onEditorExit(finalContent, saved);
+              setTimeout(() => inputRef.current?.focus(), 0);
+            }}
+          />
+        )}
+
+        {k9sOpen && (
+          <K9sView
+            onExit={() => {
+              setK9sOpen(false);
+              setLines((prev) => [...prev, { type: 'output', text: '(k9s exited)' }]);
               setTimeout(() => inputRef.current?.focus(), 0);
             }}
           />

@@ -8,6 +8,7 @@ import {
   getParent,
   resolvePath,
 } from './virtualFs';
+import { FAKE_PODS } from './k8sFixtures';
 
 export interface CommandResult {
   output: string[];
@@ -15,6 +16,7 @@ export interface CommandResult {
   cwd: string[];
   clear?: boolean;
   openEditor?: { fileSegs: string[]; filename: string; content: string };
+  openK9s?: boolean;
 }
 
 function tokenize(line: string): string[] {
@@ -774,16 +776,13 @@ export function runCommand(
       return { output: [`docker: '${sub}' is not a recognized command. Try: ps, images, build, run, stop, rm, rmi, logs, pull, push, tag, exec, inspect, network ls, volume ls, compose up|down`], fs, cwd };
     }
 
+    case 'k9s': {
+      return { output: [], fs, cwd, openK9s: true };
+    }
+
     case 'kubectl': {
       const sub = args[0];
       if (!sub) return { output: ['kubectl: usage: kubectl <get|describe|apply|delete|logs|exec|scale|rollout|top|config> [args]'], fs, cwd };
-
-      const FAKE_PODS = [
-        { name: 'api-7d8f9c6b8-x2k9p', ready: '1/1', status: 'Running', restarts: '0', age: '2d' },
-        { name: 'web-6b5f9d8c7-p8m2q', ready: '1/1', status: 'Running', restarts: '1', age: '5h' },
-        { name: 'redis-0', ready: '1/1', status: 'Running', restarts: '0', age: '10d' },
-        { name: 'migration-job-4kd9x', ready: '0/1', status: 'CrashLoopBackOff', restarts: '5', age: '15m' },
-      ];
 
       // splitFlags treats "-n" as a flag, which would swallow the namespace value; parse it manually first.
       const nsIdx = args.findIndex((a) => a === '-n' || a === '--namespace');
@@ -888,7 +887,7 @@ export function runCommand(
       }
 
       if (sub === 'logs') {
-        const name = rest.find((a) => !a.startsWith('-')) ?? rest[1];
+        const name = rest.slice(1).find((a) => !a.startsWith('-'));
         if (!name) return { output: ['kubectl: usage: kubectl logs [-f] <pod>'], fs, cwd };
         const pod = FAKE_PODS.find((p) => p.name === name);
         if (pod?.status === 'CrashLoopBackOff') {

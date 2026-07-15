@@ -379,6 +379,20 @@ export const linuxCommands: LinuxCommand[] = [
     ],
   },
   {
+    name: 'k9s',
+    category: 'DevOps Tools',
+    syntax: 'k9s',
+    description: "A terminal UI for Kubernetes — browse pods/deployments/services/namespaces, drill into details and logs, all with keyboard navigation, instead of typing a fresh kubectl command for every lookup. In this sandbox it opens a real full-screen browsable dashboard.",
+    examples: [
+      { cmd: 'k9s', note: 'launch the dashboard (opens on the pods view)' },
+      { cmd: 'j / k or ↓ / ↑', note: 'move the selection down/up the resource list' },
+      { cmd: ':deploy  or  :svc  or  :ns', note: 'switch views to Deployments, Services, or Namespaces' },
+      { cmd: 'd', note: 'describe the selected resource' },
+      { cmd: 'l', note: 'view logs for the selected pod' },
+      { cmd: 'q  or  Esc', note: 'go back to the list, or quit k9s entirely from the list view' },
+    ],
+  },
+  {
     name: 'openssl',
     category: 'Security',
     syntax: 'openssl <genrsa|req|x509|enc|dgst> [args]',
