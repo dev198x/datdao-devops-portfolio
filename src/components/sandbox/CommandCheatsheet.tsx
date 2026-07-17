@@ -57,7 +57,7 @@ export const CommandCheatsheet: React.FC = () => {
             <p className="text-sm text-neutral-300 mb-2">{c.description}</p>
             <div className="space-y-1">
               {c.examples.map((ex, i) => (
-                <div key={i} className="text-xs font-mono bg-black/30 rounded px-2 py-1">
+                <div key={i} className="text-xs font-mono rounded px-2 py-1">
                   <span className="text-green-400">$ {ex.cmd}</span>
                   <span className="text-neutral-500"> — {ex.note}</span>
                 </div>

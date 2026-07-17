@@ -1388,6 +1388,123 @@ const caseStudies: CaseStudy[] = [
         ["safeLog() automatic detection", "Passwords, tokens, API keys, credit cards, PII, AWS/SMTP credentials, deeply nested, both naming conventions", "Low — one wrapping convention; custom fields registered once at startup"]
       ]
     }
+  },
+  {
+    id: 28,
+    title: "Common AWS CLI",
+    subtitle: "A Practical Reference: Everyday Commands Across EC2, S3, IAM, ECS/EKS, and CloudWatch",
+    category: "Cloud Infrastructure",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Day-to-day AWS work constantly drops into the terminal — checking what's running, tailing logs, pushing an object, rotating a credential — but the AWS CLI's surface area is enormous and each service has its own subcommand shape, output verbosity, and pagination quirks. Without a working set of the commands actually used daily, every task turns into re-reading `--help` output or hunting through the web console for something a single command line would answer.",
+    solution: [
+      "Configure & Identify — set up credentials/region once per profile, and confirm which identity/account the CLI is currently acting as before running anything destructive.\n```bash\naws configure --profile myprofile\naws sts get-caller-identity --profile myprofile\n```\nQuery: aws configure list  # shows which profile/region/keys are active for the current shell",
+      "EC2 — List, Start, Stop Instances — inspect running infrastructure and control instance lifecycle without opening the console.\n```bash\naws ec2 describe-instances --query 'Reservations[].Instances[].[InstanceId,State.Name,PublicIpAddress]' --output table\naws ec2 start-instances --instance-ids i-0123456789abcdef0\naws ec2 stop-instances --instance-ids i-0123456789abcdef0\n```\nQuery: aws ec2 describe-instance-status --instance-ids i-0123456789abcdef0  # confirms health/status checks after start",
+      "S3 — Sync, Copy, and Manage Buckets — the most-used data-movement commands; `sync` only transfers changed files, unlike `cp` which always copies.\n```bash\naws s3 ls s3://my-bucket/\naws s3 cp ./dist s3://my-bucket/app/ --recursive\naws s3 sync ./dist s3://my-bucket/app/ --delete\n```\nQuery: aws s3api head-object --bucket my-bucket --key app/index.html  # confirms an object's metadata/ETag after upload",
+      "IAM — Inspect Roles, Policies, and Access Keys — audit who can do what, and rotate access keys without touching the console.\n```bash\naws iam list-users\naws iam list-attached-user-policies --user-name deploy-bot\naws iam create-access-key --user-name deploy-bot\naws iam delete-access-key --user-name deploy-bot --access-key-id AKIA...\n```\nQuery: aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::123456789012:user/deploy-bot --action-names s3:PutObject --resource-arns arn:aws:s3:::my-bucket/*  # checks a permission before granting it for real",
+      "Find the AWS Account ID From a Bare Access Key ID — useful when a key shows up in a log, a leaked-secret scan, or a support ticket and you need to know which account it belongs to before you can even ask that account's owner to rotate it; this works without needing valid credentials for the key itself, since `sts get-access-key-info` only decodes the account ID embedded in the key ID's structure, it doesn't validate or authenticate the key.\n```bash\naws sts get-access-key-info --access-key-id AKIAxxxxxxxxxxx 2>&1\n```\nQuery: aws sts get-access-key-info --access-key-id AKIAIOSFODNN7EXAMPLE  # -> { \"Account\": \"123456789012\" }",
+      "ECS — Check Service and Task Status — confirm a deployed service is actually healthy and see why a task exited if it isn't.\n```bash\naws ecs list-services --cluster my-cluster\naws ecs describe-services --cluster my-cluster --services my-service --query 'services[].deployments'\naws ecs describe-tasks --cluster my-cluster --tasks $(aws ecs list-tasks --cluster my-cluster --service-name my-service --query 'taskArns[0]' --output text)\n```\nQuery: aws ecs update-service --cluster my-cluster --service my-service --force-new-deployment  # rolls a service to pick up a new image tag without changing the task definition",
+      "EKS — Get Cluster Credentials and Basic Cluster Info — the one command that bridges the AWS CLI to kubectl by writing cluster auth into your local kubeconfig.\n```bash\naws eks list-clusters\naws eks update-kubeconfig --name my-cluster --region us-east-1\naws eks describe-cluster --name my-cluster --query 'cluster.status'\n```\nQuery: kubectl get nodes  # confirms update-kubeconfig worked and the cluster is reachable",
+      "CloudWatch Logs — Tail and Search Application Logs — find the actual error without opening the console log group viewer.\n```bash\naws logs describe-log-groups --query 'logGroups[].logGroupName'\naws logs tail /ecs/my-service --follow\naws logs filter-log-events --log-group-name /ecs/my-service --filter-pattern 'ERROR' --start-time $(date -d '1 hour ago' +%s000)\n```\nQuery: aws logs tail /ecs/my-service --since 30m  # quick recent-history check without --follow blocking the terminal",
+      "CloudFormation / Stacks — Check Deploy Status and Recent Events — the fastest way to see why a stack update failed, straight from the terminal instead of scrolling the console's events tab.\n```bash\naws cloudformation describe-stacks --stack-name my-stack --query 'Stacks[0].StackStatus'\naws cloudformation describe-stack-events --stack-name my-stack --max-items 10\n```\nQuery: aws cloudformation describe-stack-events --stack-name my-stack --query \"StackEvents[?ResourceStatus=='CREATE_FAILED']\"  # isolates just the failing resource in a large stack",
+      "Secrets Manager & SSM Parameter Store — Read Config/Secrets from Scripts — pull a secret or config value into a deploy script instead of hardcoding it.\n```bash\naws secretsmanager get-secret-value --secret-id prod/db/password --query 'SecretString' --output text\naws ssm get-parameter --name /myapp/prod/API_URL --with-decryption --query 'Parameter.Value' --output text\n```\nQuery: aws ssm put-parameter --name /myapp/prod/API_URL --value 'https://api.example.com' --type SecureString --overwrite  # updates a config value used by the next deploy",
+      "Cost Explorer — Check Spend Without Opening Billing Console — a fast sanity check when investigating a cost spike.\n```bash\naws ce get-cost-and-usage --time-period Start=2026-07-01,End=2026-07-31 --granularity MONTHLY --metrics BlendedCost --group-by Type=DIMENSION,Key=SERVICE\n```\nQuery: aws ce get-cost-and-usage --time-period Start=2026-07-01,End=2026-07-31 --granularity MONTHLY --metrics BlendedCost  # total spend for the period without a per-service breakdown"
+    ],
+    impact: [
+      "Every command in this reference can be run hands-on in the site's Sandbox (terminal simulator) — the `aws` command is simulated there alongside `kubectl`, `k9s`, and `docker`, so you can practice `aws sts get-access-key-info`, `aws s3 sync`, `aws eks update-kubeconfig`, and more without touching a real AWS account",
+      "`--query` (JMESPath) + `--output table|text|json` turns noisy default CLI output into exactly the field(s) needed for a script or a quick terminal check — the single biggest daily productivity habit for this CLI",
+      "`aws sts get-caller-identity` before any destructive command (delete, stop, terminate) catches the classic mistake of running against the wrong profile/account — cheap insurance against acting on production by accident",
+      "`aws s3 sync --delete` vs. `aws s3 cp --recursive`: sync only transfers changed files and can mirror-delete removed ones, making it the right choice for deploying a built frontend (`dist/`) to a static hosting bucket; cp always re-copies everything",
+      "`aws eks update-kubeconfig` is the one command that matters for EKS from the AWS CLI's side — everything after that (get pods, logs, describe) is kubectl, not aws-cli",
+      "Reading secrets via `secretsmanager get-secret-value` or `ssm get-parameter --with-decryption` in a deploy script keeps credentials out of source control and CI logs, consistent with the org's rule against pasting API keys/secrets into chat or committing them to a repo",
+      "`--profile` isolates credentials per AWS account/role so a single machine can safely operate against dev, staging, and prod without manually swapping `~/.aws/credentials` contents",
+      "`aws sts get-access-key-info` decodes the account ID baked into an access key ID's own structure — no valid credentials, session, or IAM permissions on that key are required, so it works even on a key you suspect is stale, revoked, or someone else's",
+      "Use case — triaging a leaked-credential alert: a secret-scanning tool (GitHub push protection, TruffleHog) flags an `AKIA...` key in a commit; running `get-access-key-info` immediately tells you which AWS account owns it, so you know who to notify or which account's key to revoke before doing anything else",
+      "Use case — verifying a rollout: `aws ecs describe-services` deployments field shows PRIMARY vs. ACTIVE task counts converging, confirming a new deployment finished rolling out before telling a team it's live",
+      "Use case — debugging a failed deploy: `aws cloudformation describe-stack-events --max-items 10` (or filtered to CREATE_FAILED/UPDATE_FAILED) surfaces the exact resource and reason without scrolling a console timeline",
+      "Use case — incident response: `aws logs tail /ecs/my-service --follow` gives a live log stream the moment an alert fires, without waiting for the console's log viewer to load",
+      "Use case — cost spike investigation: `aws ce get-cost-and-usage --group-by Type=DIMENSION,Key=SERVICE` immediately shows which service's spend jumped, before diving into Cost Explorer's UI for a deeper breakdown"
+    ],
+    technologies: ["AWS CLI", "EC2", "S3", "IAM", "ECS", "EKS", "CloudWatch Logs", "CloudFormation", "Secrets Manager", "SSM Parameter Store", "Cost Explorer", "JMESPath"],
+    impactMetrics: {
+      performance: { improvement: "Console click-through -> single-command terminal workflow" }
+    },
+    architecture: {
+      components: ["aws configure / sts (identity)", "EC2 (compute)", "S3 (storage)", "IAM (access)", "ECS / EKS (orchestration)", "CloudWatch Logs (observability)", "CloudFormation (IaC status)", "Secrets Manager / SSM (config & secrets)", "Cost Explorer (spend)"],
+      pattern: "AWS CLI Daily-Driver Command Reference"
+    },
+    comparisonTable: {
+      headers: ["Task", "Command", "Notes"],
+      rows: [
+        ["Who am I authenticated as?", "aws sts get-caller-identity", "Run before any destructive command"],
+        ["Which account owns this access key?", "aws sts get-access-key-info --access-key-id AKIA...", "No credentials for that key needed"],
+        ["Deploy a static build", "aws s3 sync ./dist s3://bucket/ --delete", "Only transfers changed files, mirrors deletions"],
+        ["Connect kubectl to EKS", "aws eks update-kubeconfig --name cluster", "One-time bridge from AWS CLI to kubectl"],
+        ["Force a service redeploy", "aws ecs update-service --force-new-deployment", "Picks up a new image tag on the same task def"],
+        ["Live-tail logs during an incident", "aws logs tail /log/group --follow", "Streams new log events as they arrive"],
+        ["Read a secret in a deploy script", "aws secretsmanager get-secret-value", "Keeps credentials out of source control"]
+      ]
+    }
+  },
+  {
+    id: 29,
+    title: "Package and Project Manager in Python",
+    subtitle: "uv: A Practical Reference for Replacing pip, pip-tools, pipx, poetry, and pyenv\nReference: https://docs.astral.sh/uv/guides/install-python/",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "A typical Python setup stitches together five separate tools — pyenv for interpreter versions, venv/virtualenv for isolated environments, pip for installing packages, pip-tools for lockfiles, and pipx/poetry for project and CLI-tool management — each with its own config file, cache, and mental model. uv (by Astral, the makers of Ruff) replaces the whole stack with a single Rust-based binary that's 10-100x faster than pip, while still speaking pip's CLI when needed.\nReference: https://docs.astral.sh/uv/guides/install-python/",
+    solution: [
+      "Install uv Itself — a single standalone binary, no Python interpreter required to bootstrap it.\n```bash\ncurl -LsSf https://astral.sh/uv/install.sh | sh\n```\nQuery: uv --version  # confirms the installed uv version",
+      "Install & Manage Python Versions — uv downloads and manages its own Python builds, so a project never depends on whatever Python happens to be on the system.\n```bash\nuv python install\nuv python install 3.12\nuv python install 3.11 3.12\nuv python install --default\n```\nQuery: uv python list  # shows installed and available Python versions, and which one is active",
+      "Initialize a New Project — scaffolds a `pyproject.toml` and a virtual environment together, replacing the manual `python -m venv` + `pip install` + hand-written `pyproject.toml` dance.\n```bash\nuv init example\ncd example\n```\nQuery: cat pyproject.toml  # project metadata + dependency table, ready to add packages to",
+      "Add / Remove Dependencies — updates `pyproject.toml` and the lockfile in one step, and creates the virtual environment automatically the first time it's needed.\n```bash\nuv add ruff\nuv add 'fastapi[standard]'\nuv remove ruff\n```\nQuery: uv add --dev pytest  # adds a dev-only dependency, kept in its own dependency group",
+      "Lock & Sync — `uv lock` resolves and pins exact versions into `uv.lock`; `uv sync` installs the environment to match that lockfile exactly, the same role `poetry.lock`/`pip-compile` + `pip-sync` played before.\n```bash\nuv lock\nuv sync\n```\nQuery: uv lock --check  # verifies the lockfile is up to date with pyproject.toml, without writing changes — useful as a CI gate",
+      "Run Commands Inside the Project Environment — no manual `source .venv/bin/activate` step; `uv run` resolves and activates the right environment on the fly.\n```bash\nuv run ruff check\nuv run pytest\nuv run python script.py\n```\nQuery: uv run --with rich python script.py  # runs a one-off script with an extra ad-hoc dependency, without touching pyproject.toml",
+      "Run Standalone Scripts with Inline (PEP 723) Dependencies — a single `.py` file can declare its own dependencies in a header comment; uv resolves and isolates them per-script, no project or requirements.txt needed.\n```bash\necho 'import requests; print(requests.get(\"https://astral.sh\"))' > example.py\nuv add --script example.py requests\nuv run example.py\n```\nQuery: uv lock --script example.py  # pins the script's inline dependencies into an adjacent .lock file for reproducibility",
+      "pip-Compatible Interface — a drop-in `uv pip` subcommand for cases that still need raw pip semantics (e.g. installing a package with native build dependencies before a project sync).\n```bash\nuv venv\nuv pip install torch setuptools\nuv pip list\n```\nQuery: uv pip freeze  # same output shape as `pip freeze`, for tooling that still expects it",
+      "Install Global CLI Tools (pipx replacement) — installs a Python-based CLI tool into its own isolated environment and exposes it on PATH, without polluting any project's dependencies.\n```bash\nuv tool install cowsay\nuv tool run ruff --version\nuvx ruff check\n```\nQuery: uv tool list  # shows every globally installed tool and its isolated environment",
+      "Build & Publish a Package — replaces `python -m build` + `twine upload` for publishing a library to PyPI.\n```bash\nuv build\nuv publish\n```\nQuery: uv build --wheel  # builds only the wheel, skipping the sdist",
+      "Use in CI/Docker — official GitHub Action and example Dockerfile patterns keep CI/production builds on the exact same tool as local dev.\n```yaml\n- uses: astral-sh/setup-uv@v8\n- run: uv python install\n- run: uv sync --locked\n```\nQuery: uv sync --locked  # fails the build instead of silently re-resolving if the lockfile is out of date — the right mode for CI"
+    ],
+    impact: [
+      "Every command in this reference can be run hands-on — uv's own docs report 10-100x faster installs than pip, since it's a compiled Rust binary with a global cache instead of a pure-Python resolver re-downloading/rebuilding on every run",
+      "One tool replaces five: pyenv (Python versions) -> `uv python install`, venv (environments) -> automatic via `uv run`/`uv sync`, pip (installs) -> `uv add`/`uv pip`, pip-tools (lockfiles) -> `uv lock`, pipx/poetry (project + global tools) -> `uv init`/`uv tool install`",
+      "`uv.lock` pins exact resolved versions the same way `poetry.lock` or a pip-tools-compiled `requirements.txt` does — `uv sync --locked` in CI fails loudly instead of silently drifting if pyproject.toml and the lockfile disagree",
+      "PEP 723 inline script dependencies remove the need for a throwaway virtualenv or a project just to run a one-off script — the dependencies travel with the file itself, and `uv run` resolves an isolated environment for it automatically",
+      "`uv python install` manages its own downloaded Python builds independent of the OS-installed Python, so a project's required Python version is reproducible across machines the same way `.nvmrc` pins Node — no more 'works on my machine' from a stray system Python",
+      "Use case — new project bootstrap: `uv init` + `uv add <deps>` + `uv run <tool>` replaces `python -m venv` + `source .venv/bin/activate` + `pip install` + hand-editing requirements.txt as the default starting workflow",
+      "Use case — CI pipeline: `uv sync --locked` after `astral-sh/setup-uv` in GitHub Actions installs exactly what's in `uv.lock`, giving the same fail-fast guarantee `npm ci` gives over `npm install` in a Node pipeline",
+      "Use case — global CLI tools (formatters, linters, scaffolding generators): `uv tool install <tool>` or the `uvx <tool>` shorthand installs/runs it in its own isolated environment, the same role pipx played, without needing pipx installed separately",
+      "Use case — Docker image build: pinning `uv sync` (or `uv pip install`) in a multi-stage Dockerfile keeps the same fast, reproducible install path in production that's used in local dev — see astral-sh/uv-docker-example for the reference pattern"
+    ],
+    technologies: ["uv", "Python", "pyproject.toml", "PEP 723", "Rust", "pip", "pip-tools", "pipx", "poetry", "pyenv", "GitHub Actions"],
+    impactMetrics: {
+      performance: { improvement: "pip/poetry/pyenv install times -> 10-100x faster (uv, Rust-based resolver + global cache)" }
+    },
+    architecture: {
+      components: ["uv python (interpreter management)", "uv init / add / remove (project + deps)", "uv lock / sync (reproducible environments)", "uv run (script + command execution)", "uv pip (pip-compatible interface)", "uv tool / uvx (global CLI tools)", "uv build / publish (packaging)"],
+      pattern: "Single-Binary Replacement for the Python Tooling Stack"
+    },
+    comparisonTable: {
+      headers: ["Old Tool", "Purpose", "uv Equivalent"],
+      rows: [
+        ["pyenv", "Install/switch Python versions", "uv python install / uv python pin"],
+        ["venv / virtualenv", "Isolated environments", "Automatic via uv run / uv sync"],
+        ["pip", "Install packages", "uv add (project) / uv pip (pip-compatible)"],
+        ["pip-tools (pip-compile/pip-sync)", "Lockfiles", "uv lock / uv sync"],
+        ["pipx", "Isolated global CLI tools", "uv tool install / uvx"],
+        ["poetry", "Project + dependency management", "uv init / uv add / uv lock / uv build / uv publish"]
+      ]
+    }
   }
 ];
 

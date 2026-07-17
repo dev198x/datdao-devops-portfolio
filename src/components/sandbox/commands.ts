@@ -60,6 +60,21 @@ function fakeHex(input: string, length: number): string {
   return out.slice(0, length);
 }
 
+/** Find the value following any of the given long-flag names, e.g. getFlagValue(args, '--name', '-n'). */
+function getFlagValue(args: string[], ...names: string[]): string | undefined {
+  for (const name of names) {
+    const idx = args.indexOf(name);
+    if (idx !== -1) return args[idx + 1];
+  }
+  return undefined;
+}
+
+/** Deterministic 12-digit fake AWS account ID derived from an access key ID, for realistic-looking sandbox output. */
+function fakeAccountId(input: string): string {
+  const digits = fakeHex(input, 16).replace(/[a-f]/g, (c) => String((c.charCodeAt(0) - 97) % 10));
+  return digits.slice(0, 12);
+}
+
 export function runCommand(
   line: string,
   fs: FSDir,
@@ -109,7 +124,7 @@ export function runCommand(
           `  ${entry.description}`,
           '',
           'EXAMPLES',
-          ...entry.examples.map((e) => `  $ ${e.cmd}\n    ${e.note}`),
+          ...entry.examples.map((e) => `  $ ${e.cmd} — ${e.note}`),
         ],
         fs,
         cwd,
@@ -965,6 +980,284 @@ export function runCommand(
       }
 
       return { output: [`kubectl: '${sub}' is not a recognized command. Try: get, describe, apply, delete, logs, exec, scale, rollout, top, config`], fs, cwd };
+    }
+
+    case 'aws': {
+      const service = args[0];
+      if (!service) return { output: ['usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]'], fs, cwd };
+      const rest = args.slice(1);
+      const action = rest[0];
+
+      if (service === 'configure') {
+        if (action === 'list') {
+          return {
+            output: formatTable([
+              ['Name', 'Value', 'Type', 'Location'],
+              ['profile', '<not set>', '', ''],
+              ['access_key', '****************ABCD', 'shared-credentials-file', ''],
+              ['secret_key', '****************wxyz', 'shared-credentials-file', ''],
+              ['region', 'us-east-1', 'config-file', '~/.aws/config'],
+            ]),
+            fs,
+            cwd,
+          };
+        }
+        return { output: ['AWS Access Key ID [****************ABCD]: ', 'AWS Secret Access Key [****************wxyz]: ', 'Default region name [us-east-1]: ', 'Default output format [json]: ', '(simulated — credentials not actually persisted in this sandbox)'], fs, cwd };
+      }
+
+      if (service === 'sts') {
+        if (action === 'get-caller-identity') {
+          return {
+            output: [
+              '{',
+              '    "UserId": "AIDAEXAMPLE123456789",',
+              '    "Account": "123456789012",',
+              '    "Arn": "arn:aws:iam::123456789012:user/deploy-bot"',
+              '}',
+            ],
+            fs,
+            cwd,
+          };
+        }
+        if (action === 'get-access-key-info') {
+          const keyId = getFlagValue(rest, '--access-key-id');
+          if (!keyId) return { output: ['usage: aws sts get-access-key-info --access-key-id <value>'], fs, cwd };
+          if (!/^[A-Z0-9]{16,}$/.test(keyId)) {
+            return { output: ['An error occurred (ValidationError) when calling the GetAccessKeyInfo operation: Invalid id'], fs, cwd };
+          }
+          return { output: ['{', `    "Account": "${fakeAccountId(keyId)}"`, '}'], fs, cwd };
+        }
+        return { output: [`aws: '${action}' is not a valid sts command. Try: get-caller-identity, get-access-key-info`], fs, cwd };
+      }
+
+      if (service === 's3' || service === 's3api') {
+        if (action === 'ls') {
+          const target = rest[1];
+          if (!target || service === 's3api') {
+            return {
+              output: formatTable([
+                ['2026-01-15 09:12:03', '', 'my-bucket'],
+                ['2026-03-02 17:41:55', '', 'my-static-site'],
+              ].map(([a, , c]) => [a, c])),
+              fs,
+              cwd,
+            };
+          }
+          return {
+            output: formatTable([
+              ['2026-06-01 10:22:14', '1042', 'index.html'],
+              ['2026-06-01 10:22:15', '38102', 'assets/index.js'],
+              ['2026-06-01 10:22:15', '8210', 'assets/index.css'],
+            ]),
+            fs,
+            cwd,
+          };
+        }
+        if (action === 'cp' || action === 'sync') {
+          const src = rest[1];
+          const dest = rest[2];
+          if (!src || !dest) return { output: [`usage: aws s3 ${action} <source> <dest> [--recursive] [--delete]`], fs, cwd };
+          const verb = action === 'sync' ? 'sync' : 'copy';
+          return {
+            output: [
+              `upload: ${src}/index.html to ${dest}index.html (simulated)`,
+              `upload: ${src}/assets/index.js to ${dest}assets/index.js (simulated)`,
+              `upload: ${src}/assets/index.css to ${dest}assets/index.css (simulated)`,
+              ...(rest.includes('--delete') ? ['delete: ' + dest + 'assets/old-chunk.js (simulated)'] : []),
+              `${verb} complete (simulated)`,
+            ],
+            fs,
+            cwd,
+          };
+        }
+        if (action === 'head-object') {
+          const key = getFlagValue(rest, '--key') ?? 'object';
+          return {
+            output: ['{', `    "ETag": "\\"${fakeHex(key, 32)}\\"",`, '    "ContentLength": 1042,', '    "ContentType": "text/html"', '}'],
+            fs,
+            cwd,
+          };
+        }
+        return { output: [`aws: '${action}' is not a valid s3 command. Try: ls, cp, sync, head-object`], fs, cwd };
+      }
+
+      if (service === 'ec2') {
+        if (action === 'describe-instances') {
+          return {
+            output: formatTable([
+              ['InstanceId', 'State', 'PublicIp'],
+              ['i-0123456789abcdef0', 'running', '203.0.113.24'],
+              ['i-0fedcba9876543210', 'stopped', '-'],
+            ]),
+            fs,
+            cwd,
+          };
+        }
+        if (action === 'start-instances' || action === 'stop-instances') {
+          const idsIdx = rest.indexOf('--instance-ids');
+          const id = idsIdx !== -1 ? rest[idsIdx + 1] : undefined;
+          if (!id) return { output: [`usage: aws ec2 ${action} --instance-ids <id>`], fs, cwd };
+          const [from, to] = action === 'start-instances' ? ['stopped', 'pending'] : ['running', 'stopping'];
+          return {
+            output: ['{', `    "${action === 'start-instances' ? 'StartingInstances' : 'StoppingInstances'}": [`, '        {', `            "InstanceId": "${id}",`, `            "CurrentState": { "Name": "${to}" },`, `            "PreviousState": { "Name": "${from}" }`, '        }', '    ]', '} (simulated)'],
+            fs,
+            cwd,
+          };
+        }
+        if (action === 'describe-instance-status') {
+          return { output: ['{', '    "InstanceStatuses": [{ "InstanceStatus": { "Status": "ok" }, "SystemStatus": { "Status": "ok" } }]', '} (simulated)'], fs, cwd };
+        }
+        return { output: [`aws: '${action}' is not a valid ec2 command. Try: describe-instances, start-instances, stop-instances, describe-instance-status`], fs, cwd };
+      }
+
+      if (service === 'iam') {
+        if (action === 'list-users') {
+          return { output: formatTable([['UserName', 'Arn'], ['deploy-bot', 'arn:aws:iam::123456789012:user/deploy-bot'], ['jane.doe', 'arn:aws:iam::123456789012:user/jane.doe']]), fs, cwd };
+        }
+        if (action === 'list-attached-user-policies') {
+          const user = getFlagValue(rest, '--user-name') ?? 'user';
+          return { output: formatTable([['PolicyName', 'PolicyArn'], ['AmazonS3FullAccess', 'arn:aws:iam::aws:policy/AmazonS3FullAccess'], [`${user}-inline-policy`, `arn:aws:iam::123456789012:policy/${user}-inline-policy`]]), fs, cwd };
+        }
+        if (action === 'create-access-key') {
+          const user = getFlagValue(rest, '--user-name') ?? 'user';
+          const newKey = `AKIA${fakeHex(user + Date.now(), 16).toUpperCase()}`;
+          return { output: ['{', '    "AccessKey": {', `        "UserName": "${user}",`, `        "AccessKeyId": "${newKey}",`, '        "Status": "Active",', `        "SecretAccessKey": "${fakeHex(user + 'secret', 40)}"`, '    }', '} (simulated — store this now, it cannot be retrieved again)'], fs, cwd };
+        }
+        if (action === 'delete-access-key') {
+          const keyId = getFlagValue(rest, '--access-key-id');
+          if (!keyId) return { output: ['usage: aws iam delete-access-key --user-name <name> --access-key-id <id>'], fs, cwd };
+          return { output: [`Access key ${keyId} deleted (simulated)`], fs, cwd };
+        }
+        if (action === 'simulate-principal-policy') {
+          const actionName = getFlagValue(rest, '--action-names') ?? 'unknown:Action';
+          return { output: formatTable([['EvalActionName', 'EvalDecision'], [actionName, 'allowed']]), fs, cwd };
+        }
+        return { output: [`aws: '${action}' is not a valid iam command. Try: list-users, list-attached-user-policies, create-access-key, delete-access-key, simulate-principal-policy`], fs, cwd };
+      }
+
+      if (service === 'ecs') {
+        const cluster = getFlagValue(rest, '--cluster') ?? 'my-cluster';
+        if (action === 'list-services') {
+          return { output: ['{', `    "serviceArns": ["arn:aws:ecs:us-east-1:123456789012:service/${cluster}/my-service"]`, '}'], fs, cwd };
+        }
+        if (action === 'describe-services') {
+          return { output: ['{', '    "services": [{', '        "deployments": [', '            { "status": "PRIMARY", "desiredCount": 3, "runningCount": 3 }', '        ]', '    }]', '} (simulated)'], fs, cwd };
+        }
+        if (action === 'list-tasks') {
+          return { output: ['{', `    "taskArns": ["arn:aws:ecs:us-east-1:123456789012:task/${cluster}/${fakeHex(cluster, 32)}"]`, '}'], fs, cwd };
+        }
+        if (action === 'describe-tasks') {
+          return { output: ['{', '    "tasks": [{ "lastStatus": "RUNNING", "healthStatus": "HEALTHY", "stoppedReason": "" }]', '} (simulated)'], fs, cwd };
+        }
+        if (action === 'update-service') {
+          const svc = getFlagValue(rest, '--service') ?? 'my-service';
+          return { output: [`Service ${svc} in cluster ${cluster} forced to redeploy (simulated)`], fs, cwd };
+        }
+        return { output: [`aws: '${action}' is not a valid ecs command. Try: list-services, describe-services, list-tasks, describe-tasks, update-service`], fs, cwd };
+      }
+
+      if (service === 'eks') {
+        if (action === 'list-clusters') {
+          return { output: ['{', '    "clusters": ["my-cluster"]', '}'], fs, cwd };
+        }
+        if (action === 'update-kubeconfig') {
+          const name = getFlagValue(rest, '--name') ?? 'my-cluster';
+          return { output: [`Added new context arn:aws:eks:us-east-1:123456789012:cluster/${name} to ~/.kube/config (simulated)`], fs, cwd };
+        }
+        if (action === 'describe-cluster') {
+          return { output: ['{', '    "cluster": { "status": "ACTIVE" }', '}'], fs, cwd };
+        }
+        return { output: [`aws: '${action}' is not a valid eks command. Try: list-clusters, update-kubeconfig, describe-cluster`], fs, cwd };
+      }
+
+      if (service === 'logs') {
+        if (action === 'describe-log-groups') {
+          return { output: ['{', '    "logGroups": ["/ecs/my-service", "/aws/lambda/my-function"]', '}'], fs, cwd };
+        }
+        if (action === 'tail') {
+          const group = rest[1] ?? '/ecs/my-service';
+          return {
+            output: [
+              `${group} (simulated tail)`,
+              '2026-07-17T10:22:01Z  server listening on port 8080',
+              '2026-07-17T10:22:03Z  GET /health 200 2ms',
+              '2026-07-17T10:22:14Z  GET /api/users 200 14ms',
+              ...(rest.includes('--follow') ? ['(streaming — press Ctrl+C to stop, simulated)'] : []),
+            ],
+            fs,
+            cwd,
+          };
+        }
+        if (action === 'filter-log-events') {
+          const pattern = getFlagValue(rest, '--filter-pattern') ?? '';
+          return {
+            output: pattern.includes('ERROR')
+              ? ['{', '    "events": [{ "message": "2026-07-17T09:58:12Z ERROR connect ECONNREFUSED 127.0.0.1:5432" }]', '} (simulated)']
+              : ['{', '    "events": []', '} (simulated)'],
+            fs,
+            cwd,
+          };
+        }
+        return { output: [`aws: '${action}' is not a valid logs command. Try: describe-log-groups, tail, filter-log-events`], fs, cwd };
+      }
+
+      if (service === 'cloudformation') {
+        const stackName = getFlagValue(rest, '--stack-name') ?? 'my-stack';
+        if (action === 'describe-stacks') {
+          return { output: ['{', '    "Stacks": [{ "StackStatus": "UPDATE_COMPLETE" }]', '}'], fs, cwd };
+        }
+        if (action === 'describe-stack-events') {
+          return {
+            output: formatTable([
+              ['Timestamp', 'ResourceStatus', 'LogicalResourceId'],
+              ['2026-07-17T10:00:00Z', 'UPDATE_COMPLETE', stackName],
+              ['2026-07-17T09:59:40Z', 'UPDATE_IN_PROGRESS', 'AppServiceTaskDef'],
+              ['2026-07-17T09:59:10Z', 'UPDATE_IN_PROGRESS', stackName],
+            ]),
+            fs,
+            cwd,
+          };
+        }
+        return { output: [`aws: '${action}' is not a valid cloudformation command. Try: describe-stacks, describe-stack-events`], fs, cwd };
+      }
+
+      if (service === 'secretsmanager') {
+        if (action === 'get-secret-value') {
+          const id = getFlagValue(rest, '--secret-id') ?? 'my-secret';
+          return { output: [`${fakeHex(id, 24)} (simulated secret value)`], fs, cwd };
+        }
+        return { output: [`aws: '${action}' is not a valid secretsmanager command. Try: get-secret-value`], fs, cwd };
+      }
+
+      if (service === 'ssm') {
+        if (action === 'get-parameter') {
+          const name = getFlagValue(rest, '--name') ?? '/myapp/prod/API_URL';
+          return { output: [`https://api.example.com (simulated value of ${name})`], fs, cwd };
+        }
+        if (action === 'put-parameter') {
+          const name = getFlagValue(rest, '--name') ?? '/myapp/prod/API_URL';
+          return { output: [`Parameter ${name} updated (simulated)`], fs, cwd };
+        }
+        return { output: [`aws: '${action}' is not a valid ssm command. Try: get-parameter, put-parameter`], fs, cwd };
+      }
+
+      if (service === 'ce') {
+        if (action === 'get-cost-and-usage') {
+          return {
+            output: formatTable([
+              ['Service', 'BlendedCost (USD)'],
+              ['Amazon Elastic Compute Cloud', '412.55'],
+              ['Amazon Simple Storage Service', '38.20'],
+              ['Amazon Elastic Container Service', '96.10'],
+            ]),
+            fs,
+            cwd,
+          };
+        }
+        return { output: [`aws: '${action}' is not a valid ce command. Try: get-cost-and-usage`], fs, cwd };
+      }
+
+      return { output: [`aws: '${service}' is not a recognized service. Try: sts, s3, ec2, iam, ecs, eks, logs, cloudformation, secretsmanager, ssm, ce, configure`], fs, cwd };
     }
 
     case 'ls': {
