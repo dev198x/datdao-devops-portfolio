@@ -571,6 +571,85 @@ Pods → Fluent Bit → CloudWatch → OpenSearch
 
 This sequence works well for backend engineers moving into DevOps, building progressively from core Kubernetes concepts into the AWS-specific pieces that make EKS distinct from self-managed clusters.
     `
+  },
+  {
+    id: 6,
+    title: "DevOps Lifecycle",
+    category: "DevOps",
+    difficulty: "Beginner",
+    readTime: "3 min read",
+    date: "2026-07-21",
+    featured: false,
+    views: "412",
+    likes: "34",
+    comments: "4",
+    excerpt: "A raw reference note on the DevOps lifecycle: the six phases of the infinity loop (Plan, Code, Build/Test, Release, Deploy, Operate, Monitor), what happens in each, and the key tools for each phase.",
+    tags: ["DevOps", "CI/CD", "Lifecycle", "Reference"],
+    content: `
+The **DevOps lifecycle** is a continuous loop that integrates software development (**Dev**) and IT operations (**Ops**). Unlike traditional linear models (like Waterfall), DevOps focuses on continuous iteration, automated testing, rapid deployment, and constant monitoring.
+
+It is usually visualized as an **infinity loop ($\\infty$)**, representing an ongoing process without a hard end point.
+
+---
+
+## Phases of the DevOps Lifecycle
+
+\`\`\`
+    [ Plan ] ---> [ Code ] ---> [ Build ] ---> [ Test ]
+       ^                                          |
+       |                                          v
+  [ Monitor ] <--- [ Operate ] <--- [ Deploy ] <--- [ Release ]
+
+\`\`\`
+
+### 1. Continuous Planning
+
+* **Goal:** Define business requirements, track issues, and design application architecture.
+* **What happens:** Teams plan upcoming features, bug fixes, and improvements in small, manageable iterations (sprints).
+* **Key Tools:** Jira, Trello, GitHub Issues.
+
+### 2. Continuous Integration & Code Development
+
+* **Goal:** Write code and frequently merge changes into a shared central repository.
+* **What happens:** Developers write code in local environments and commit changes regularly. Automated workflows build the code, check code style, and ensure new commits don't break existing features.
+* **Key Tools:** Git, GitHub, GitLab, Bitbucket.
+
+### 3. Continuous Testing
+
+* **Goal:** Identify bugs and security vulnerabilities early in the development cycle (**Shift-Left Testing**).
+* **What happens:** Automated test suites (Unit, Integration, End-to-End, Security scans) execute automatically whenever new code is merged.
+* **Key Tools:** Jest, Cypress, Selenium, SonarQube.
+
+### 4. Continuous Delivery & Deployment (CD)
+
+* **Goal:** Deliver code changes to production quickly, reliably, and safely.
+* **What happens:**
+* **Continuous Delivery:** Code is automatically built, tested, and packaged into standard artifacts (e.g., Docker images), ready for manual release approval.
+* **Continuous Deployment:** Every change that passes automated tests is automatically deployed straight to production environments without human intervention.
+
+
+* **Key Tools:** GitHub Actions, Jenkins, ArgoCD, Flux.
+
+### 5. Continuous Provisioning & Operations
+
+* **Goal:** Manage, scale, and maintain infrastructure reliably.
+* **What happens:** Infrastructure is defined as code (**IaC**) so environments can be created or destroyed automatically. System performance and scalability are handled seamlessly.
+* **Key Tools:** Terraform, Ansible, Docker, Kubernetes.
+
+### 6. Continuous Monitoring & Observability
+
+* **Goal:** Track application health, performance, user experience, and security in real time.
+* **What happens:** Logs, metrics, and distributed traces are collected from servers and applications to detect anomalies, analyze errors, and provide feedback directly to the planning phase for the next development cycle.
+* **Key Tools:** Prometheus, Grafana, ELK Stack (Elasticsearch, Logstash, Kibana), Datadog.
+
+---
+
+## Why the Lifecycle Matters
+
+* **Faster Time-to-Market:** Features reach end-users in hours or days instead of months.
+* **Higher Reliability:** Automated tests and continuous feedback catch failures before they impact production.
+* **Shorter Recovery Time (MTTR):** Quick identification and rolling out of hotfixes or automatic rollbacks.
+    `
   }
 ];
 

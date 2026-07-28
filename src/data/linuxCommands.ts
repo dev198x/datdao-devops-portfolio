@@ -3,7 +3,7 @@ export interface LinuxCommand {
   category: string;
   syntax: string;
   description: string;
-  examples: { cmd: string; note: string }[];
+  examples: { cmd: string; note: string; group?: string }[];
 }
 
 export const linuxCommandCategories = [
@@ -416,13 +416,27 @@ export const linuxCommands: LinuxCommand[] = [
   {
     name: 'openssl',
     category: 'Security',
-    syntax: 'openssl <genrsa|req|x509|enc|dgst> [args]',
-    description: 'Swiss-army-knife crypto CLI: generate keys/certificates, inspect existing certificates, and encrypt/hash data from the shell.',
+    syntax: 'openssl <genrsa|req|x509|enc|dgst|rand> [args]',
+    description: 'Swiss-army-knife crypto CLI: generate keys/certificates, inspect existing certificates, encrypt/hash data, and generate cryptographically random bytes from the shell.',
     examples: [
       { cmd: 'openssl genrsa -out key.pem 2048', note: 'generate a 2048-bit RSA private key' },
       { cmd: 'openssl req -new -x509 -key key.pem -out cert.pem -days 365', note: 'create a self-signed certificate from that key' },
       { cmd: 'openssl x509 -in cert.pem -noout -dates', note: 'check a certificate\'s validity/expiry dates' },
       { cmd: 'openssl dgst -sha256 file.txt', note: 'print the SHA-256 hash of a file' },
+      { cmd: 'openssl rand -base64 32', note: 'generate a random 32-byte key, base64-encoded' },
+      { cmd: 'openssl rand -hex 16', note: 'generate a random 16-byte value as hex, e.g. for a nonce' },
+    ],
+  },
+  {
+    name: 'node',
+    category: 'DevOps Tools',
+    syntax: 'node [-e "<script>" | file.js | -v]',
+    description: 'Run JavaScript with the Node.js runtime. "-e" evaluates an inline script — handy for one-off tasks (generating a secret, hashing a string) without creating a file.',
+    examples: [
+      { cmd: 'node -v', note: 'print the installed Node.js version' },
+      { cmd: 'node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"', note: 'generate a random 32-byte key, base64-encoded, without OpenSSL' },
+      { cmd: 'node -e "console.log(require(\'crypto\').randomBytes(16).toString(\'hex\'))"', note: 'same idea, hex-encoded instead' },
+      { cmd: 'node server.js', note: 'run a script file' },
     ],
   },
   {
@@ -444,6 +458,28 @@ export const linuxCommands: LinuxCommand[] = [
     examples: [
       { cmd: 'nohup ./long-running-job.sh &', note: 'start a job that survives the SSH session disconnecting' },
       { cmd: 'nohup npm start > app.log 2>&1 &', note: 'run in the background, redirecting output to app.log instead of nohup.out' },
+    ],
+  },
+  {
+    name: 'devops-common-commands-linux',
+    category: 'DevOps Tools',
+    syntax: 'reference — one-liners for everyday DevOps tasks',
+    description: 'Common Commands for DevOps — quick one-liners reached for daily on the job. Run any of these directly in this sandbox.',
+    examples: [
+      { group: 'Linux', cmd: 'openssl rand -base64 32', note: 'generate a random 32-byte key, base64-encoded — cross-platform via OpenSSL' },
+      { group: 'Linux', cmd: 'node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"', note: 'same result via Node.js crypto, base64-encoded — either works' },
+      { group: 'MongoDB', cmd: 'export MONGODB_USER=u1\nexport MONGODB_PASS=p1\nexport MONGODB_URI=mongodb+srv://${MONGODB_USER}:${MONGODB_PASS}@host/app-dev', note: 'set connection env vars once instead of embedding credentials in every mongosh command' },
+      { group: 'MongoDB', cmd: 'docker exec cn_mongodb mongosh "${MONGODB_URI}" --eval "show dbs;"', note: 'list databases via mongosh running inside a Docker container' },
+      { group: 'MongoDB', cmd: 'docker exec cn_mongodb mongosh "${MONGODB_URI}" --eval "show collections;"', note: 'list collections in the connected database' },
+      { group: 'MongoDB', cmd: 'docker exec cn_mongodb mongosh "${MONGODB_URI}" --eval "db.getCollection(\'Event\').find({}).limit(1)" | grep s3.amazonaws.com', note: 'search every field of a sample document in the Event collection for a substring, e.g. an S3 URL' },
+      { group: 'MySQL', cmd: 'export MYSQL_USER=root\nexport MYSQL_PASSWORD=Aa123456\nexport MYSQL_DB=information_schema', note: 'set connection env vars once instead of embedding credentials in every mysql command' },
+      { group: 'MySQL', cmd: 'docker exec cn_mysql mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "SHOW DATABASES;"', note: 'list databases via the mysql client running inside a Docker container' },
+      { group: 'MySQL', cmd: 'docker exec cn_mysql mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "SHOW TABLES IN ${MYSQL_DB};"', note: 'list tables in a given database' },
+      { group: 'MySQL', cmd: 'docker exec cn_mysql mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "SELECT * FROM ${MYSQL_DB}.VIEWS;" 2>&1 | grep localhost', note: 'search all fields of every record in a table for a substring, e.g. a leaked host reference' },
+      { group: 'PostgreSQL', cmd: 'export POSTGRES_USER=postgres\nexport POSTGRES_PASSWORD=123456\nexport POSTGRES_DB_NAME=mydb_ai_practices', note: 'set connection env vars once instead of embedding credentials in every psql command' },
+      { group: 'PostgreSQL', cmd: 'docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" cn_postgres psql -U ${POSTGRES_USER} -d postgres -l', note: 'list databases via psql running inside a Docker container' },
+      { group: 'PostgreSQL', cmd: 'docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" cn_postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB_NAME} -c "\\dt"', note: 'list tables in the connected database' },
+      { group: 'PostgreSQL', cmd: 'docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" cn_postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB_NAME} -c \'SELECT * FROM "Product" LIMIT 10;\' 2>&1 | grep Computer', note: 'search sampled records in a table for a substring, e.g. filtering a product list' },
     ],
   },
 ];

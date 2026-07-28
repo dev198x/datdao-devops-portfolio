@@ -56,12 +56,22 @@ export const CommandCheatsheet: React.FC = () => {
             <code className="block text-xs text-neutral-400 font-mono mb-2">{c.syntax}</code>
             <p className="text-sm text-neutral-300 mb-2">{c.description}</p>
             <div className="space-y-1">
-              {c.examples.map((ex, i) => (
-                <div key={i} className="text-xs font-mono rounded px-2 py-1">
-                  <span className="text-green-400">$ {ex.cmd}</span>
-                  <span className="text-neutral-500"> — {ex.note}</span>
-                </div>
-              ))}
+              {c.examples.map((ex, i) => {
+                const showGroup = ex.group && ex.group !== c.examples[i - 1]?.group;
+                return (
+                  <React.Fragment key={i}>
+                    {showGroup && (
+                      <div className="text-[11px] uppercase tracking-wide text-primary-500/80 font-mono pt-2 first:pt-0">
+                        {ex.group}
+                      </div>
+                    )}
+                    <div className="text-xs font-mono rounded px-2 py-1 whitespace-pre-wrap">
+                      <span className="text-green-400">$ {ex.cmd}</span>
+                      <span className="text-neutral-500"> — {ex.note}</span>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         ))}

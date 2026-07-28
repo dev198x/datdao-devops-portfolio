@@ -14,7 +14,7 @@ export const Navbar = () => {
     { path: '/projects', label: 'Projects' },
     { path: '/blog', label: 'Blog', icon: BookOpen },
     { path: '/case-studies', label: 'Case Studies', icon: FileText },
-    { path: '/sandbox', label: 'Sandbox', icon: TerminalSquare },
+    { path: '/commands', label: 'Commands', icon: TerminalSquare },
     { path: '/contact', label: 'Contact' },
   ];
 

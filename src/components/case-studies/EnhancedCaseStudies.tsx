@@ -1415,7 +1415,7 @@ const caseStudies: CaseStudy[] = [
       "Cost Explorer — Check Spend Without Opening Billing Console — a fast sanity check when investigating a cost spike.\n```bash\naws ce get-cost-and-usage --time-period Start=2026-07-01,End=2026-07-31 --granularity MONTHLY --metrics BlendedCost --group-by Type=DIMENSION,Key=SERVICE\n```\nQuery: aws ce get-cost-and-usage --time-period Start=2026-07-01,End=2026-07-31 --granularity MONTHLY --metrics BlendedCost  # total spend for the period without a per-service breakdown"
     ],
     impact: [
-      "Every command in this reference can be run hands-on in the site's Sandbox (terminal simulator) — the `aws` command is simulated there alongside `kubectl`, `k9s`, and `docker`, so you can practice `aws sts get-access-key-info`, `aws s3 sync`, `aws eks update-kubeconfig`, and more without touching a real AWS account",
+      "Every command in this reference is documented in the site's Commands page cheatsheet — the `aws` command sits alongside `kubectl`, `k9s`, and `docker`, so you have `aws sts get-access-key-info`, `aws s3 sync`, `aws eks update-kubeconfig`, and more on hand as a lookup without touching a real AWS account",
       "`--query` (JMESPath) + `--output table|text|json` turns noisy default CLI output into exactly the field(s) needed for a script or a quick terminal check — the single biggest daily productivity habit for this CLI",
       "`aws sts get-caller-identity` before any destructive command (delete, stop, terminate) catches the classic mistake of running against the wrong profile/account — cheap insurance against acting on production by accident",
       "`aws s3 sync --delete` vs. `aws s3 cp --recursive`: sync only transfers changed files and can mirror-delete removed ones, making it the right choice for deploying a built frontend (`dist/`) to a static hosting bucket; cp always re-copies everything",
@@ -1503,6 +1503,54 @@ const caseStudies: CaseStudy[] = [
         ["pip-tools (pip-compile/pip-sync)", "Lockfiles", "uv lock / uv sync"],
         ["pipx", "Isolated global CLI tools", "uv tool install / uvx"],
         ["poetry", "Project + dependency management", "uv init / uv add / uv lock / uv build / uv publish"]
+      ]
+    }
+  },
+  {
+    id: 30,
+    title: "Next.js — How to Handle Multi-Server Deployments",
+    subtitle: "Coordinating State, Caching, and Encryption Keys Across Load-Balanced Instances\nReference: https://nextjs.org/docs/app/guides/self-hosting#multi-server-deployments",
+    category: "DevOps",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "Deploying Next.js across multiple server instances — behind a load balancer, as Kubernetes pods, or as AWS ECS containers — breaks several defaults that only work on a single machine: each instance generates its own Server Functions encryption key, its own build ID, and caches renders on its local filesystem/memory. Without explicit coordination, this surfaces as `Failed to find Server Action` errors when a request lands on a different server than the one that encrypted it, clients stuck on stale JS/CSS after a rolling deploy, and cache fragmentation where the same page renders differently depending on which pod served it.\nReference: https://nextjs.org/docs/app/guides/self-hosting#multi-server-deployments",
+    solution: [
+      "Synchronize the Server Functions Encryption Key — Next.js encrypts Server Function (Server Action) closure variables sent to the client, generating a unique AES key per build by default. If instance A encrypts with a different key than instance B holds, B can't decrypt it and throws `Failed to find Server Action`. Fix it by pinning one base64-encoded AES key (16, 24, or 32 bytes) across every instance via an environment variable set at build time.\n```bash\nNEXT_SERVER_ACTIONS_ENCRYPTION_KEY=your-32-byte-base64-key next build\n```\nQuery: openssl rand -base64 32  # generate a valid 32-byte key to use as the value",
+      "Configure `deploymentId` for Version-Skew Protection — during a rolling deploy, a client with an old page open may request static assets or invoke a Server Function from the previous build that the new pod no longer recognizes. Setting a consistent `deploymentId` (e.g. the Git commit SHA) lets Next.js detect that mismatch and trigger an automatic hard reload to fetch current assets, instead of the request silently failing.\n```javascript\n// next.config.js\nmodule.exports = {\n  deploymentId: process.env.GIT_COMMIT_SHA,\n}\n```\nQuery: // can also read from a platform-provided variable: process.env.DEPLOYMENT_VERSION || process.env.GIT_SHA",
+      "Share Cache & Storage Across Instances — by default, Next.js stores page render caches and data fetches on the local filesystem or in a per-instance in-memory cache (50MB default), so two pods serving the same route can disagree on what's cached and one can serve a stale response the other already revalidated. Replace it with a custom `cacheHandler` backed by a shared store (Redis, S3) and disable the local in-memory layer so every instance reads from the same source of truth.\n```javascript\n// next.config.js\nmodule.exports = {\n  cacheHandler: require.resolve('./cache-handler.js'),\n  cacheMaxMemorySize: 0, // disable local in-memory caching\n}\n```\nQuery: // implement refreshTags() in the custom cache handler so every instance checks Redis for revalidateTag() updates before serving a request",
+      "Ensure Consistent Build IDs Across Containers — if the build pipeline produces separate Docker images or artifacts per pod/stage, a mismatched build ID between containers means they're technically running different code even though they're behind the same load balancer, which reintroduces the same version-skew problem `deploymentId` was meant to solve. Pin `generateBuildId` to the same deterministic value (the commit SHA) used for `deploymentId` so every container's build output is provably identical.\n```javascript\n// next.config.js\nmodule.exports = {\n  generateBuildId: async () => process.env.GIT_COMMIT_SHA,\n}\n```\nQuery: // run this against every Docker image before deploy: same GIT_COMMIT_SHA in, same build ID out, across all containers",
+      "Disable Reverse-Proxy Buffering for Streaming Responses — streaming rendering (React Suspense, Partial Prerendering) sends the response in chunks as they become ready, but Nginx or an AWS ALB sitting in front of the app may buffer the whole chunked response before forwarding it, silently turning a streaming response back into a blocking one and delaying content the user should have seen immediately. Send the `X-Accel-Buffering: no` header directly from Next.js so the proxy passes chunks through as they arrive.\n```javascript\n// next.config.js\nmodule.exports = {\n  async headers() {\n    return [\n      {\n        source: '/:path*{/}?',\n        headers: [{ key: 'X-Accel-Buffering', value: 'no' }],\n      },\n    ]\n  },\n}\n```\nQuery: curl -N https://example.com/streaming-page  # -N disables curl's own buffering, letting you see chunks arrive incrementally if the header is working"
+    ],
+    impact: [
+      "All five settings solve the same root problem from different angles: a single logical app is running as N physically separate processes, so anything Next.js defaults to storing 'on this machine' (encryption key, build ID, render cache) has to be made explicit and shared, or different pods silently disagree about what the current, correct state is",
+      "The encryption-key and build-ID fixes both trace back to the same root cause — per-instance defaults that assume a single server — and both are fixed the same way: derive the value deterministically (from an env var or the same Git SHA) instead of letting each instance generate its own at build time",
+      "`deploymentId` doesn't prevent version skew, it detects it and recovers automatically via a hard reload — this matters because a rolling deploy inherently has a window where old and new pods are both serving traffic, and the fix has to handle that window gracefully rather than assume it doesn't exist",
+      "Skipping the shared cacheHandler doesn't just risk showing stale data — it risks showing inconsistent data, where two users hitting the same URL through the same load balancer get two different renders depending purely on which pod's local cache happened to have (or not have) that page",
+      "X-Accel-Buffering is a proxy-layer concern that's easy to miss because the app-level Suspense/streaming code works perfectly in local dev (no reverse proxy in front of it) and only breaks once it's deployed behind Nginx/ALB in the target multi-server environment",
+      "Use case — Kubernetes deployment behind an ingress/load balancer: set `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and `deploymentId`/`generateBuildId` from the same CI-provided `GIT_COMMIT_SHA`, baked into the image at build time so every replica of the Deployment is provably running identical, action-compatible code",
+      "Use case — AWS ECS with an Application Load Balancer: identical to the Kubernetes case, plus the ALB's own response buffering behavior means the `X-Accel-Buffering: no` header (or the ALB-equivalent config) is required for streamed Suspense boundaries to actually stream to the client",
+      "Use case — autoscaling groups where pod/task count changes constantly: a shared Redis- or S3-backed `cacheHandler` is what keeps cache behavior consistent as instances scale up and down, since a fresh instance joining the pool has no local cache history but does have access to the shared store"
+    ],
+    technologies: ["Next.js", "Server Actions", "Kubernetes", "AWS ECS", "Nginx", "AWS ALB", "Redis", "next.config.js", "Rolling Deployment"],
+    impactMetrics: {
+      performance: { improvement: "Per-instance defaults -> shared encryption key, build ID, cache, and proxy config across all nodes" }
+    },
+    architecture: {
+      components: ["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY (env var)", "deploymentId (next.config.js)", "generateBuildId (next.config.js)", "Custom cacheHandler (Redis/S3-backed)", "X-Accel-Buffering header (proxy passthrough)"],
+      pattern: "Shared State Across Load-Balanced Next.js Instances"
+    },
+    comparisonTable: {
+      headers: ["Concern", "Single-Server Default", "Multi-Server Fix"],
+      rows: [
+        ["Server Actions encryption", "Random key generated per build", "Pin NEXT_SERVER_ACTIONS_ENCRYPTION_KEY across all instances"],
+        ["Version skew on deploy", "No detection — stale client requests can fail silently", "Set deploymentId; triggers automatic hard reload on mismatch"],
+        ["Render/data cache", "Local filesystem or in-memory (50MB) per instance", "Custom cacheHandler backed by Redis/S3, cacheMaxMemorySize: 0"],
+        ["Build identity across containers", "Each image/build can generate its own ID", "generateBuildId pinned to the same Git commit SHA"],
+        ["Streaming (Suspense/PPR) behind a proxy", "Nginx/ALB may buffer chunked responses", "Send X-Accel-Buffering: no from next.config.js headers()"]
       ]
     }
   }
