@@ -2,43 +2,65 @@ export const HERO_CONTENT = "Full-stack engineer building AI-powered application
 
 export const ABOUT_TEXT = "I design, automate, and operate reliable cloud platforms that enable teams to deliver software efficiently and at scale. My journey began with software development before evolving into Cloud, DevOps, and Site Reliability Engineering, where I focus on building scalable infrastructure, automating operations, and improving system reliability. I work extensively across AWS and Google Cloud Platform (GCP), leveraging Terraform, Kubernetes, Docker, and CI/CD pipelines to deliver secure and resilient environments. My experience includes cloud networking, load balancing, Cloud Armor security policies, DDoS protection, private connectivity across projects, infrastructure automation, observability, and performance monitoring. Using tools such as Jenkins, GitHub Actions, GitLab CI/CD, Prometheus, Grafana, Dynatrace, Site24x7, and Bash scripting, I help organizations improve reliability, reduce operational overhead, and accelerate software delivery.";
 
-export const SKILLS = [
+export type SkillLevel = 'expert' | 'advanced' | 'intermediate' | 'beginner';
+
+export interface Skill {
+  name: string;
+  icon: string;
+  category: string;
+  level: SkillLevel;
+}
+
+export const SKILL_LEVELS: {
+  id: SkillLevel;
+  group: string;
+  label: string;
+  dots: number;
+  description: string;
+}[] = [
+  { id: 'expert', group: 'Daily in production', label: 'Expert', dots: 4, description: 'Used every day in production; I can design, operate, and troubleshoot it independently.' },
+  { id: 'advanced', group: 'Hands-on', label: 'Advanced', dots: 3, description: 'Regular hands-on use in real projects; comfortable building and debugging with it.' },
+  { id: 'intermediate', group: 'Working knowledge', label: 'Intermediate', dots: 2, description: 'Practical experience on specific tasks; I use it with docs and some guidance.' },
+  { id: 'beginner', group: 'Learning', label: 'Beginner', dots: 1, description: 'Basic exposure or currently learning; not yet used independently in production.' },
+];
+
+export const SKILLS: Skill[] = [
   // Cloud
   {
     name: "AWS",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "cloud",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "Google Cloud",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/googlecloud/googlecloud-original.svg",
     category: "cloud",
-    level: 20,
+    level: 'beginner',
   },
   {
     name: "AWS Compute (EC2, ECS, Lambda)",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "cloud",
-    level: 85,
+    level: 'expert',
   },
   {
     name: "AWS Storage & Database (S3, CloudFront, RDS)",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "cloud",
-    level: 85,
+    level: 'expert',
   },
   {
     name: "AWS Networking (VPC, Route53)",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "cloud",
-    level: 80,
+    level: 'advanced',
   },
   {
     name: "AWS Messaging (SQS, SES)",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "cloud",
-    level: 75,
+    level: 'advanced',
   },
 
   // Containers
@@ -46,13 +68,13 @@ export const SKILLS = [
     name: "Docker",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg",
     category: "containers",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "Kubernetes",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kubernetes/kubernetes-plain.svg",
     category: "containers",
-    level: 20,
+    level: 'beginner',
   },
 
   // Infrastructure
@@ -60,19 +82,19 @@ export const SKILLS = [
     name: "Terraform",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/terraform/terraform-original.svg",
     category: "infrastructure",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "Ansible",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ansible/ansible-original-wordmark.svg",
     category: "infrastructure",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "AWS CloudFormation",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "infrastructure",
-    level: 80,
+    level: 'advanced',
   },
 
   // DevOps / SRE
@@ -80,67 +102,67 @@ export const SKILLS = [
     name: "Linux",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linux/linux-plain.svg",
     category: "devops",
-    level: 90,
+    level: 'expert',
   },
   // {
   //   name: "Jenkins",
   //   icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jenkins/jenkins-plain.svg",
   //   category: "devops",
-  //   level: 90,
+  //   level: 'expert',
   // },
   {
     name: "GitHub Actions",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg",
     category: "devops",
-    level: 90,
+    level: 'expert',
   },
   // {
   //   name: "GitLab CI",
   //   icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/gitlab/gitlab-original.svg",
   //   category: "devops",
-  //   level: 90,
+  //   level: 'expert',
   // },
   {
     name: "Git",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg",
     category: "devops",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "AWS CodePipeline",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "devops",
-    level: 70,
+    level: 'advanced',
   },
   {
     name: "AWS CodeBuild",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg",
     category: "devops",
-    level: 80,
+    level: 'advanced',
   },
   {
     name: "Prometheus",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/prometheus/prometheus-original.svg",
     category: "devops",
-    level: 80,
+    level: 'advanced',
   },
   {
     name: "Grafana",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/grafana/grafana-original.svg",
     category: "devops",
-    level: 80,
+    level: 'advanced',
   },
   // {
   //   name: "Dynatrace",
   //   icon: "https://cdn.simpleicons.org/dynatrace",
   //   category: "devops",
-  //   level: 90,
+  //   level: 'expert',
   // },
   {
     name: "Bash Scripting",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bash/bash-original.svg",
     category: "devops",
-    level: 90,
+    level: 'expert',
   },
 
   // AI
@@ -148,25 +170,25 @@ export const SKILLS = [
     name: "AI Agents",
     icon: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%2322c55e%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%224%22%20y=%228%22%20width=%2216%22%20height=%2212%22%20rx=%222%22/%3E%3Cpath%20d=%22M12%208V4%22/%3E%3Ccircle%20cx=%2212%22%20cy=%223%22%20r=%221%22/%3E%3Ccircle%20cx=%229%22%20cy=%2214%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2214%22%20r=%221.2%22/%3E%3Cpath%20d=%22M9%2017.5h6M2%2013v3M22%2013v3%22/%3E%3C/svg%3E",
     category: "ai",
-    level: 70,
+    level: 'advanced',
   },
   {
     name: "Retrieval-Augmented Generation (RAG)",
     icon: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%2322c55e%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%224%22%20y=%228%22%20width=%2216%22%20height=%2212%22%20rx=%222%22/%3E%3Cpath%20d=%22M12%208V4%22/%3E%3Ccircle%20cx=%2212%22%20cy=%223%22%20r=%221%22/%3E%3Ccircle%20cx=%229%22%20cy=%2214%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2214%22%20r=%221.2%22/%3E%3Cpath%20d=%22M9%2017.5h6M2%2013v3M22%2013v3%22/%3E%3C/svg%3E",
     category: "ai",
-    level: 50,
+    level: 'intermediate',
   },
   {
     name: "AI Agents & Tool Calling",
     icon: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%2322c55e%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%224%22%20y=%228%22%20width=%2216%22%20height=%2212%22%20rx=%222%22/%3E%3Cpath%20d=%22M12%208V4%22/%3E%3Ccircle%20cx=%2212%22%20cy=%223%22%20r=%221%22/%3E%3Ccircle%20cx=%229%22%20cy=%2214%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2214%22%20r=%221.2%22/%3E%3Cpath%20d=%22M9%2017.5h6M2%2013v3M22%2013v3%22/%3E%3C/svg%3E",
     category: "ai",
-    level: 80,
+    level: 'advanced',
   },
   {
     name: "Observability & Evals",
     icon: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%2322c55e%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%224%22%20y=%228%22%20width=%2216%22%20height=%2212%22%20rx=%222%22/%3E%3Cpath%20d=%22M12%208V4%22/%3E%3Ccircle%20cx=%2212%22%20cy=%223%22%20r=%221%22/%3E%3Ccircle%20cx=%229%22%20cy=%2214%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2214%22%20r=%221.2%22/%3E%3Cpath%20d=%22M9%2017.5h6M2%2013v3M22%2013v3%22/%3E%3C/svg%3E",
     category: "ai",
-    level: 70,
+    level: 'advanced',
   },
 
   // Development
@@ -174,37 +196,37 @@ export const SKILLS = [
     name: "Python",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg",
     category: "development",
-    level: 70,
+    level: 'advanced',
   },
   {
     name: "PHP",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg",
     category: "development",
-    level: 70,
+    level: 'advanced',
   },
   {
     name: "JavaScript",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-plain.svg",
     category: "development",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "Typescript",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg",
     category: "development",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "Node.js",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-plain.svg",
     category: "development",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "React",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg",
     category: "development",
-    level: 70,
+    level: 'advanced',
   },
 
   // Databases
@@ -212,25 +234,25 @@ export const SKILLS = [
     name: "MongoDB",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mongodb/mongodb-original.svg",
     category: "database",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "MySQL",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg",
     category: "database",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "PostgreSQL",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg",
     category: "database",
-    level: 90,
+    level: 'expert',
   },
   {
     name: "Redis",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg",
     category: "database",
-    level: 70,
+    level: 'advanced',
   },
 ];
 

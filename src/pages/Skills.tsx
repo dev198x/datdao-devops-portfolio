@@ -3,7 +3,11 @@ import { motion } from 'framer-motion';
 import { TerminalHeader } from '../components/TerminalHeader';
 import { Typewriter } from '../components/Typewriter';
 import { Cloud, Container, Code, Database, Bot, Terminal as TerminalIcon } from 'lucide-react';
-import { SKILLS_BY_CATEGORY } from '../data/portfolio';
+import { SKILLS, SKILL_LEVELS, type SkillLevel } from '../data/portfolio';
+
+const levelOf = (id: SkillLevel) => SKILL_LEVELS.find(l => l.id === id)!;
+
+const renderDots = (filled: number) => '●'.repeat(filled) + '○'.repeat(4 - filled);
 
 export const Skills = () => {
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
@@ -13,51 +17,51 @@ export const Skills = () => {
   const categories = [
     {
       id: 'ai',
+      short: 'AI',
       title: 'AI & Agents',
       icon: Bot,
-      skills: SKILLS_BY_CATEGORY.ai,
       color: 'text-cyan-400',
     },
     {
       id: 'database',
+      short: 'Database',
       title: 'Databases',
       icon: Database,
-      skills: SKILLS_BY_CATEGORY.database,
       color: 'text-red-500',
     },
     {
       id: 'development',
+      short: 'Dev',
       title: 'Development Stack',
       icon: Code,
-      skills: SKILLS_BY_CATEGORY.development,
       color: 'text-orange-500',
     },
     {
       id: 'cloud',
+      short: 'Cloud',
       title: 'Cloud Platforms',
       icon: Cloud,
-      skills: SKILLS_BY_CATEGORY.cloud,
       color: 'text-blue-500',
     },
     {
       id: 'infrastructure',
+      short: 'IaC',
       title: 'Infrastructure as Code',
       icon: TerminalIcon,
-      skills: SKILLS_BY_CATEGORY.infrastructure,
       color: 'text-purple-500',
     },
     {
       id: 'containers',
+      short: 'Containers',
       title: 'Container & Orchestration',
       icon: Container,
-      skills: SKILLS_BY_CATEGORY.containers,
       color: 'text-blue-400',
     },
     {
       id: 'devops',
+      short: 'DevOps',
       title: 'DevOps & Automation',
       icon: Code,
-      skills: SKILLS_BY_CATEGORY.devops,
       color: 'text-green-500',
     },
   ];
@@ -73,10 +77,7 @@ export const Skills = () => {
     ],
     levels: [
       'Proficiency Levels:',
-      '  Beginner (30%)     - Basic understanding',
-      '  Intermediate (60%) - Practical experience',
-      '  Advanced (85%)     - Production usage',
-      '  Expert (100%)      - Deep expertise',
+      ...SKILL_LEVELS.map(l => `  ${renderDots(l.dots)} ${l.label} (${l.group}) - ${l.description}`),
     ],
     clear: () => setTerminalOutput([]),
     default: (input: string) => [
@@ -112,7 +113,7 @@ export const Skills = () => {
             const cat = categories.find(c => c.id === category)!;
             output = [
               `${cat.title}:`,
-              ...cat.skills.map(skill => `  ${skill.name} (${skill.level}%)`)
+              ...SKILLS.filter(skill => skill.category === cat.id).map(skill => `  ${skill.name} (${levelOf(skill.level).label})`)
             ];
           } else {
             output = [
@@ -123,19 +124,13 @@ export const Skills = () => {
           break;
         case 'cat':
           const skillName = args.slice(1).join(' ');
-          const skill = SKILLS_BY_CATEGORY.cloud.find(s => s.name.toLowerCase() === skillName) ||
-                       SKILLS_BY_CATEGORY.containers.find(s => s.name.toLowerCase() === skillName) ||
-                       SKILLS_BY_CATEGORY.infrastructure.find(s => s.name.toLowerCase() === skillName) ||
-                       SKILLS_BY_CATEGORY.devops.find(s => s.name.toLowerCase() === skillName) ||
-                       SKILLS_BY_CATEGORY.ai.find(s => s.name.toLowerCase() === skillName) ||
-                       SKILLS_BY_CATEGORY.development.find(s => s.name.toLowerCase() === skillName) ||
-                       SKILLS_BY_CATEGORY.database.find(s => s.name.toLowerCase() === skillName);
+          const skill = SKILLS.find(s => s.name.toLowerCase() === skillName);
 
           if (skill) {
             output = [
               `Skill: ${skill.name}`,
               `Category: ${skill.category}`,
-              `Proficiency: ${skill.level}%`,
+              `Level: ${renderDots(levelOf(skill.level).dots)} ${levelOf(skill.level).label} (${levelOf(skill.level).group})`,
               '',
               `Icon: ${skill.icon}`,
             ];
@@ -181,77 +176,62 @@ export const Skills = () => {
               Technical Expertise
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
-              Comprehensive skill set spanning cloud infrastructure, development, and DevOps practices
+              Grouped by how I actually use each skill, from daily production work to things I am still learning
             </p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            {categories.map((category, categoryIndex) => {
-              const IconComponent = category.icon;
+          {/* Level legend */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
+            {SKILL_LEVELS.map((level) => (
+              <div key={level.id} className="bg-bg-elevated border border-neutral-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono text-sm text-primary-500">{level.label}</span>
+                  <span className="font-mono text-primary-500 tracking-widest" aria-hidden="true">{renderDots(level.dots)}</span>
+                </div>
+                <p className="text-xs text-neutral-400 leading-relaxed">{level.description}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-12">
+            {SKILL_LEVELS.map((level, levelIndex) => {
+              const tierSkills = SKILLS.filter((skill) => skill.level === level.id);
+              if (tierSkills.length === 0) return null;
               return (
                 <motion.div
-                  key={category.id}
+                  key={level.id}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: categoryIndex * 0.1, duration: 0.6 }}
+                  transition={{ delay: levelIndex * 0.05, duration: 0.5 }}
                   viewport={{ once: true }}
-                  className="bg-bg-surface border border-neutral-700 rounded-xl overflow-hidden"
                 >
-                  {/* Category Header */}
-                  <div className="bg-bg-elevated border-b border-neutral-700 p-6">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg bg-neutral-800 ${category.color}`}>
-                        <IconComponent size={24} />
-                      </div>
-                      <h3 className="font-mono text-xl font-semibold text-primary-500">
-                        {category.title}
-                      </h3>
-                    </div>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <span className="font-mono text-primary-500 tracking-widest" aria-hidden="true">{renderDots(level.dots)}</span>
+                    <h3 className="font-mono text-xl font-semibold text-primary-500">{level.group}</h3>
+                    <span className="text-xs font-mono text-neutral-500">{tierSkills.length}</span>
                   </div>
-
-                  {/* Skills Grid */}
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {category.skills.map((skill, skillIndex) => (
-                        <motion.div
+                  <div className="flex flex-wrap gap-3">
+                    {tierSkills.map((skill) => {
+                      const category = categories.find((c) => c.id === skill.category);
+                      return (
+                        <div
                           key={skill.name}
-                          initial={{ opacity: 0, x: -20 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          transition={{ delay: (categoryIndex * 0.1) + (skillIndex * 0.05), duration: 0.4 }}
-                          viewport={{ once: true }}
-                          whileHover={{ scale: 1.02 }}
-                          className="bg-bg-elevated border border-neutral-700 p-4 rounded-lg hover:border-primary-500/50 transition-all duration-300 group"
+                          title={`${skill.name} — ${level.label}`}
+                          className="flex items-center space-x-3 bg-bg-elevated border border-neutral-700 rounded-lg px-4 py-3 hover:border-primary-500/50 transition-colors group"
                         >
-                          <div className="flex items-center space-x-3 mb-3">
-                            <img
-                              src={skill.icon}
-                              alt={skill.name}
-                              className="w-8 h-8 opacity-80 group-hover:opacity-100 transition-opacity"
-                            />
-                            <span className="font-mono font-medium text-neutral-200">
-                              {skill.name}
-                            </span>
-                          </div>
-                          
-                          {/* Proficiency Bar */}
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-xs">
-                              <span className="text-neutral-400">Proficiency</span>
-                              <span className="text-primary-500 font-mono">{skill.level}%</span>
-                            </div>
-                            <div className="w-full bg-neutral-700 rounded-full h-2">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                whileInView={{ width: `${skill.level}%` }}
-                                transition={{ delay: (categoryIndex * 0.1) + (skillIndex * 0.05) + 0.3, duration: 0.8 }}
-                                viewport={{ once: true }}
-                                className="h-2 bg-gradient-to-r from-primary-500 to-primary-700 rounded-full"
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
+                          <img
+                            src={skill.icon}
+                            alt=""
+                            className="w-6 h-6 opacity-80 group-hover:opacity-100 transition-opacity"
+                          />
+                          <span className="font-mono text-sm text-neutral-200">{skill.name}</span>
+                          {category && (
+                            <span className={`text-xs font-mono ${category.color}`}>{category.short}</span>
+                          )}
+                          <span className="sr-only">{level.label}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </motion.div>
               );
@@ -360,7 +340,7 @@ export const Skills = () => {
               {[
                 { cmd: 'help', desc: 'Show commands' },
                 { cmd: 'ls cloud', desc: 'Cloud skills' },
-                { cmd: 'levels', desc: 'Proficiency guide' },
+                { cmd: 'levels', desc: 'Level guide' },
                 { cmd: 'cat Docker', desc: 'Skill details' },
               ].map((item) => (
                 <button
