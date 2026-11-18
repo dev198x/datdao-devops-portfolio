@@ -237,7 +237,7 @@ export const SKILLS = [
 export const PROJECTS = [
   {
     title: 'Customer Support Chatbot — RAG + LLM',
-    image: '/images/chatbot-cskh.svg',
+    image: `${import.meta.env.BASE_URL}images/chatbot-cskh.svg`,
     description: 'Chatbot chăm sóc khách hàng cho cửa hàng điện tử: trả lời câu hỏi về chính sách (giao hàng, bảo hành, đổi trả) bằng RAG và giúp khách đã đăng nhập tra cứu đơn hàng của chính họ qua tool calling. Quan sát toàn bộ luồng bằng OpenTelemetry: log và span gửi qua OTel Collector (xoá header nhạy cảm, gom lô) vào grafana/otel-lgtm (Loki, Tempo, Prometheus, Grafana dashboard).',
     technologies: ['RAG', 'LLM', 'Tool Calling', 'OpenTelemetry', 'Grafana', 'Loki', 'Tempo', 'Prometheus'],
     category: 'fullstack',
@@ -246,7 +246,7 @@ export const PROJECTS = [
   },
   {
     title: 'Booking online - EKS && GihubActions',
-    image: '/images/booking-online.webp',
+    image: `${import.meta.env.BASE_URL}images/booking-online.webp`,
     description: 'Deployed a production-grade booking online on AWS EKS with helm. Integrated CI/CD pipelines using GitHub Actions, containerized microservices with Docker.',
     technologies: ['AWS EKS', 'Kubernetes', 'Helm', 'GitHub Actions', 'Docker', 'Full-Stack'],
     category: 'devops',
@@ -255,7 +255,7 @@ export const PROJECTS = [
   },
   {
     title: 'Next.js CI/CD Pipeline with Docker & Kubernetes',
-    image: '/images/cicd-k8s.webp',
+    image: `${import.meta.env.BASE_URL}images/cicd-k8s.webp`,
     description: 'Developed and containerized a Next.js application, deploying it to Kubernetes clusters using GitHub Actions for automated CI/CD. Implemented multi-stage Docker builds, health probes, resource limits, and rolling updates for high availability.',
     technologies: ['Next.js', 'Docker', 'Kubernetes', 'GitHub Actions', 'GHCR'],
     category: 'devops',
@@ -264,7 +264,7 @@ export const PROJECTS = [
   },
   {
     title: 'Realtime Chat App — MERN + Socket.IO',
-    image: '/images/todo-webapp.webp',
+    image: `${import.meta.env.BASE_URL}images/todo-webapp.webp`,
     description: 'Developed a real-time chat application using the MERN stack with Socket.IO for instant communication. Implemented custom hooks for efficient state management. Deployed behind Nginx as a reverse proxy, Dockerized for deployment.',
     technologies: ['React', 'Node', 'Express', 'MongoDB', 'Socket.IO', 'Nginx', 'Docker'],
     category: 'fullstack',
@@ -273,7 +273,7 @@ export const PROJECTS = [
   },
   {
     title: 'Cloud Infrastructure Automation',
-    image: '/images/terraform-aws.webp',
+    image: `${import.meta.env.BASE_URL}images/terraform-aws.webp`,
     description: 'Automated AWS infrastructure provisioning using Terraform with reusable modules for EC2, VPC, and S3. Integrated CI/CD with GitHub Actions for continuous deployment of cloud environments.',
     technologies: ['AWS', 'Terraform', 'GitHub Actions', 'EC2', 'S3'],
     category: 'devops',
@@ -282,7 +282,7 @@ export const PROJECTS = [
   },
   {
     title: 'Shaire Salon using ParsePlatform/ReactJS',
-    image: '/images/shaire-salon.webp',
+    image: `${import.meta.env.BASE_URL}images/shaire-salon.webp`,
     description: 'Built Shaire Salon on Parse Platform and React, with MongoDB and Redis for data and caching, Firebase for auxiliary services, and a production deployment on AWS EC2 behind Nginx, backed by S3 and CloudFront for static asset delivery.',
     technologies: ['ParsePlatform', 'ReactJS', 'MongoDB', 'Redis', 'Firebase', 'EC2', 'Nginx', 'S3', 'CloudFront'],
     category: 'fullstack',
@@ -291,7 +291,7 @@ export const PROJECTS = [
   },
   {
     title: 'Wine Auction using Symfony/MySQL',
-    image: '/images/wine-auction.webp',
+    image: `${import.meta.env.BASE_URL}images/wine-auction.webp`,
     description: 'Built a wine auction platform on Symfony with MySQL, deployed on AWS EC2 behind Nginx with S3 for asset storage.',
     technologies: ['Symfony', 'MySQL', 'EC2', 'Nginx', 'S3'],
     category: 'fullstack',
@@ -300,7 +300,7 @@ export const PROJECTS = [
   },
   {
     title: 'Portfolio Website',
-    image: '/images/portfolio-personal.webp',
+    image: `${import.meta.env.BASE_URL}images/portfolio-personal.webp`,
     description: 'This portfolio site itself — a cyber-terminal-themed single-page app built with React, TypeScript, and Vite, deployed as a static SPA.',
     technologies: ['React', 'TypeScript', 'Vite', 'React Router', 'Tailwind CSS', 'Framer Motion'],
     category: 'fullstack',

@@ -13,7 +13,7 @@ import './App.css';
 
 function App() {
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <div className="min-h-screen bg-bg-page text-neutral-200 font-sans">
         <Navbar />
         <main className="pt-16">
