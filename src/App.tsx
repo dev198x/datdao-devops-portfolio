@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import { About } from './pages/About';
 import { Skills } from './pages/Skills';
 import { Projects } from './pages/Projects';
+import { ProjectDetail } from './pages/ProjectDetail';
 import Blog from './pages/Blog';
 import CaseStudies from './pages/CaseStudies';
 import Commands from './pages/Commands';
@@ -22,6 +23,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/skills" element={<Skills />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:projectId" element={<ProjectDetail />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/case-studies" element={<CaseStudies />} />
             <Route path="/commands" element={<Commands />} />

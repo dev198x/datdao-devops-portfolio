@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TerminalHeader } from '../components/TerminalHeader';
-import { ExternalLink, Github, Filter } from 'lucide-react';
+import { ExternalLink, Github, Filter, ArrowRight } from 'lucide-react';
 import { PROJECTS_BY_CATEGORY, CONTACT } from '../data/portfolio';
 
 export const Projects = () => {
@@ -66,7 +67,7 @@ export const Projects = () => {
           >
             {getProjects().map((project, index) => (
               <motion.div
-                key={project.title}
+                key={project.slug}
                 layout
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -74,7 +75,7 @@ export const Projects = () => {
                 className="bg-bg-surface border border-neutral-700 rounded-xl overflow-hidden group hover:border-primary-500/50 transition-all duration-300 shadow-card hover:shadow-card-hover"
               >
                 {/* Project Image */}
-                <div className="relative aspect-video overflow-hidden">
+                <Link to={`/projects/${project.slug}`} className="relative block aspect-video overflow-hidden">
                   <img
                     src={project.image}
                     alt={project.title}
@@ -92,13 +93,13 @@ export const Projects = () => {
                       {project.category === 'devops' ? 'DevOps' : 'Full-Stack'}
                     </span>
                   </div>
-                </div>
+                </Link>
 
                 {/* Project Content */}
                 <div className="p-6 space-y-4">
                   {/* Title */}
                   <h3 className="font-mono text-xl font-bold text-primary-500 group-hover:text-primary-400 transition-colors">
-                    {project.title}
+                    <Link to={`/projects/${project.slug}`}>{project.title}</Link>
                   </h3>
 
                   {/* Description */}
@@ -125,15 +126,25 @@ export const Projects = () => {
 
                   {/* Action Buttons */}
                   <div className="flex items-center space-x-4 pt-4">
-                    <a
-                      href={project.githubLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-2 text-neutral-400 hover:text-primary-500 transition-colors group/btn"
+                    <Link
+                      to={`/projects/${project.slug}`}
+                      className="flex items-center space-x-2 text-primary-500 hover:text-primary-400 transition-colors group/btn"
                     >
-                      <Github size={16} className="group-hover/btn:scale-110 transition-transform" />
-                      <span className="text-sm font-mono">Code</span>
-                    </a>
+                      <span className="text-sm font-mono">View details</span>
+                      <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                    </Link>
+
+                    {project.githubLink && (
+                      <a
+                        href={project.githubLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 text-neutral-400 hover:text-primary-500 transition-colors group/btn"
+                      >
+                        <Github size={16} className="group-hover/btn:scale-110 transition-transform" />
+                        <span className="text-sm font-mono">Code</span>
+                      </a>
+                    )}
                     
                     {project.websiteLink && (
                       <a
