@@ -1565,7 +1565,7 @@ const caseStudies: CaseStudy[] = [
 ];
 
 const EnhancedCaseStudies: React.FC = () => {
-  const [selectedStudy, setSelectedStudy] = useState<number | null>(caseStudies[0]?.id || null);
+  const [selectedStudy, setSelectedStudy] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'solution' | 'results'>('overview');
 
   const selectedStudyData = caseStudies.find(study => study.id === selectedStudy);
@@ -1695,12 +1695,11 @@ const EnhancedCaseStudies: React.FC = () => {
                 key={study.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setSelectedStudy(study.id)}
-                className={`cursor-pointer p-4 rounded-lg border transition-all duration-300 ${
-                  selectedStudy === study.id
-                    ? 'bg-green-400/10 border-green-400'
-                    : 'bg-gray-900/50 border-gray-700 hover:border-green-400/50'
-                } ${study.featured ? 'ring-2 ring-yellow-400/50' : ''}`}
+                onClick={() => {
+                  setActiveTab('overview');
+                  setSelectedStudy(study.id);
+                }}
+                className={`cursor-pointer p-4 rounded-lg border transition-all duration-300 bg-gray-900/50 border-gray-700 hover:border-green-400/50 ${study.featured ? 'ring-2 ring-yellow-400/50' : ''}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <TechBadge name={study.category} category={study.category} size="sm" />
@@ -1736,18 +1735,39 @@ const EnhancedCaseStudies: React.FC = () => {
           )}
         </motion.div>
 
-        {/* Selected Study Details */}
-        <AnimatePresence mode="wait">
+        {/* Case Study Modal */}
+        <AnimatePresence>
           {selectedStudyData && (
             <motion.div
-              key={selectedStudyData.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setSelectedStudy(null)}
             >
+            <motion.div
+              key={selectedStudyData.id}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label={selectedStudyData.title}
+              className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-900 border border-gray-700 rounded-lg"
+            >
+              <button
+                onClick={() => setSelectedStudy(null)}
+                aria-label="Close"
+                className="absolute top-4 right-4 z-10 text-gray-400 hover:text-neutral-200 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
               {/* Study Header */}
-              <div className="p-6 border-b border-gray-700">
+              <div className="p-6 pr-14 border-b border-gray-700">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
@@ -2087,6 +2107,7 @@ const EnhancedCaseStudies: React.FC = () => {
                   </motion.div>
                 </AnimatePresence>
               </div>
+            </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
