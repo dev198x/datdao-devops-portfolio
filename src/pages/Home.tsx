@@ -7,13 +7,22 @@ import { HERO_CONTENT, SKILLS, PROJECTS, CONTACT } from '../data/portfolio';
 
 export const Home = () => {
   const stats = [
-    { label: 'Years Experience', value: '1+' },
+    { label: 'Years Experience', value: '10+' },
     { label: 'Cloud Platforms', value: '2' },
     { label: 'Projects Completed', value: '10+' },
     { label: 'Technologies', value: '19+' },
   ];
 
-  const featuredSkills = SKILLS.slice(0, 6);
+  // Highlight order: Full-Stack -> AI -> Cloud -> Monitoring
+  const FEATURED_SKILL_NAMES = [
+    'React', 'Node.js', 'Typescript', 'PostgreSQL',
+    'Retrieval-Augmented Generation (RAG)', 'AI Agents & Tool Calling',
+    'AWS', 'Kubernetes', 'Docker', 'Terraform',
+    'Prometheus', 'Grafana',
+  ];
+  const featuredSkills = FEATURED_SKILL_NAMES
+    .map((name) => SKILLS.find((skill) => skill.name === name))
+    .filter((skill): skill is (typeof SKILLS)[number] => Boolean(skill));
 
   return (
     <div className="min-h-screen bg-bg-page relative overflow-hidden">
@@ -37,7 +46,7 @@ export const Home = () => {
 
             {/* Typewriter heading */}
             <div className="font-mono text-4xl md:text-6xl lg:text-8xl font-bold tracking-tight text-primary-500">
-              <Typewriter text="DevOps & Solution Architecture" delay={80} />
+              <Typewriter text="Full-Stack, AI & Cloud Engineer" delay={80} />
               <span className="terminal-cursor ml-2" />
             </div>
 
@@ -124,7 +133,7 @@ export const Home = () => {
               Featured Technologies
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
-              A curated selection of the technologies I work with daily to build and deploy scalable systems
+              From full-stack development and AI to cloud and monitoring: the technologies I use to build, ship, and run production systems
             </p>
           </motion.div>
 

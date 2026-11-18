@@ -113,44 +113,6 @@ interface CaseStudy {
 
 const caseStudies: CaseStudy[] = [
   {
-    id: 1,
-    title: "Amazon Clone — EKS & ArgoCD Deployment",
-    subtitle: "E-commerce Platform with GitOps",
-    category: "DevOps",
-    featured: true,
-    timeline: {
-      start: "Sep 2024",
-      end: "Nov 2024",
-      duration: "2 months"
-    },
-    challenge: "Migrate a complex e-commerce platform to a scalable Kubernetes infrastructure while implementing GitOps practices for automated deployments and ensuring zero-downtime updates.",
-    solution: [
-      "Designed and implemented production-grade EKS cluster with multi-AZ deployment",
-      "Set up ArgoCD for GitOps-based continuous deployment with progressive delivery",
-      "Implemented automated CI/CD pipelines with GitHub Actions and Docker",
-      "Configured monitoring and alerting with Prometheus and Grafana",
-      "Established security practices with RBAC, network policies, and image scanning"
-    ],
-    impact: [
-      "Reduced deployment time from 45 minutes to 5 minutes",
-      "Achieved 99.9% uptime with automated failover",
-      "Decreased infrastructure costs by 30% through autoscaling",
-      "Improved developer productivity with self-service deployments",
-      "Enhanced security posture with automated compliance checks"
-    ],
-    technologies: ["AWS EKS", "ArgoCD", "GitOps", "Kubernetes", "Docker", "Terraform", "GitHub Actions"],
-    impactMetrics: {
-      deploymentTime: { before: "45 min", after: "8 min", improvement: "82%" },
-      cost: { before: "$2,400/mo", after: "$1,800/mo", reduction: "25%" },
-      availability: { uptime: "99.5%", improvement: "1.5%" },
-      scalability: { capacity: "5x", improvement: "500%" }
-    },
-    architecture: {
-      components: ["EKS Cluster", "ArgoCD", "Application Pods", "Load Balancers", "Database", "Cache Layer"],
-      pattern: "Microservices with GitOps"
-    }
-  },
-  {
     id: 2,
     title: "Realtime Chat Application",
     subtitle: "WebSocket Architecture with Scaling",
@@ -1551,6 +1513,52 @@ const caseStudies: CaseStudy[] = [
         ["Render/data cache", "Local filesystem or in-memory (50MB) per instance", "Custom cacheHandler backed by Redis/S3, cacheMaxMemorySize: 0"],
         ["Build identity across containers", "Each image/build can generate its own ID", "generateBuildId pinned to the same Git commit SHA"],
         ["Streaming (Suspense/PPR) behind a proxy", "Nginx/ALB may buffer chunked responses", "Send X-Accel-Buffering: no from next.config.js headers()"]
+      ]
+    }
+  },
+  {
+    id: 31,
+    title: "String .length vs. Bytes",
+    subtitle: "Why a String's Character Count Isn't Its Storage or Network Size",
+    category: "Full-Stack",
+    featured: false,
+    timeline: {
+      start: "Reference",
+      end: "Reference",
+      duration: "Quick read"
+    },
+    challenge: "`.length` (JavaScript's `String.length`, similarly `len()` on a Python str) counts UTF-16 code units — not bytes, and not always even 'characters'. For plain ASCII text the two happen to match, so the bug stays invisible until non-English text or emoji shows up. Then `.length` and the actual byte size diverge: an emoji like '🚀' is 1 grapheme but `.length === 2` (a UTF-16 surrogate pair) and 4 bytes in UTF-8; a word like 'café' is 4 characters but 5 bytes in UTF-8. Code that allocates a buffer, sets a byte-based limit, or trusts `Content-Length` using `.length` directly under-allocates for any input outside the ASCII range — producing truncated multi-byte data, corrupted output, or a buffer overflow/crash rather than a clean error.",
+    solution: [
+      "Know what `.length` actually counts — UTF-16 code units, not bytes and not user-perceived characters. Emoji and characters outside the Basic Multilingual Plane are encoded as surrogate pairs, so a single emoji can cost 2 toward `.length`.\n```javascript\n'hello'.length        // 5 — matches byte count, all ASCII\n'café'.length         // 4 — but café is 5 bytes in UTF-8 (é is 2 bytes)\n'🚀'.length           // 2 — one emoji, one surrogate pair, still just 1 grapheme\n```\nQuery: [...'🚀'].length  // 1 — spreading iterates by code point, closer to 'what a user sees' than .length",
+      "Get the real byte size with `TextEncoder` (browser/Node) or `Buffer.byteLength` (Node) — this is what actually reflects how many bytes the string occupies once encoded, e.g. as UTF-8 for storage, a network payload, or a file.\n```javascript\nnew TextEncoder().encode('café').length   // 5 — the real UTF-8 byte count\nBuffer.byteLength('café', 'utf8')          // 5 — Node-native equivalent\nBuffer.byteLength('🚀', 'utf8')            // 4\n```\nQuery: Buffer.from('café', 'utf8').length  // 5 — same answer via an actual allocated Buffer",
+      "Use `.length` for UI logic — form validation and display truncation are about how many characters a user typed or sees, not how the string will eventually be encoded on the wire.\n```javascript\nif (username.length > 15) {\n  throw new Error('Username must be under 15 characters');\n}\nconst preview = comment.length > 100 ? comment.slice(0, 100) + '...' : comment;\n```\nQuery: // .length is the right tool here — the constraint is user-facing character count, not storage size",
+      "Use byte size for network and storage — `Content-Length`, database column/storage limits, and buffer allocation all operate in bytes, so sizing them off `.length` silently under-counts any non-ASCII input.\n```javascript\nconst body = JSON.stringify(payload);\nres.setHeader('Content-Length', Buffer.byteLength(body, 'utf8')); // not body.length\n\nconst buf = Buffer.alloc(Buffer.byteLength(userInput, 'utf8')); // sized in bytes, not code units\nbuf.write(userInput, 'utf8');\n```\nQuery: // res.setHeader('Content-Length', body.length) is a real, easy-to-miss bug the moment 'body' contains an emoji or accented character"
+    ],
+    impact: [
+      "Core rule: use `.length` for UI logic, use byte size for network and storage — they answer two different questions and aren't interchangeable once input goes beyond plain ASCII",
+      "Allocating memory (or a fixed-size buffer/column) based on `.length` for non-English text causes data corruption or crashes, because the buffer ends up too small for the actual UTF-8 byte count it needs to hold",
+      "Use case — form input validation: 'Username must be under 15 characters' → validate with `.length`, since the limit is about what the user typed, not how it will be stored on disk",
+      "Use case — truncating text for display: a comment preview or table cell → truncate with `.length` (or a grapheme-aware split for emoji-heavy text), since it's a rendering concern, not a storage one",
+      "Use case — setting the `Content-Length` HTTP header: must be the exact byte count of the response body, or clients relying on it (or keep-alive connection reuse) will hang or truncate the response — use `Buffer.byteLength(body, 'utf8')`, never `body.length`",
+      "Use case — database storage limits: a `VARCHAR(255)` or similar byte/character-aware column constraint should be checked against the encoded byte size for byte-limited engines, not the raw JS string length",
+      "Use case — allocating buffer streams: `Buffer.alloc(n)` or any fixed-size byte buffer receiving user text must be sized with `Buffer.byteLength`/`TextEncoder`, not `.length`, or multi-byte characters get truncated mid-codepoint and corrupt the output"
+    ],
+    technologies: ["JavaScript", "UTF-8", "UTF-16", "TextEncoder", "Buffer.byteLength", "Content-Length", "String.length"],
+    impactMetrics: {
+      performance: { improvement: "Prevents buffer under-allocation and truncated/corrupted output on multi-byte (non-ASCII) input" }
+    },
+    architecture: {
+      components: ["String.length (UTF-16 code units)", "TextEncoder", "Buffer.byteLength", "Buffer.alloc", "Content-Length header"],
+      pattern: "Character Count vs. Byte Size"
+    },
+    comparisonTable: {
+      headers: ["Concern", "Wrong Tool", "Right Tool"],
+      rows: [
+        ["Form input validation (e.g. max 15 characters)", "Buffer.byteLength", "String.length"],
+        ["Truncating text for display", "Buffer.byteLength", "String.length (or grapheme-aware split)"],
+        ["HTTP Content-Length header", "String.length", "Buffer.byteLength(body, 'utf8')"],
+        ["Database storage limits (byte-based columns)", "String.length", "Buffer.byteLength / TextEncoder"],
+        ["Allocating a fixed-size buffer", "String.length", "Buffer.byteLength / TextEncoder"]
       ]
     }
   }

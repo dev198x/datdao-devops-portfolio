@@ -650,6 +650,182 @@ It is usually visualized as an **infinity loop ($\\infty$)**, representing an on
 * **Higher Reliability:** Automated tests and continuous feedback catch failures before they impact production.
 * **Shorter Recovery Time (MTTR):** Quick identification and rolling out of hotfixes or automatic rollbacks.
     `
+  },
+  {
+    id: 7,
+    title: "Simulating 3D in Three.js with the webgpu-claude-skill",
+    category: "Full-Stack",
+    difficulty: "Intermediate",
+    readTime: "10 min read",
+    date: "2026-07-30",
+    featured: false,
+    views: "0",
+    likes: "0",
+    comments: "0",
+    excerpt: "How I used dgreenheck's webgpu-claude-skill — a packaged Claude Code skill for WebGPU + TSL — to go from zero to a working 3D particle simulation in Three.js, and what's inside the skill that makes that possible.",
+    tags: ["Three.js", "WebGPU", "TSL", "Claude Code", "AI Tooling"],
+    content: `
+# Simulating 3D in Three.js with the webgpu-claude-skill
+
+[dgreenheck/webgpu-claude-skill](https://github.com/dgreenheck/webgpu-claude-skill) is a Claude Code **skill** — a packaged bundle of docs, examples, and templates that an agent loads on demand instead of relying on stale training data. Its subject is Three.js's newest renderer, WebGPU, and its node-based shader language, **TSL (Three.js Shading Language)**. Rather than write a generic "how WebGPU works" tutorial, this post covers how the skill itself is structured and how I used it to drive an actual 3D simulation build.
+
+## What a Claude Code skill actually is
+
+A skill is a folder of markdown + code that gets injected into the agent's context only when relevant, keyed off a trigger description. This one triggers on prompts mentioning WebGPU, TSL, node materials, or GPU compute in Three.js. Once loaded, the agent has:
+
+\`\`\`
+webgpu-claude-skill/
+├── docs/
+│   ├── core-concepts.md       # types, operators, uniforms, control flow
+│   ├── materials.md           # node materials and all properties
+│   ├── compute-shaders.md     # GPU compute with instanced arrays
+│   ├── post-processing.md     # built-in and custom effects
+│   ├── wgsl-integration.md    # custom WGSL functions
+│   ├── device-loss.md         # handling GPU device loss and recovery
+│   └── limits-and-features.md # WebGPU device limits and optional features
+├── examples/
+│   ├── basic-setup.js
+│   ├── custom-material.js
+│   ├── particle-system.js
+│   └── earth-shader.js
+├── templates/
+│   ├── webgpu-project.js
+│   └── compute-shader.js
+└── REFERENCE.md                # quick cheatsheet
+\`\`\`
+
+That structure matters more than it looks: instead of one giant prompt, the agent can pull just \`docs/compute-shaders.md\` when building a particle system, or just \`materials.md\` when writing a custom shader — keeping context focused and answers accurate to the current TSL API rather than an older GLSL-era mental model.
+
+## Using the skill: renderer setup
+
+Asking the agent to "set up a WebGPU renderer with Three.js" pulls the \`templates/webgpu-project.js\` starter, which enforces the one detail people most often get wrong — importing from the WebGPU-specific entry points, not the classic \`three\` package:
+
+\`\`\`javascript
+import * as THREE from 'three/webgpu';
+import { color, time, oscSine } from 'three/tsl';
+
+const renderer = new THREE.WebGPURenderer({ antialias: true });
+await renderer.init(); // WebGPU initialization is async
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  60,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.set(0, 2, 5);
+\`\`\`
+
+Notice the pattern the skill enforces: import from \`three/webgpu\` and \`three/tsl\`, never the classic \`three\` package — the node material system doesn't exist on the WebGL-only entry point, and it's the single most common mistake when adapting older Three.js tutorials.
+
+## Using the skill: node-based materials
+
+Asking for "a custom shader material" pulls \`docs/materials.md\` and \`examples/custom-material.js\`. The skill's core lesson here is a mental-model shift: instead of setting \`material.color\` or \`material.map\` directly, you assign **nodes** to properties like \`colorNode\`, \`roughnessNode\`, and \`positionNode\`.
+
+\`\`\`javascript
+const material = new THREE.MeshStandardNodeMaterial();
+
+// Animate color with a sine oscillator driven by elapsed time
+material.colorNode = color(0x00ff88).mul(oscSine(time));
+
+// Vertex displacement for a simple "breathing" sphere
+const geometry = new THREE.SphereGeometry(1, 64, 64);
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
+\`\`\`
+
+The skill also flags TSL's **method-chaining** convention, which trips people up coming from GLSL. What would be \`sin(time * 2.0 + offset) * 0.5 + 0.5\` becomes:
+
+\`\`\`javascript
+time.mul(2.0).add(offset).sin().mul(0.5).add(0.5)
+\`\`\`
+
+## Using the skill: GPU compute for the simulation itself
+
+This is the part that made the skill worth pulling in — \`docs/compute-shaders.md\` and \`examples/particle-system.js\` cover **GPU compute with instanced arrays**, which is what actually simulates motion for thousands of objects without a CPU round-trip per frame:
+
+\`\`\`javascript
+import { instancedArray, Fn, vec3, instanceIndex } from 'three/tsl';
+
+const particleCount = 50_000;
+const positionBuffer = instancedArray(particleCount, 'vec3');
+
+const computeUpdate = Fn(() => {
+  const pos = positionBuffer.element(instanceIndex);
+  pos.addAssign(vec3(0, -0.01, 0)); // simple gravity simulation
+})().compute(particleCount);
+
+// Each frame:
+renderer.computeAsync(computeUpdate);
+\`\`\`
+
+Pair this buffer with a \`THREE.InstancedMesh\`, or a points material whose \`positionNode\` reads from \`positionBuffer\`, to render the simulated particles. This is directly lifted from the skill's \`templates/compute-shader.js\` template rather than assembled from scratch.
+
+## Using the skill: reusable shader logic
+
+For effects you'll reuse across materials — a Fresnel rim light, for example — the skill's core-concepts doc shows wrapping the logic in \`Fn()\`:
+
+\`\`\`javascript
+import { Fn, normalWorld, positionViewDirection, float } from 'three/tsl';
+
+const fresnel = Fn(([power = 2.0]) => {
+  const nDotV = normalWorld.dot(positionViewDirection).saturate();
+  return float(1.0).sub(nDotV).pow(power);
+});
+
+material.emissiveNode = color(0x00ff88).mul(fresnel(3.0));
+\`\`\`
+
+## Using the skill: post-processing and device loss
+
+\`docs/post-processing.md\` covers composing effects declaratively:
+
+\`\`\`javascript
+import { pass } from 'three/tsl';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+
+const scenePass = pass(scene, camera);
+const bloomPass = bloom(scenePass, 1.0, 0.4, 0.1);
+
+const postProcessing = new THREE.PostProcessing(renderer);
+postProcessing.outputNode = scenePass.add(bloomPass);
+\`\`\`
+
+And \`docs/device-loss.md\` covers a failure mode that's easy to miss if you're only used to WebGL: WebGPU devices can be lost outright (driver crash, resource limits, tab backgrounding), so production code needs an explicit recovery path:
+
+\`\`\`javascript
+renderer.onDeviceLost((info) => {
+  console.warn('WebGPU device lost:', info.message);
+  // Recreate renderer and re-upload scene resources
+});
+\`\`\`
+
+## Putting it together
+
+The full render loop combines the compute pass with the render/post-processing pass:
+
+\`\`\`javascript
+renderer.setAnimationLoop(() => {
+  renderer.computeAsync(computeUpdate);
+  postProcessing.render();
+});
+\`\`\`
+
+## Why go through the skill instead of just asking the model
+
+Three.js's WebGPU/TSL API is new enough that a model's training data is likely to blend it with older GLSL-based APIs, or with outdated pre-release TSL syntax. The skill sidesteps that by giving the agent current, curated reference material — docs, working examples, and templates — to pull from on demand, so what comes back matches the actual current API instead of a plausible-sounding blend of old and new.
+
+## Key Takeaways
+
+1. A Claude Code skill is a folder of docs/examples/templates loaded into context only when its trigger matches — here, anything mentioning WebGPU, TSL, or Three.js GPU compute.
+2. It fixes the two mistakes people make most: wrong import path (\`three/webgpu\` / \`three/tsl\`, not \`three\`) and treating node materials like flat properties.
+3. GPU compute via \`instancedArray\` + \`.compute()\` — sourced from the skill's compute-shader template — is what makes large-scale simulation practical in the browser.
+4. Device-loss handling is documented explicitly in the skill because it's a real WebGPU failure mode, not an edge case worth skipping.
+5. Reference: [dgreenheck/webgpu-claude-skill](https://github.com/dgreenheck/webgpu-claude-skill).
+    `
   }
 ];
 

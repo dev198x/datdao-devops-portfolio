@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TerminalHeader } from '../components/TerminalHeader';
 import { Typewriter } from '../components/Typewriter';
-import { Cloud, Container, Code, Database, Terminal as TerminalIcon } from 'lucide-react';
+import { Cloud, Container, Code, Database, Bot, Terminal as TerminalIcon } from 'lucide-react';
 import { SKILLS_BY_CATEGORY } from '../data/portfolio';
 
 export const Skills = () => {
@@ -12,32 +12,18 @@ export const Skills = () => {
 
   const categories = [
     {
-      id: 'cloud',
-      title: 'Cloud Platforms',
-      icon: Cloud,
-      skills: SKILLS_BY_CATEGORY.cloud,
-      color: 'text-blue-500',
+      id: 'ai',
+      title: 'AI & Agents',
+      icon: Bot,
+      skills: SKILLS_BY_CATEGORY.ai,
+      color: 'text-cyan-400',
     },
     {
-      id: 'containers',
-      title: 'Container & Orchestration',
-      icon: Container,
-      skills: SKILLS_BY_CATEGORY.containers,
-      color: 'text-blue-400',
-    },
-    {
-      id: 'infrastructure',
-      title: 'Infrastructure as Code',
-      icon: TerminalIcon,
-      skills: SKILLS_BY_CATEGORY.infrastructure,
-      color: 'text-purple-500',
-    },
-    {
-      id: 'devops',
-      title: 'DevOps & Automation',
-      icon: Code,
-      skills: SKILLS_BY_CATEGORY.devops,
-      color: 'text-green-500',
+      id: 'database',
+      title: 'Databases',
+      icon: Database,
+      skills: SKILLS_BY_CATEGORY.database,
+      color: 'text-red-500',
     },
     {
       id: 'development',
@@ -47,11 +33,32 @@ export const Skills = () => {
       color: 'text-orange-500',
     },
     {
-      id: 'database',
-      title: 'Databases',
-      icon: Database,
-      skills: SKILLS_BY_CATEGORY.database,
-      color: 'text-red-500',
+      id: 'cloud',
+      title: 'Cloud Platforms',
+      icon: Cloud,
+      skills: SKILLS_BY_CATEGORY.cloud,
+      color: 'text-blue-500',
+    },
+    {
+      id: 'infrastructure',
+      title: 'Infrastructure as Code',
+      icon: TerminalIcon,
+      skills: SKILLS_BY_CATEGORY.infrastructure,
+      color: 'text-purple-500',
+    },
+    {
+      id: 'containers',
+      title: 'Container & Orchestration',
+      icon: Container,
+      skills: SKILLS_BY_CATEGORY.containers,
+      color: 'text-blue-400',
+    },
+    {
+      id: 'devops',
+      title: 'DevOps & Automation',
+      icon: Code,
+      skills: SKILLS_BY_CATEGORY.devops,
+      color: 'text-green-500',
     },
   ];
 
@@ -120,6 +127,7 @@ export const Skills = () => {
                        SKILLS_BY_CATEGORY.containers.find(s => s.name.toLowerCase() === skillName) ||
                        SKILLS_BY_CATEGORY.infrastructure.find(s => s.name.toLowerCase() === skillName) ||
                        SKILLS_BY_CATEGORY.devops.find(s => s.name.toLowerCase() === skillName) ||
+                       SKILLS_BY_CATEGORY.ai.find(s => s.name.toLowerCase() === skillName) ||
                        SKILLS_BY_CATEGORY.development.find(s => s.name.toLowerCase() === skillName) ||
                        SKILLS_BY_CATEGORY.database.find(s => s.name.toLowerCase() === skillName);
 

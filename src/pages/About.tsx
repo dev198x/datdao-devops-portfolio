@@ -98,17 +98,22 @@ const timeline = [
                     className="text-primary-500 font-semibold block mb-4"
                   />
                   <p>
-                    I design, automate, and deploy systems that turn code into production-grade reality. 
-                    My journey began with full-stack development—building web apps with Node.js, React, and PHP.
+                    I build and ship software end to end. My foundation is <span className="text-primary-500">full-stack development</span>:
+                    web apps and APIs with Node.js, TypeScript, React, and PHP, backed by MongoDB, MySQL, PostgreSQL, and Redis.
                   </p>
                   <p>
-                    Over time, that foundation evolved into a passion for DevOps and Cloud Engineering, 
-                    where I now focus on crafting scalable infrastructure, clean CI/CD pipelines, and resilient deployments.
+                    On top of that I build <span className="text-primary-500">AI applications</span>: RAG pipelines, LLM-powered agents with
+                    tool calling, and evals to measure answer quality, for example a customer support chatbot that answers policy questions and
+                    looks up a logged-in customer's own orders.
                   </p>
-                 <p>
-                    I work across AWS, Linux environments and Google Cloud Platform (GCP), orchestrate containers with Docker and Kubernetes,
-                    and define infrastructure using Terraform and automation tooling. Behind the command line,
-                    I'm equally comfortable in version control and workflow automation, using Git, GitHub CI/CD, and modern observability practices to bridge collaboration and delivery.
+                  <p>
+                    I run those systems on the <span className="text-primary-500">cloud</span>: AWS, Linux, and Google Cloud Platform (GCP),
+                    with Docker and Kubernetes for containers, and Terraform and CI/CD automation (GitHub Actions, GitLab CI/CD, Jenkins)
+                    to make every deployment repeatable.
+                  </p>
+                  <p>
+                    Finally, I keep them healthy with <span className="text-primary-500">monitoring and observability</span>: Prometheus, Grafana,
+                    Loki, Tempo, OpenTelemetry, Dynatrace, and Site24x7, so teams see problems before users do.
                   </p>
                   <p className="text-primary-500 font-medium">
                     For me, DevOps isn't just about speed—it's about precision, repeatability, 
@@ -133,7 +138,7 @@ const timeline = [
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">Experience</span>
-                    <span className="text-primary-500 font-mono">1+ years</span>
+                    <span className="text-primary-500 font-mono">10+ years</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">Cloud Platforms</span>
@@ -156,11 +161,14 @@ const timeline = [
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {[
+  'Full-Stack Development',
+  'AI Agents & RAG',
   'Cloud Architecture',
-  'Site Reliability Engineering',
+  'Monitoring & Observability',
   'Infrastructure as Code',
   'CI/CD Automation',
-  'Kubernetes & Containers'
+  'Kubernetes & Containers',
+  'Site Reliability Engineering'
 ].map((skill) => (
                     <span
                       key={skill}
