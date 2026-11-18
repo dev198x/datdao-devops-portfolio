@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BookOpen, 
@@ -531,6 +531,16 @@ const EnhancedBlog: React.FC = () => {
   const [sortBy, setSortBy] = useState<'date' | 'views' | 'likes'>('date');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [blogViews, setBlogViews] = useState<{[key: number]: number}>({});
+
+  // Close the modal with the Esc key, same as clicking the X button
+  useEffect(() => {
+    if (selectedPost === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedPost(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPost]);
 
   const filteredPosts = useMemo(() => {
     let filtered = blogPosts;

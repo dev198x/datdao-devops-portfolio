@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -1567,6 +1567,16 @@ const caseStudies: CaseStudy[] = [
 const EnhancedCaseStudies: React.FC = () => {
   const [selectedStudy, setSelectedStudy] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'solution' | 'results'>('overview');
+
+  // Close the modal with the Esc key, same as clicking the X button
+  useEffect(() => {
+    if (selectedStudy === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedStudy(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedStudy]);
 
   const selectedStudyData = caseStudies.find(study => study.id === selectedStudy);
 
