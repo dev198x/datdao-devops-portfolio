@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Github, Code2 } from 'lucide-react';
+import { ExternalLink, Github, Code2, Bot, Award, Database, ArrowRight } from 'lucide-react';
 import { Grid3DBackground } from '../components/Grid3D';
 import { Typewriter } from '../components/Typewriter';
 import { HERO_CONTENT, SKILLS, PROJECTS, CONTACT } from '../data/portfolio';
@@ -8,17 +8,41 @@ import { HERO_CONTENT, SKILLS, PROJECTS, CONTACT } from '../data/portfolio';
 export const Home = () => {
   const stats = [
     { label: 'Years Experience', value: '10+' },
-    { label: 'Cloud Platforms', value: '2' },
-    { label: 'Projects Completed', value: '10+' },
-    { label: 'Technologies', value: '19+' },
+    { label: 'Projects', value: String(PROJECTS.length) },
+    { label: 'Technologies', value: String(SKILLS.length) },
+    { label: 'Faster Incident Investigation', value: '50–75%' },
   ];
 
-  // Highlight order: Full-Stack -> AI -> Cloud -> Monitoring
+  // Highlight order: Backend -> AI -> Cloud/DevOps -> Observability
   const FEATURED_SKILL_NAMES = [
-    'React', 'Node.js', 'Typescript', 'PostgreSQL',
-    'Retrieval-Augmented Generation (RAG)', 'AI Agents & Tool Calling',
-    'AWS', 'Kubernetes', 'Docker', 'Terraform',
-    'Prometheus', 'Grafana',
+    'Node.js', 'Typescript', 'NestJS', 'PostgreSQL',
+    'Claude API', 'Retrieval-Augmented Generation (RAG)',
+    'AWS', 'Terraform', 'Docker', 'GitHub Actions',
+    'OpenTelemetry', 'Grafana',
+  ];
+
+  const highlights = [
+    {
+      icon: Bot,
+      title: 'AI-Powered Observability',
+      description: 'Claude Messages API on logs and distributed traces for root-cause analysis, used in a real environment. Investigation time cut by 50–75%.',
+      to: '/projects/ai-observability-platform',
+      cta: 'View project',
+    },
+    {
+      icon: Award,
+      title: 'AWS Certified Solutions Architect – Associate',
+      description: 'Certified in 2025, with hands-on AWS work across EC2, S3, CloudFront, ECS, Lambda, RDS, IAM, and VPC using Terraform and GitHub Actions.',
+      to: '/about',
+      cta: 'See background',
+    },
+    {
+      icon: Database,
+      title: 'Internal Knowledge AI (in development)',
+      description: 'RAG application on a PostgreSQL vector database so employees can retrieve internal company knowledge through an AI interface.',
+      to: '/about',
+      cta: 'Learn more',
+    },
   ];
   const featuredSkills = FEATURED_SKILL_NAMES
     .map((name) => SKILLS.find((skill) => skill.name === name))
@@ -46,7 +70,7 @@ export const Home = () => {
 
             {/* Typewriter heading */}
             <div className="font-mono text-4xl md:text-6xl lg:text-8xl font-bold tracking-tight text-primary-500">
-              <Typewriter text="Full-Stack, AI & Cloud Engineer" delay={80} />
+              <Typewriter text="Backend, DevOps & AI Engineer" delay={80} />
               <span className="terminal-cursor ml-2" />
             </div>
 
@@ -119,6 +143,49 @@ export const Home = () => {
         </div>
       </section>
 
+      {/* Highlights Section */}
+      <section className="py-24 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+              Highlights
+            </h2>
+          </motion.div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {highlights.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <motion.div
+                  key={item.title}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
+                  viewport={{ once: true }}
+                  className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 flex flex-col hover:border-primary-500/50 transition-colors"
+                >
+                  <Icon size={28} className="text-primary-500 mb-4" />
+                  <h3 className="font-semibold text-lg text-neutral-200 mb-2">{item.title}</h3>
+                  <p className="text-neutral-400 text-sm leading-relaxed flex-1">{item.description}</p>
+                  <Link
+                    to={item.to}
+                    className="inline-flex items-center space-x-2 mt-4 font-mono text-sm text-primary-500 hover:text-primary-400"
+                  >
+                    <span>{item.cta}</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Featured Skills Section */}
       <section className="py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -133,7 +200,7 @@ export const Home = () => {
               Featured Technologies
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
-              From full-stack development and AI to cloud and monitoring: the technologies I use to build, ship, and run production systems
+              From backend and AI to cloud, DevOps, and observability: the technologies I use to build, ship, and run production systems
             </p>
           </motion.div>
 

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" font-family="monospace">
+<rect width="640" height="360" fill="#0b0f14"/>
+<g fill="#111a14" stroke="#22c55e" stroke-width="1.5">
+<rect x="30" y="40" width="150" height="50" rx="6"/><rect x="245" y="40" width="150" height="50" rx="6"/><rect x="460" y="40" width="150" height="50" rx="6"/>
+<rect x="30" y="150" width="150" height="50" rx="6"/><rect x="245" y="150" width="150" height="50" rx="6"/><rect x="460" y="150" width="150" height="50" rx="6"/>
+<rect x="245" y="255" width="150" height="50" rx="6"/>
+</g>
+<g stroke="#22c55e" stroke-width="1.5" fill="none"><path d="M180 65h65M395 65h65M535 90v60M460 175h-65M245 175h-65M105 90v60M320 200v55"/></g>
+<g fill="#86efac" font-size="13" text-anchor="middle">
+<text x="105" y="70">Microservices</text><text x="320" y="70">OTel / Pino logs</text><text x="535" y="70">Jaeger · Prom</text>
+<text x="105" y="180">Elasticsearch</text><text x="320" y="180">Error Scanner</text><text x="535" y="180">Claude Analysis</text>
+<text x="320" y="285">Slack Alerts</text>
+<text x="320" y="340" fill="#22c55e" font-size="15">AI-Powered Observability &amp; Incident Analysis</text></g>
+</svg>

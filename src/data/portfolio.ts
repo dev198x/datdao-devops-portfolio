@@ -1,6 +1,4 @@
-export const HERO_CONTENT = "Full-stack engineer building AI-powered applications and running them on reliable cloud platforms. From Node.js and React to RAG and AI agents, AWS, Kubernetes, and observability with Prometheus and Grafana, I take systems from code to production.";
-
-export const ABOUT_TEXT = "I design, automate, and operate reliable cloud platforms that enable teams to deliver software efficiently and at scale. My journey began with software development before evolving into Cloud, DevOps, and Site Reliability Engineering, where I focus on building scalable infrastructure, automating operations, and improving system reliability. I work extensively across AWS and Google Cloud Platform (GCP), leveraging Terraform, Kubernetes, Docker, and CI/CD pipelines to deliver secure and resilient environments. My experience includes cloud networking, load balancing, Cloud Armor security policies, DDoS protection, private connectivity across projects, infrastructure automation, observability, and performance monitoring. Using tools such as Jenkins, GitHub Actions, GitLab CI/CD, Prometheus, Grafana, Dynatrace, Site24x7, and Bash scripting, I help organizations improve reliability, reduce operational overhead, and accelerate software delivery.";
+export const HERO_CONTENT = "Software engineer with 10+ years in backend development, system architecture, and cloud engineering. I build AI-powered engineering solutions, including a production-used observability platform that uses the Claude API with logs and distributed traces to cut incident investigation time by 50–75%, and I run systems on AWS with Terraform, Docker, and GitHub Actions.";
 
 export type SkillLevel = 'expert' | 'advanced' | 'intermediate' | 'beginner';
 
@@ -164,6 +162,24 @@ export const SKILLS: Skill[] = [
     category: "devops",
     level: 'expert',
   },
+  {
+    name: "OpenTelemetry",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/opentelemetry/opentelemetry-original.svg",
+    category: "devops",
+    level: 'advanced',
+  },
+  {
+    name: "Jaeger",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jaegertracing/jaegertracing-original.svg",
+    category: "devops",
+    level: 'advanced',
+  },
+  {
+    name: "Nginx",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg",
+    category: "devops",
+    level: 'advanced',
+  },
 
   // AI
   {
@@ -189,6 +205,18 @@ export const SKILLS: Skill[] = [
     icon: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%2322c55e%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%224%22%20y=%228%22%20width=%2216%22%20height=%2212%22%20rx=%222%22/%3E%3Cpath%20d=%22M12%208V4%22/%3E%3Ccircle%20cx=%2212%22%20cy=%223%22%20r=%221%22/%3E%3Ccircle%20cx=%229%22%20cy=%2214%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2214%22%20r=%221.2%22/%3E%3Cpath%20d=%22M9%2017.5h6M2%2013v3M22%2013v3%22/%3E%3C/svg%3E",
     category: "ai",
     level: 'advanced',
+  },
+  {
+    name: "Claude API",
+    icon: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%2322c55e%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%224%22%20y=%228%22%20width=%2216%22%20height=%2212%22%20rx=%222%22/%3E%3Cpath%20d=%22M12%208V4%22/%3E%3Ccircle%20cx=%2212%22%20cy=%223%22%20r=%221%22/%3E%3Ccircle%20cx=%229%22%20cy=%2214%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2214%22%20r=%221.2%22/%3E%3Cpath%20d=%22M9%2017.5h6M2%2013v3M22%2013v3%22/%3E%3C/svg%3E",
+    category: "ai",
+    level: 'advanced',
+  },
+  {
+    name: "MCP (Model Context Protocol)",
+    icon: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%2322c55e%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%224%22%20y=%228%22%20width=%2216%22%20height=%2212%22%20rx=%222%22/%3E%3Cpath%20d=%22M12%208V4%22/%3E%3Ccircle%20cx=%2212%22%20cy=%223%22%20r=%221%22/%3E%3Ccircle%20cx=%229%22%20cy=%2214%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2215%22%20cy=%2214%22%20r=%221.2%22/%3E%3Cpath%20d=%22M9%2017.5h6M2%2013v3M22%2013v3%22/%3E%3C/svg%3E",
+    category: "ai",
+    level: 'intermediate',
   },
 
   // Development
@@ -228,6 +256,18 @@ export const SKILLS: Skill[] = [
     category: "development",
     level: 'advanced',
   },
+  {
+    name: "NestJS",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nestjs/nestjs-original.svg",
+    category: "development",
+    level: 'advanced',
+  },
+  {
+    name: "RabbitMQ",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rabbitmq/rabbitmq-original.svg",
+    category: "development",
+    level: 'intermediate',
+  },
 
   // Databases
   {
@@ -254,9 +294,33 @@ export const SKILLS: Skill[] = [
     category: "database",
     level: 'advanced',
   },
+  {
+    name: "Elasticsearch",
+    icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/elasticsearch/elasticsearch-original.svg",
+    category: "database",
+    level: 'advanced',
+  },
 ];
 
 export const PROJECTS = [
+  {
+    slug: 'ai-observability-platform',
+    title: 'AI-Powered Observability & Incident Analysis Platform',
+    image: `${import.meta.env.BASE_URL}images/ai-observability.svg`,
+    description: 'Observability and incident analysis platform for microservices, used in a real environment. An error-scanner service pulls errors from Elasticsearch, correlates them with Jaeger trace spans, and sends the context to the Anthropic Claude Messages API for root-cause analysis and recommendations, with alerts delivered to Slack.',
+    technologies: ['TypeScript', 'NestJS', 'Next.js', 'Claude API', 'OpenTelemetry', 'Jaeger', 'Prometheus', 'Grafana', 'Elasticsearch', 'Kibana', 'PostgreSQL', 'Slack', 'Docker', 'AWS EC2'],
+    category: 'devops',
+    githubLink: '',
+    websiteLink: 'https://obs.247.id.vn/obs',
+    detail: {
+      summary: 'AI-powered root-cause analysis for microservice incidents, built on logs, traces, and the Claude Messages API.',
+      role: 'Backend, AI Integration & Infrastructure Engineering',
+      problem: 'Investigating incidents meant manually searching logs and cross-referencing traces across services, which took about 10 minutes for simple issues and about 40 minutes for complex, multi-service ones.',
+      solution: 'An automated error-scanner periodically retrieves Elasticsearch errors and correlates them with Jaeger trace spans via request-ID and trace-ID. The context is analyzed by the Claude Messages API, alerts go to Slack, and analysis activity is recorded in PostgreSQL.',
+      highlights: ['Investigation time reduced from ~10 to ~5 minutes (simple) and from ~40 to ~10 minutes (complex)', 'TypeScript pnpm monorepo with auth-service, product-service, and payment-service (NestJS)', 'Distributed tracing (OpenTelemetry, Jaeger), metrics (Prometheus, Grafana), centralized logging (Pino, Filebeat, Elasticsearch, Kibana)', 'PII and credential masking, internal service authentication, DTO validation, parameterized queries', 'Seven custom Claude Code subagents for security, logging, dashboard, Dockerfile, and testing reviews'],
+      architecture: ['Microservices', 'OpenTelemetry / Structured Logging', 'Jaeger / Prometheus / Elasticsearch', 'Error Scanner', 'Claude AI Analysis', 'Slack Alerts'],
+    },
+  },
   {
     slug: 'customer-support-chatbot-rag',
     title: 'Customer Support Chatbot — RAG + LLM',
