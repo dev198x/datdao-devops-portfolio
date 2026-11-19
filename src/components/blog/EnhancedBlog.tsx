@@ -43,8 +43,6 @@ interface BlogPost {
   readTime: string;
   date: string;
   featured: boolean;
-  likes: string;
-  comments: string;
   excerpt: string;
   tags: string[];
   heroImage?: string;
@@ -60,8 +58,6 @@ const blogPosts: BlogPost[] = [
     readTime: "12 min read",
     date: "2025-01-10",
     featured: false,
-    likes: "98",
-    comments: "15",
     excerpt: "Master Terraform infrastructure management with proven patterns, state management, and security practices for AWS deployments.",
     tags: ["Terraform", "AWS", "IaC", "Security", "Best Practices"],
     content: `
@@ -139,8 +135,6 @@ Following these best practices will help you maintain scalable, secure, and main
     readTime: "6 min read",
     date: "2025-01-05",
     featured: false,
-    likes: "234",
-    comments: "41",
     excerpt: "Explore the latest DevOps trends shaping the industry in 2025, from AI-powered automation to enhanced GitOps workflows.",
     tags: ["Trends", "AI", "GitOps", "Cloud Native", "Automation"],
     content: `
@@ -198,8 +192,6 @@ The future of DevOps is bright, with these trends setting the stage for more eff
     readTime: "10 min read",
     date: "2024-12-28",
     featured: true,
-    likes: "127",
-    comments: "19",
     excerpt: "Build scalable real-time applications using WebSocket architecture with Node.js, Redis, and message queues.",
     tags: ["WebSocket", "Node.js", "Redis", "Real-time", "Architecture"],
     content: `
@@ -268,8 +260,6 @@ This architecture provides a solid foundation for building real-time application
     readTime: "3 min read",
     date: "2026-07-21",
     featured: true,
-    likes: "34",
-    comments: "4",
     excerpt: "A raw reference note on the DevOps lifecycle: the six phases of the infinity loop (Plan, Code, Build/Test, Release, Deploy, Operate, Monitor), what happens in each, and the key tools for each phase.",
     tags: ["DevOps", "CI/CD", "Lifecycle", "Reference"],
     content: `
@@ -346,8 +336,6 @@ It is usually visualized as an **infinity loop ($\\infty$)**, representing an on
     readTime: "10 min read",
     date: "2026-07-30",
     featured: false,
-    likes: "0",
-    comments: "0",
     excerpt: "How I used dgreenheck's webgpu-claude-skill — a packaged Claude Code skill for WebGPU + TSL — to go from zero to a working 3D particle simulation in Three.js, and what's inside the skill that makes that possible.",
     tags: ["Three.js", "WebGPU", "TSL", "Claude Code", "AI Tooling"],
     content: `
@@ -521,7 +509,6 @@ const EnhancedBlog: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
   // Close the modal with the Esc key, same as clicking the X button
@@ -551,18 +538,11 @@ const EnhancedBlog: React.FC = () => {
       );
     }
 
-    // Sort
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'likes':
-          return parseInt(b.likes) - parseInt(a.likes);
-        default:
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-      }
-    });
+    // Newest first
+    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return filtered;
-  }, [selectedCategory, searchTerm, sortBy]);
+  }, [selectedCategory, searchTerm]);
 
   const featuredPosts = blogPosts.filter(post => post.featured);
 
@@ -660,8 +640,6 @@ const EnhancedBlog: React.FC = () => {
                   
                   <div className="flex items-center justify-between">
                     <EngagementMetrics
-                      likes={post.likes}
-                      comments={post.comments}
                       featured={post.featured}
                     />
                     
@@ -709,15 +687,6 @@ const EnhancedBlog: React.FC = () => {
           />
           
           <ViewToggle view={view} onViewChange={setView} />
-          
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'date' | 'likes')}
-            className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-neutral-200 focus:outline-none focus:border-green-400"
-          >
-            <option value="date">Latest</option>
-            <option value="likes">Most Liked</option>
-          </select>
         </motion.div>
 
         {/* Blog Posts Grid/List */}
@@ -768,8 +737,6 @@ const EnhancedBlog: React.FC = () => {
                   </p>
                   
                   <EngagementMetrics
-                    likes={post.likes}
-                    comments={post.comments}
                     featured={post.featured}
                   />
                   
