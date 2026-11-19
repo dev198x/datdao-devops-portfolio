@@ -726,6 +726,256 @@ curl -X POST localhost:3000/payments -H 'Content-Type: application/json' \\
 5. Dùng State Machine với UPDATE có điều kiện status thay cho cờ boolean, và đừng giữ transaction trong lúc gọi dịch vụ bên ngoài.
 6. Reconciliation là lưới an toàn cho timeout và webhook bị mất.
     `
+  },
+  {
+    id: 11,
+    title: "Kiểm Tra Trùng Lịch (Overlap Detection) trong Hệ Thống Booking",
+    category: "Full-Stack",
+    difficulty: "Intermediate",
+    readTime: "11 min read",
+    date: "2026-11-19",
+    featured: false,
+    excerpt: "Công thức kiểm tra trùng lịch chỉ với hai phép so sánh, cách đưa vào SQL, các trường hợp biên (validation, reschedule, timezone, buffer time) và cách chặn race condition tận gốc bằng EXCLUDE constraint của PostgreSQL.",
+    tags: ["Booking", "SQL", "PostgreSQL", "Concurrency", "Algorithm"],
+    content: `
+# Kiểm Tra Trùng Lịch (Overlap Detection) trong Hệ Thống Booking
+
+Đặt phòng họp, lịch khám, thuê xe: bài toán nào cũng có một câu hỏi chung: khung giờ mới có đè lên lịch đã có không? Công thức rất ngắn, nhưng đưa vào hệ thống thật thì có nhiều chỗ dễ sai. Bài này đi từ công thức cơ bản đến cách triển khai an toàn với schema và SQL mẫu.
+
+## 1. Công thức cơ bản
+
+Hai khoảng thời gian \`[newStart, newEnd)\` và \`[existingStart, existingEnd)\` trùng nhau khi và chỉ khi:
+
+\`\`\`
+newStart < existingEnd  AND  newEnd > existingStart
+\`\`\`
+
+Hiểu theo cách ngược lại: chúng KHÔNG trùng khi cái này kết thúc trước hoặc đúng lúc cái kia bắt đầu. Nên chỉ cần phủ định hai trường hợp đó là xong, không cần liệt kê từng kiểu chồng lấn (nằm trong, bao trùm, lệch trái, lệch phải).
+
+Dạng code:
+
+\`\`\`javascript
+const isOverlapping = (newStart, newEnd, existingStart, existingEnd) =>
+  newStart < existingEnd && newEnd > existingStart;
+\`\`\`
+
+### Quy ước khoảng nửa mở [start, end)
+
+Lịch 09:00 đến 10:00 và lịch 10:00 đến 11:00 nên được phép đặt liền nhau. Dùng dấu \`<\` và \`>\` (không phải \`<=\` và \`>=\`) chính là quy ước khoảng nửa mở: thời điểm bắt đầu được tính, thời điểm kết thúc không được tính. Hãy thống nhất quy ước này ở mọi tầng (frontend, backend, database).
+
+Giả sử đã có một lịch 09:00 đến 10:00, các trường hợp cần test:
+
+\`\`\`
+Lịch mới        Kết quả   Lý do
+10:00 - 11:00   OK        đặt liền sau, end == start nên không trùng
+08:00 - 09:00   OK        đặt liền trước
+08:00 - 08:30   OK        nằm hẳn phía trước
+09:30 - 10:30   TRÙNG     lệch phải
+08:30 - 09:30   TRÙNG     lệch trái
+09:15 - 09:45   TRÙNG     nằm trong lịch cũ
+08:00 - 11:00   TRÙNG     bao trùm lịch cũ
+09:00 - 10:00   TRÙNG     trùng khớp hoàn toàn
+\`\`\`
+
+## 2. Schema mẫu
+
+Ví dụ với PostgreSQL:
+
+\`\`\`sql
+CREATE TABLE resources (
+  id   BIGSERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL            -- phòng họp, bác sĩ, xe...
+);
+
+CREATE TABLE bookings (
+  id          BIGSERIAL PRIMARY KEY,
+  resource_id BIGINT      NOT NULL REFERENCES resources(id),
+  user_id     BIGINT      NOT NULL,
+  start_time  TIMESTAMPTZ NOT NULL,
+  end_time    TIMESTAMPTZ NOT NULL,
+  status      VARCHAR(16) NOT NULL DEFAULT 'CONFIRMED',  -- CONFIRMED | CANCELLED
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_booking_time CHECK (start_time < end_time)
+);
+
+-- index phục vụ câu truy vấn kiểm tra trùng
+CREATE INDEX idx_bookings_resource_time
+  ON bookings (resource_id, start_time, end_time)
+  WHERE status <> 'CANCELLED';
+\`\`\`
+
+Một vài điểm đáng chú ý:
+- Dùng \`TIMESTAMPTZ\` thay vì \`TIMESTAMP\` để tránh sai lệch múi giờ. Lưu theo UTC, chỉ đổi sang giờ địa phương khi hiển thị.
+- \`CHECK (start_time < end_time)\` là lớp bảo vệ cuối cho điều kiện hợp lệ của đầu vào, kể cả khi code ứng dụng quên kiểm tra.
+- Index một phần (\`WHERE status <> 'CANCELLED'\`) bỏ qua các lịch đã hủy, nhỏ hơn và nhanh hơn.
+
+Dữ liệu mẫu:
+
+\`\`\`sql
+INSERT INTO resources (name) VALUES ('Meeting Room A');
+
+INSERT INTO bookings (resource_id, user_id, start_time, end_time) VALUES
+  (1, 101, '2026-12-01 09:00:00+07', '2026-12-01 10:00:00+07'),
+  (1, 102, '2026-12-01 13:00:00+07', '2026-12-01 14:30:00+07');
+\`\`\`
+
+## 3. Kiểm tra trùng lịch bằng SQL
+
+Đừng kéo toàn bộ lịch về rồi lặp trong code. Hãy để database lọc trực tiếp, nhanh hơn và tốn ít bộ nhớ hơn:
+
+\`\`\`sql
+SELECT EXISTS (
+  SELECT 1
+  FROM bookings
+  WHERE resource_id = 1
+    AND status <> 'CANCELLED'              -- bỏ qua lịch đã hủy
+    AND start_time < '2026-12-01 10:30:00+07'   -- newEnd
+    AND end_time   > '2026-12-01 09:30:00+07'   -- newStart
+) AS is_overlapping;
+\`\`\`
+
+Kết quả \`true\` nghĩa là bị trùng, \`false\` nghĩa là khung giờ còn trống. Dùng \`EXISTS\` thay cho \`COUNT(*)\` vì database dừng ngay khi gặp row đầu tiên thay vì đếm hết.
+
+Với dữ liệu mẫu ở trên, khung 09:30 đến 10:30 trả về \`true\` (đè lên lịch 09:00 đến 10:00), còn khung 10:00 đến 11:00 trả về \`false\`.
+
+Để xem các lịch đang gây trùng (hữu ích khi báo lỗi cho người dùng):
+
+\`\`\`sql
+SELECT id, start_time, end_time
+FROM bookings
+WHERE resource_id = 1
+  AND status <> 'CANCELLED'
+  AND start_time < '2026-12-01 10:30:00+07'
+  AND end_time   > '2026-12-01 09:30:00+07'
+ORDER BY start_time;
+\`\`\`
+
+## 4. Các trường hợp biên
+
+### Kiểm tra đầu vào
+
+Luôn kiểm tra \`newStart < newEnd\` trước khi chạy truy vấn. Nếu thời gian bắt đầu lớn hơn hoặc bằng thời gian kết thúc, trả lỗi ngay. Kèm theo đó nên kiểm tra các giới hạn nghiệp vụ như không đặt vào quá khứ hay không dài quá mức cho phép.
+
+\`\`\`javascript
+if (!(newStart < newEnd)) {
+  throw new Error('start_time must be before end_time');
+}
+\`\`\`
+
+### Cập nhật hoặc đổi lịch (Reschedule)
+
+Khi sửa một lịch đã có, phải loại chính nó ra khỏi phép so sánh. Nếu không, lịch mới sẽ báo trùng với chính phiên bản cũ của nó.
+
+\`\`\`sql
+SELECT EXISTS (
+  SELECT 1
+  FROM bookings
+  WHERE resource_id = 1
+    AND id <> 42                            -- loại trừ chính lịch đang sửa
+    AND status <> 'CANCELLED'
+    AND start_time < '2026-12-01 11:00:00+07'
+    AND end_time   > '2026-12-01 10:00:00+07'
+) AS is_overlapping;
+\`\`\`
+
+### Thời gian nghỉ (Buffer Time)
+
+Phòng họp cần dọn dẹp, bác sĩ cần nghỉ giữa ca, xe thuê cần vệ sinh. Với \`buffer\` phút, cộng khoảng đó vào lúc kiểm tra:
+
+\`\`\`javascript
+const isOverlapping = (newStart, newEnd, existingStart, existingEnd, bufferMs) =>
+  newStart < existingEnd + bufferMs && newEnd + bufferMs > existingStart;
+\`\`\`
+
+Tương đương trong SQL, với buffer 15 phút:
+
+\`\`\`sql
+SELECT EXISTS (
+  SELECT 1
+  FROM bookings
+  WHERE resource_id = 1
+    AND status <> 'CANCELLED'
+    AND start_time < '2026-12-01 10:30:00+07'::timestamptz + INTERVAL '15 minutes'
+    AND end_time   > '2026-12-01 09:30:00+07'::timestamptz - INTERVAL '15 minutes'
+) AS is_overlapping;
+\`\`\`
+
+Lưu ý hệ quả: khi có buffer, lịch 10:00 đến 11:00 đặt liền sau lịch 09:00 đến 10:00 cũng bị coi là trùng (kết quả \`true\`), vì giữa hai ca phải cách nhau ít nhất 15 phút. Đó là ý định của buffer, nhưng hãy nhớ báo rõ lý do cho người dùng.
+
+Một giới hạn quan trọng: EXCLUDE constraint ở phần 5 chỉ so sánh \`[start_time, end_time)\` gốc, nên không tự áp dụng buffer. Nếu cần database cưỡng chế cả buffer, hãy lưu thêm hai cột \`block_start = start_time - buffer\` và \`block_end = end_time + buffer\` (do ứng dụng tính khi ghi) rồi đặt EXCLUDE trên khoảng \`[block_start, block_end)\`. Không đặt trực tiếp biểu thức \`start_time - INTERVAL '15 minutes'\` vào constraint vì PostgreSQL không coi phép cộng/trừ interval trên \`timestamptz\` là immutable.
+
+## 5. Race condition: bước kiểm tra là chưa đủ
+
+Hai người cùng bấm đặt khung giờ 09:30 đến 10:30 tại cùng một mili-giây. Cả hai chạy câu SELECT ở trên, cả hai nhận \`false\`, cả hai INSERT. Kết quả: hai lịch đè nhau. Kiểm tra rồi mới ghi (check-then-insert) không bao giờ an toàn khi có đồng thời.
+
+### Cách 1 (khuyến nghị cho PostgreSQL): EXCLUDE constraint
+
+Để chính database từ chối lịch trùng, không phụ thuộc vào code ứng dụng:
+
+\`\`\`sql
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+ALTER TABLE bookings
+  ADD CONSTRAINT no_overlapping_bookings
+  EXCLUDE USING gist (
+    resource_id WITH =,
+    tstzrange(start_time, end_time, '[)') WITH &&
+  ) WHERE (status <> 'CANCELLED');
+\`\`\`
+
+Ý nghĩa: không được tồn tại hai row cùng \`resource_id\` mà khoảng thời gian \`[start, end)\` chồng lên nhau (toán tử \`&&\`), và chỉ áp dụng cho các lịch chưa hủy. Khi đó chỉ cần INSERT và bắt lỗi:
+
+\`\`\`javascript
+try {
+  await pool.query(
+    \`INSERT INTO bookings (resource_id, user_id, start_time, end_time)
+     VALUES ($1, $2, $3, $4)\`,
+    [resourceId, userId, newStart, newEnd]
+  );
+} catch (err) {
+  if (err.code === '23P01') {            // exclusion_violation
+    return res.status(409).json({ error: 'Time slot is already booked' });
+  }
+  throw err;
+}
+\`\`\`
+
+Lúc này câu SELECT kiểm tra trùng chỉ còn để phản hồi sớm cho người dùng, còn tính đúng đắn do constraint đảm bảo. Lưu ý \`'[)'\` khớp với quy ước nửa mở ở phần 1, nên lịch 09:00 đến 10:00 và 10:00 đến 11:00 vẫn đặt liền được.
+
+### Cách 2 (MySQL hoặc DB không có EXCLUDE): khóa row cha trong transaction
+
+Bảng bookings không có row nào để khóa trong khoảng trống chưa ai đặt, nên hãy khóa row của tài nguyên (resource) để tuần tự hóa các lần đặt cùng tài nguyên:
+
+\`\`\`sql
+BEGIN;
+SELECT id FROM resources WHERE id = 1 FOR UPDATE;   -- người đến sau chờ ở đây
+
+-- kiểm tra trùng (câu SELECT EXISTS ở phần 3)
+-- nếu is_overlapping = false thì:
+INSERT INTO bookings (resource_id, user_id, start_time, end_time)
+VALUES (1, 101, '2026-12-01 09:30:00+07', '2026-12-01 10:30:00+07');
+COMMIT;
+\`\`\`
+
+Nhược điểm: các lần đặt cùng một tài nguyên bị xếp hàng (khác ngày vẫn chờ nhau). Với lưu lượng đặt vừa phải thì chấp nhận được; hãy giữ transaction ngắn và đặt lock timeout.
+
+## 6. So sánh nhanh
+
+\`\`\`
+Cách                         Chặn race condition   Độ phức tạp   Ghi chú
+Chỉ SELECT rồi INSERT        Không                 Thấp          Chỉ dùng cho demo
+Khóa row resource            Có                    Trung bình    Chạy được trên mọi DB, đặt chung hàng chờ
+EXCLUDE constraint (PG)      Có                    Thấp          Gọn nhất, DB tự bảo vệ, cần btree_gist
+\`\`\`
+
+## Key Takeaways
+
+1. Công thức trùng lịch: \`newStart < existingEnd AND newEnd > existingStart\`, dùng khoảng nửa mở để các lịch liền kề không bị coi là trùng.
+2. Để database lọc bằng \`EXISTS\` kèm index \`(resource_id, start_time, end_time)\`, đừng kéo dữ liệu về lặp trong code.
+3. Kiểm tra \`start < end\`, loại trừ chính lịch đang sửa khi reschedule, bỏ qua lịch đã hủy, và lưu giờ bằng \`TIMESTAMPTZ\`.
+4. Buffer time chỉ là cộng thêm khoảng nghỉ vào hai vế so sánh.
+5. Check-then-insert không an toàn khi đồng thời: dùng EXCLUDE constraint trên PostgreSQL, hoặc khóa row resource trong transaction trên các DB khác.
+    `
   }
 ];
 
