@@ -128,377 +128,251 @@ Following these best practices will help you maintain scalable, secure, and main
     `
   },
   {
-    id: 3,
-    title: "DevOps Trends 2025: AI, GitOps, and Cloud Native Revolution",
-    category: "DevOps",
-    difficulty: "Beginner",
-    readTime: "6 min read",
-    date: "2025-01-05",
+    id: 8,
+    title: "Row Locking in SQL: SELECT ... FOR UPDATE Without the Footguns",
+    category: "Full-Stack",
+    difficulty: "Intermediate",
+    readTime: "8 min read",
+    date: "2026-11-19",
     featured: false,
-    excerpt: "Explore the latest DevOps trends shaping the industry in 2025, from AI-powered automation to enhanced GitOps workflows.",
-    tags: ["Trends", "AI", "GitOps", "Cloud Native", "Automation"],
+    excerpt: "Cách Row Locking ngăn lost update và race condition, các timeout nào bảo vệ bạn khi transaction bị treo, và bốn quy tắc giúp SELECT ... FOR UPDATE không làm sập database.",
+    tags: ["PostgreSQL", "MySQL", "Concurrency", "Transactions", "Database"],
     content: `
-# DevOps Trends 2025: AI, GitOps, and Cloud Native Revolution
+# Row Locking in SQL: SELECT ... FOR UPDATE Without the Footguns
 
-The DevOps landscape continues to evolve rapidly. Let's explore the key trends that will shape the industry in 2025.
+Hai request cùng mua món hàng cuối cùng trong kho tại cùng một thời điểm. Cả hai đều đọc \`stock = 1\`, cả hai đều pass điều kiện kiểm tra, cả hai đều trừ kho. Bạn vừa bán một thứ mình không có. Đây là Lost Update, và một câu \`SELECT\` thông thường không thể ngăn được. Row Locking thì có thể.
 
-## AI-Powered Automation
+## Row Locking làm gì
 
-AI is transforming how we approach DevOps:
-- Intelligent incident detection and response
-- Automated capacity planning
-- Predictive maintenance
-- Smart resource optimization
+\`SELECT ... FOR UPDATE\` đặt một exclusive lock lên các row mà nó trả về, trong phạm vi transaction hiện tại. Các transaction khác vẫn đọc bình thường những row đó, nhưng không thể update, delete hay lock chúng cho đến khi bạn kết thúc. Những row không ai chạm tới vẫn hoàn toàn khả dụng, nên khác với table lock, cái giá chỉ giới hạn ở những chỗ thực sự có tranh chấp.
 
-## Enhanced GitOps Workflows
+## Hai transaction tương tác thế nào
 
-GitOps continues to mature:
-- Multi-cluster synchronization
-- Progressive delivery strategies
-- Policy-as-code enforcement
-- Enhanced rollback capabilities
+Giả sử T1 và T2 cùng chạy \`SELECT ... FOR UPDATE\` trên cùng một row.
 
-## Cloud Native Security
+1. Lock Manager cấp exclusive lock cho transaction đến trước, giả sử là T1.
+2. T2 bị đưa vào Lock Wait Queue và tạm dừng tại câu lệnh đó.
+3. T1 xử lý xong và kết thúc bằng COMMIT hoặc ROLLBACK. Đó là thời điểm duy nhất khóa được giải phóng.
+4. T2 được đánh thức, nhận khóa và đọc đúng trạng thái T1 vừa commit, nên điều kiện nghiệp vụ của nó thấy được dữ liệu thật.
 
-Security is becoming more integrated:
-- Zero-trust architectures
-- DevSecOps pipelines
-- Container image scanning
-- Runtime security monitoring
+\`\`\`sql
+BEGIN;
+SELECT stock FROM products WHERE id = 42 FOR UPDATE;
+UPDATE products SET stock = stock - 1 WHERE id = 42 AND stock >= 1;
+COMMIT;
+\`\`\`
 
-## Platform Engineering
+## Chọn cách chờ
 
-Organizations are building internal platforms:
-- Self-service developer portals
-- Standardized deployment pipelines
-- Automated compliance checks
-- Improved developer experience
+Mặc định là chặn (block). Có hai biến thể thay đổi hành vi này:
+
+\`\`\`sql
+-- báo lỗi ngay nếu row đang bị khóa, để app trả về "đang bận"
+SELECT * FROM seats WHERE id = 7 FOR UPDATE NOWAIT;
+
+-- bỏ qua các row đang bị khóa và lấy row trống kế tiếp, lý tưởng cho job queue
+SELECT * FROM jobs WHERE status = 'pending'
+ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
+\`\`\`
+
+NOWAIT phù hợp với thao tác của người dùng, nơi một câu "thử lại sau" nhanh tốt hơn một request bị treo. SKIP LOCKED cho phép nhiều worker lấy các row khác nhau song song mà không cần message broker riêng. Cả hai đều có từ PostgreSQL 9.5+ và MySQL 8.0+.
+
+## Chuyện gì xảy ra khi có thứ bị treo
+
+Mỗi sự cố ảnh hưởng đến một transaction khác nhau, và mỗi loại cần một timeout riêng:
+
+\`\`\`
+T1 giữ khóa quá lâu, T2 đứng chờ     -> T2 nhận lỗi    lock_timeout (PG, mặc định không giới hạn)
+                                                       innodb_lock_wait_timeout (MySQL, mặc định 50s)
+T1 "ngủ quên" sau khi lấy khóa       -> T1 bị cắt      idle_in_transaction_session_timeout (PG, mặc định tắt)
+                                                       wait_timeout (MySQL, mặc định 8h) + app timeout
+T1 chạy câu SQL quá nặng             -> T1 bị cắt      statement_timeout (PG) / max_execution_time (MySQL)
+T1 và T2 khóa chéo row của nhau      -> DB chọn một bên làm nạn nhân và rollback (Deadlock Detector)
+\`\`\`
+
+Điểm quan trọng: trên PostgreSQL gần như tất cả đều mặc định là "không giới hạn". Nếu bạn không đặt, một transaction bị kẹt có thể kéo mọi request khác xếp hàng phía sau cho đến khi Connection Pool cạn kiệt.
+
+## Bốn quy tắc để dùng an toàn
+
+### 1. Đảm bảo WHERE dùng được index
+
+Việc khóa đi theo access path. Với MySQL InnoDB, \`FOR UPDATE\` trên cột không có index sẽ quét toàn bảng và khóa mọi row nó quét qua, gần như chặn các writer khác nặng không kém table lock. PostgreSQL chỉ khóa các row được trả về, nhưng Full Table Scan vẫn chậm và giữ khóa lâu hơn. Hãy chạy \`EXPLAIN\` trước.
+
+### 2. Khóa theo thứ tự cố định
+
+Deadlock sinh ra từ vòng chờ: T1 giữ A và cần B, T2 giữ B và cần A. Nếu mọi transaction đều khóa nhiều row theo cùng một thứ tự, vòng chờ không thể hình thành.
+
+\`\`\`sql
+BEGIN;
+SELECT id, balance FROM accounts WHERE id IN (101, 202) ORDER BY id FOR UPDATE;
+UPDATE accounts SET balance = balance - 50 WHERE id = 101;
+UPDATE accounts SET balance = balance + 50 WHERE id = 202;
+COMMIT;
+\`\`\`
+
+Deadlock Detector chỉ là lưới an toàn, không phải kế hoạch. Nó rollback một bên, nên code của bạn vẫn cần retry cho loại lỗi này.
+
+### 3. Giữ transaction ngắn
+
+Không gọi External API, gửi email hay xử lý file giữa BEGIN và COMMIT. Mỗi mili-giây tiêu tốn ở đó là một mili-giây mà mọi transaction khác trên row đó phải chờ.
+
+### 4. Đặt timeout ở cả hai tầng
+
+Dùng Transaction Timeout ở tầng ứng dụng (30 đến 60 giây) cùng với các giới hạn ở tầng database:
+
+\`\`\`sql
+SET lock_timeout = '5s';
+SET statement_timeout = '30s';
+SET idle_in_transaction_session_timeout = '60s';
+\`\`\`
+
+Cách này ngăn một transaction chậm biến thành Cascading Failure lan ra toàn bộ service.
+
+## Khi nào không nên dùng
+
+Pessimistic Locking là lựa chọn đúng khi xung đột có khả năng cao và tính đúng đắn quan trọng hơn throughput tối đa: tồn kho, số dư, đặt chỗ. Với các luồng nặng về đọc hoặc dữ liệu ít tranh chấp, Optimistic Locking (cột version kèm UPDATE có điều kiện) tránh hẳn việc giữ khóa. Và đừng bao giờ giữ row lock trong lúc chờ con người.
 
 ## Key Takeaways
 
-1. Embrace automation, but maintain human oversight
-2. Invest in security from day one
-3. Focus on developer experience
-4. Stay adaptable to new technologies
-
-The future of DevOps is bright, with these trends setting the stage for more efficient and secure software delivery.
+1. \`SELECT ... FOR UPDATE\` chỉ tuần tự hóa các transaction tranh nhau cùng những row đó, và khóa tồn tại đến khi COMMIT hoặc ROLLBACK.
+2. Dùng NOWAIT để báo lỗi nhanh và SKIP LOCKED cho các queue worker chạy song song.
+3. Đánh index cho mệnh đề WHERE, khóa nhiều row theo thứ tự nhất quán và giữ transaction ngắn.
+4. Cấu hình lock, statement và idle-in-transaction timeout một cách chủ động, vì mặc định của PostgreSQL là không giới hạn.
+5. Coi lỗi deadlock là lỗi có thể retry.
     `
   },
   {
-    id: 4,
-    title: "Real-time Communication: WebSocket Architecture with Node.js",
+    id: 9,
+    title: "Preventing Overbooking: Reservation Holds with Redis TTL",
     category: "Full-Stack",
-    difficulty: "Intermediate",
-    readTime: "10 min read",
-    date: "2024-12-28",
-    featured: true,
-    excerpt: "Build scalable real-time applications using WebSocket architecture with Node.js, Redis, and message queues.",
-    tags: ["WebSocket", "Node.js", "Redis", "Real-time", "Architecture"],
-    content: `
-# Real-time Communication: WebSocket Architecture with Node.js
-
-Real-time communication has become essential for modern applications. This guide covers building scalable WebSocket applications.
-
-## Architecture Overview
-
-\`\`\`
-Client -> Load Balancer -> WebSocket Server -> Redis Pub/Sub -> Database
-                                    -> Message Queue -> Background Workers
-\`\`\`
-
-## WebSocket Server Setup
-
-\`\`\`javascript
-const WebSocket = require('ws');
-const redis = require('redis');
-
-class WebSocketServer {
-  constructor(port) {
-    this.wss = new WebSocket.Server({ port });
-    this.redisClient = redis.createClient();
-    this.setupWebSocketHandlers();
-  }
-  
-  setupWebSocketHandlers() {
-    this.wss.on('connection', (ws) => {
-      console.log('New client connected');
-      
-      ws.on('message', (message) => {
-        this.handleMessage(ws, message);
-      });
-      
-      ws.on('close', () => {
-        console.log('Client disconnected');
-      });
-    });
-  }
-}
-\`\`\`
-
-## Scaling Strategies
-
-1. **Horizontal Scaling**: Use Redis for session sharing
-2. **Load Balancing**: Implement sticky sessions
-3. **Message Queues**: Handle high message volumes
-4. **Database Optimization**: Use efficient data structures
-
-## Best Practices
-
-- Implement proper error handling
-- Use connection pooling
-- Monitor memory usage
-- Implement rate limiting
-
-This architecture provides a solid foundation for building real-time applications that can scale to thousands of concurrent users.
-    `
-  },
-  {
-    id: 6,
-    title: "DevOps Lifecycle",
-    category: "DevOps",
-    difficulty: "Beginner",
-    readTime: "3 min read",
-    date: "2026-07-21",
-    featured: true,
-    excerpt: "A raw reference note on the DevOps lifecycle: the six phases of the infinity loop (Plan, Code, Build/Test, Release, Deploy, Operate, Monitor), what happens in each, and the key tools for each phase.",
-    tags: ["DevOps", "CI/CD", "Lifecycle", "Reference"],
-    content: `
-The **DevOps lifecycle** is a continuous loop that integrates software development (**Dev**) and IT operations (**Ops**). Unlike traditional linear models (like Waterfall), DevOps focuses on continuous iteration, automated testing, rapid deployment, and constant monitoring.
-
-It is usually visualized as an **infinity loop ($\\infty$)**, representing an ongoing process without a hard end point.
-
----
-
-## Phases of the DevOps Lifecycle
-
-\`\`\`
-    [ Plan ] ---> [ Code ] ---> [ Build ] ---> [ Test ]
-       ^                                          |
-       |                                          v
-  [ Monitor ] <--- [ Operate ] <--- [ Deploy ] <--- [ Release ]
-
-\`\`\`
-
-### 1. Continuous Planning
-
-* **Goal:** Define business requirements, track issues, and design application architecture.
-* **What happens:** Teams plan upcoming features, bug fixes, and improvements in small, manageable iterations (sprints).
-* **Key Tools:** Jira, Trello, GitHub Issues.
-
-### 2. Continuous Integration & Code Development
-
-* **Goal:** Write code and frequently merge changes into a shared central repository.
-* **What happens:** Developers write code in local environments and commit changes regularly. Automated workflows build the code, check code style, and ensure new commits don't break existing features.
-* **Key Tools:** Git, GitHub, GitLab, Bitbucket.
-
-### 3. Continuous Testing
-
-* **Goal:** Identify bugs and security vulnerabilities early in the development cycle (**Shift-Left Testing**).
-* **What happens:** Automated test suites (Unit, Integration, End-to-End, Security scans) execute automatically whenever new code is merged.
-* **Key Tools:** Jest, Cypress, Selenium, SonarQube.
-
-### 4. Continuous Delivery & Deployment (CD)
-
-* **Goal:** Deliver code changes to production quickly, reliably, and safely.
-* **What happens:**
-* **Continuous Delivery:** Code is automatically built, tested, and packaged into standard artifacts (e.g., Docker images), ready for manual release approval.
-* **Continuous Deployment:** Every change that passes automated tests is automatically deployed straight to production environments without human intervention.
-
-
-* **Key Tools:** GitHub Actions, Jenkins, ArgoCD, Flux.
-
-### 5. Continuous Provisioning & Operations
-
-* **Goal:** Manage, scale, and maintain infrastructure reliably.
-* **What happens:** Infrastructure is defined as code (**IaC**) so environments can be created or destroyed automatically. System performance and scalability are handled seamlessly.
-* **Key Tools:** Terraform, Ansible, Docker, Kubernetes.
-
-### 6. Continuous Monitoring & Observability
-
-* **Goal:** Track application health, performance, user experience, and security in real time.
-* **What happens:** Logs, metrics, and distributed traces are collected from servers and applications to detect anomalies, analyze errors, and provide feedback directly to the planning phase for the next development cycle.
-* **Key Tools:** Prometheus, Grafana, ELK Stack (Elasticsearch, Logstash, Kibana), Datadog.
-
----
-
-## Why the Lifecycle Matters
-
-* **Faster Time-to-Market:** Features reach end-users in hours or days instead of months.
-* **Higher Reliability:** Automated tests and continuous feedback catch failures before they impact production.
-* **Shorter Recovery Time (MTTR):** Quick identification and rolling out of hotfixes or automatic rollbacks.
-    `
-  },
-  {
-    id: 7,
-    title: "Simulating 3D in Three.js with the webgpu-claude-skill",
-    category: "Full-Stack",
-    difficulty: "Intermediate",
-    readTime: "10 min read",
-    date: "2026-07-30",
+    difficulty: "Advanced",
+    readTime: "9 min read",
+    date: "2026-11-19",
     featured: false,
-    excerpt: "How I used dgreenheck's webgpu-claude-skill — a packaged Claude Code skill for WebGPU + TSL — to go from zero to a working 3D particle simulation in Three.js, and what's inside the skill that makes that possible.",
-    tags: ["Three.js", "WebGPU", "TSL", "Claude Code", "AI Tooling"],
+    excerpt: "Phân tích kỹ thuật cơ chế giữ chỗ tạm thời cho ghế/vé: Redis SET NX EX để claim nguyên tử, database làm source of truth, và các trường hợp biên (late webhook, Redis restart, đặt nhiều ghế) làm hỏng những thiết kế ngây thơ.",
+    tags: ["Redis", "Concurrency", "System Design", "Booking", "Lua"],
     content: `
-# Simulating 3D in Three.js with the webgpu-claude-skill
+# Preventing Overbooking: Reservation Holds with Redis TTL
 
-[dgreenheck/webgpu-claude-skill](https://github.com/dgreenheck/webgpu-claude-skill) is a Claude Code **skill** — a packaged bundle of docs, examples, and templates that an agent loads on demand instead of relying on stale training data. Its subject is Three.js's newest renderer, WebGPU, and its node-based shader language, **TSL (Three.js Shading Language)**. Rather than write a generic "how WebGPU works" tutorial, this post covers how the skill itself is structured and how I used it to drive an actual 3D simulation build.
+Hai người dùng bấm cùng một ghế trong cùng một mili-giây. Một người phải thua, và ghế không được phép bị khóa mãi nếu người thắng bỏ đi giữa trang thanh toán. Đây là bài toán Reservation Hold, xuất hiện trong bán vé, đặt phòng khách sạn và flash sale.
 
-## What a Claude Code skill actually is
+## Thiết kế trong một đoạn
 
-A skill is a folder of markdown + code that gets injected into the agent's context only when relevant, keyed off a trigger description. This one triggers on prompts mentioning WebGPU, TSL, node materials, or GPU compute in Three.js. Once loaded, the agent has:
+Database chỉ lưu các trạng thái bền vững: AVAILABLE và BOOKED. Hold tạm thời chỉ nằm trên Redis, dưới dạng một key có TTL 15 phút. Khi key hết hạn thì ghế tự động trống lại, nên không cần ghi row HOLDING và không cần Cronjob quét các hold hết hạn.
 
-\`\`\`
-webgpu-claude-skill/
-├── docs/
-│   ├── core-concepts.md       # types, operators, uniforms, control flow
-│   ├── materials.md           # node materials and all properties
-│   ├── compute-shaders.md     # GPU compute with instanced arrays
-│   ├── post-processing.md     # built-in and custom effects
-│   ├── wgsl-integration.md    # custom WGSL functions
-│   ├── device-loss.md         # handling GPU device loss and recovery
-│   └── limits-and-features.md # WebGPU device limits and optional features
-├── examples/
-│   ├── basic-setup.js
-│   ├── custom-material.js
-│   ├── particle-system.js
-│   └── earth-shader.js
-├── templates/
-│   ├── webgpu-project.js
-│   └── compute-shader.js
-└── REFERENCE.md                # quick cheatsheet
+## Data model
+
+\`\`\`sql
+-- trạng thái bền vững: chỉ có hai giá trị
+event_seats(event_id, seat_id, status, user_id, updated_at)
+status IN ('AVAILABLE', 'BOOKED')
 \`\`\`
 
-That structure matters more than it looks: instead of one giant prompt, the agent can pull just \`docs/compute-shaders.md\` when building a particle system, or just \`materials.md\` when writing a custom shader — keeping context focused and answers accurate to the current TSL API rather than an older GLSL-era mental model.
+\`\`\`
+-- trạng thái tạm thời trên Redis
+key:   hold:{event_id}:{seat_id}      ví dụ hold:event_1:seat_A1
+value: id của user hoặc order         chủ sở hữu của hold
+TTL:   900 giây
+\`\`\`
 
-## Using the skill: renderer setup
+## Luồng 1: liệt kê ghế khả dụng
 
-Asking the agent to "set up a WebGPU renderer with Three.js" pulls the \`templates/webgpu-project.js\` starter, which enforces the one detail people most often get wrong — importing from the WebGPU-specific entry points, not the classic \`three\` package:
+Đọc toàn bộ ghế của event từ database, sau đó kiểm tra những ghế AVAILABLE nào đang bị giữ bằng đúng một lệnh MGET.
 
 \`\`\`javascript
-import * as THREE from 'three/webgpu';
-import { color, time, oscSine } from 'three/tsl';
-
-const renderer = new THREE.WebGPURenderer({ antialias: true });
-await renderer.init(); // WebGPU initialization is async
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-camera.position.set(0, 2, 5);
+const seats = await db.query('SELECT seat_id, status FROM event_seats WHERE event_id = $1', [eventId]);
+const available = seats.rows.filter(s => s.status === 'AVAILABLE');
+const holds = await redis.mget(available.map(s => \`hold:\${eventId}:\${s.seat_id}\`));
 \`\`\`
 
-Notice the pattern the skill enforces: import from \`three/webgpu\` and \`three/tsl\`, never the classic \`three\` package — the node material system doesn't exist on the WebGL-only entry point, and it's the single most common mistake when adapting older Three.js tutorials.
+BOOKED trong database nghĩa là đã bán. AVAILABLE kèm key Redis nghĩa là đang được giữ. AVAILABLE mà không có key nghĩa là còn trống. Tuyệt đối không dùng KEYS cho việc này: nó quét toàn bộ keyspace và chặn Redis trong lúc chạy.
 
-## Using the skill: node-based materials
+## Luồng 2: giữ một ghế
 
-Asking for "a custom shader material" pulls \`docs/materials.md\` and \`examples/custom-material.js\`. The skill's core lesson here is a mental-model shift: instead of setting \`material.color\` or \`material.map\` directly, you assign **nodes** to properties like \`colorNode\`, \`roughnessNode\`, and \`positionNode\`.
+Sau bước kiểm tra nhanh ghế đang AVAILABLE trong database, claim ghế bằng một lệnh nguyên tử:
 
-\`\`\`javascript
-const material = new THREE.MeshStandardNodeMaterial();
-
-// Animate color with a sine oscillator driven by elapsed time
-material.colorNode = color(0x00ff88).mul(oscSine(time));
-
-// Vertex displacement for a simple "breathing" sphere
-const geometry = new THREE.SphereGeometry(1, 64, 64);
-const mesh = new THREE.Mesh(geometry, material);
-scene.add(mesh);
+\`\`\`
+SET hold:event_1:seat_A1 user_A NX EX 900
 \`\`\`
 
-The skill also flags TSL's **method-chaining** convention, which trips people up coming from GLSL. What would be \`sin(time * 2.0 + offset) * 0.5 + 0.5\` becomes:
+NX nghĩa là "chỉ khi key chưa tồn tại" và EX đặt TTL trong cùng một bước. OK nghĩa là bạn đã giữ được ghế, hãy tạo đơn hàng PENDING. nil nghĩa là người khác nhanh hơn, hãy yêu cầu user chọn ghế khác. Đừng cài đặt bằng GET rồi SET, vì race condition sẽ quay lại ngay.
 
-\`\`\`javascript
-time.mul(2.0).add(offset).sin().mul(0.5).add(0.5)
+## Luồng 3: xác nhận thanh toán
+
+Khi cổng thanh toán gọi webhook, database quyết định, không phải đồng hồ:
+
+\`\`\`sql
+UPDATE event_seats
+SET status = 'BOOKED', user_id = 'user_A', updated_at = NOW()
+WHERE event_id = 'event_1' AND seat_id = 'seat_A1' AND status = 'AVAILABLE';
 \`\`\`
 
-## Using the skill: GPU compute for the simulation itself
+Điều kiện status chính là một Optimistic Lock. Nếu ảnh hưởng một row thì ghế là của bạn. Nếu ảnh hưởng 0 row thì người khác đã sở hữu, hãy hủy đơn và kích hoạt Auto-Refund. Chỉ sau khi database xác nhận mới nhả key Redis. Làm đúng thứ tự này thì không bao giờ có lúc hold đã mất mà ghế vẫn trông như AVAILABLE.
 
-This is the part that made the skill worth pulling in — \`docs/compute-shaders.md\` and \`examples/particle-system.js\` cover **GPU compute with instanced arrays**, which is what actually simulates motion for thousands of objects without a CPU round-trip per frame:
+Nhả key bằng compare-and-delete, để không xóa nhầm hold mới hơn của người khác:
 
-\`\`\`javascript
-import { instancedArray, Fn, vec3, instanceIndex } from 'three/tsl';
-
-const particleCount = 50_000;
-const positionBuffer = instancedArray(particleCount, 'vec3');
-
-const computeUpdate = Fn(() => {
-  const pos = positionBuffer.element(instanceIndex);
-  pos.addAssign(vec3(0, -0.01, 0)); // simple gravity simulation
-})().compute(particleCount);
-
-// Each frame:
-renderer.computeAsync(computeUpdate);
+\`\`\`lua
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0
 \`\`\`
 
-Pair this buffer with a \`THREE.InstancedMesh\`, or a points material whose \`positionNode\` reads from \`positionBuffer\`, to render the simulated particles. This is directly lifted from the skill's \`templates/compute-shader.js\` template rather than assembled from scratch.
+## Luồng 4: hết hạn và hủy
 
-## Using the skill: reusable shader logic
+Nếu không ai thanh toán trong 900 giây, Redis tự xóa key và lần liệt kê ghế kế tiếp sẽ hiển thị ghế là còn trống. Nếu user chủ động hủy, chạy cùng script compare-and-delete để nhả ngay thay vì chờ hết TTL.
 
-For effects you'll reuse across materials — a Fresnel rim light, for example — the skill's core-concepts doc shows wrapping the logic in \`Fn()\`:
+## Các trường hợp biên
 
-\`\`\`javascript
-import { Fn, normalWorld, positionViewDirection, float } from 'three/tsl';
+### Late webhook
 
-const fresnel = Fn(([power = 2.0]) => {
-  const nDotV = normalWorld.dot(positionViewDirection).saturate();
-  return float(1.0).sub(nDotV).pow(power);
-});
+User thanh toán lúc 14:59 và ngân hàng báo về lúc 15:02, sau khi key đã hết hạn. Vì việc xác nhận dựa trên trạng thái database, đơn hàng vẫn thành công nếu trong lúc đó chưa ai mua ghế. Có một điều cần quyết định chủ động: nếu lúc đó có user khác đang giữ ghế, bạn chấp nhận người trả trễ và hoàn tiền cho người đang giữ, hay từ chối người trả trễ? Luồng trên ưu tiên bên nào chạm vào UPDATE có điều kiện trước.
 
-material.emissiveNode = color(0x00ff88).mul(fresnel(3.0));
+### Lệch đồng hồ phía client
+
+Bộ đếm trên app có thể chạy chậm hơn server. Hãy hiển thị bộ đếm ngắn hơn TTL khoảng 30 giây, ví dụ 14:30 trên màn hình so với 15:00 trên Redis.
+
+### Redis restart
+
+Redis giữ dữ liệu trên RAM nên restart sẽ làm mất mọi hold. Bật AOF với fsync mỗi giây:
+
+\`\`\`
+appendonly yes
+appendfsync everysec
 \`\`\`
 
-## Using the skill: post-processing and device loss
+AOF lưu thời điểm hết hạn dưới dạng timestamp tuyệt đối nên TTL còn lại được khôi phục đúng. Bạn có thể mất tối đa khoảng một giây dữ liệu ghi, và câu UPDATE có điều kiện ở database vẫn là lớp bảo vệ cuối cùng chống bán trùng.
 
-\`docs/post-processing.md\` covers composing effects declaratively:
+### Đặt nhiều ghế
 
-\`\`\`javascript
-import { pass } from 'three/tsl';
-import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+User chọn ba ghế nhưng chỉ giữ được hai. Dùng Lua Script để Redis kiểm tra và claim tất cả trong một bước nguyên tử:
 
-const scenePass = pass(scene, camera);
-const bloomPass = bloom(scenePass, 1.0, 0.4, 0.1);
-
-const postProcessing = new THREE.PostProcessing(renderer);
-postProcessing.outputNode = scenePass.add(bloomPass);
+\`\`\`lua
+-- KEYS = các hold key, ARGV[1] = owner, ARGV[2] = ttl (giây)
+for _, k in ipairs(KEYS) do
+  if redis.call('EXISTS', k) == 1 then
+    return 0
+  end
+end
+for _, k in ipairs(KEYS) do
+  redis.call('SET', k, ARGV[1], 'EX', ARGV[2])
+end
+return 1
 \`\`\`
 
-And \`docs/device-loss.md\` covers a failure mode that's easy to miss if you're only used to WebGL: WebGPU devices can be lost outright (driver crash, resource limits, tab backgrounding), so production code needs an explicit recovery path:
+Script trả về 1 nếu giữ được tất cả ghế và 0 nếu không thay đổi gì.
 
-\`\`\`javascript
-renderer.onDeviceLost((info) => {
-  console.warn('WebGPU device lost:', info.message);
-  // Recreate renderer and re-upload scene resources
-});
-\`\`\`
+### Redis Cluster
 
-## Putting it together
-
-The full render loop combines the compute pass with the render/post-processing pass:
-
-\`\`\`javascript
-renderer.setAnimationLoop(() => {
-  renderer.computeAsync(computeUpdate);
-  postProcessing.render();
-});
-\`\`\`
-
-## Why go through the skill instead of just asking the model
-
-Three.js's WebGPU/TSL API is new enough that a model's training data is likely to blend it with older GLSL-based APIs, or with outdated pre-release TSL syntax. The skill sidesteps that by giving the agent current, curated reference material — docs, working examples, and templates — to pull from on demand, so what comes back matches the actual current API instead of a plausible-sounding blend of old and new.
+MGET và Lua Script nhiều key sẽ lỗi CROSSSLOT khi các key nằm ở hash slot khác nhau. Dùng hash tag như \`hold:{event_1}:seat_A1\` để mọi ghế của một event cùng một slot. Đổi lại, một event sẽ chỉ nằm trên một shard.
 
 ## Key Takeaways
 
-1. A Claude Code skill is a folder of docs/examples/templates loaded into context only when its trigger matches — here, anything mentioning WebGPU, TSL, or Three.js GPU compute.
-2. It fixes the two mistakes people make most: wrong import path (\`three/webgpu\` / \`three/tsl\`, not \`three\`) and treating node materials like flat properties.
-3. GPU compute via \`instancedArray\` + \`.compute()\` — sourced from the skill's compute-shader template — is what makes large-scale simulation practical in the browser.
-4. Device-loss handling is documented explicitly in the skill because it's a real WebGPU failure mode, not an edge case worth skipping.
-5. Reference: [dgreenheck/webgpu-claude-skill](https://github.com/dgreenheck/webgpu-claude-skill).
+1. Giữ quyền sở hữu bền vững ở database và hold tạm thời ở Redis kèm TTL, nên hết hạn không cần Cronjob.
+2. Claim bằng SET NX EX, không bao giờ GET rồi SET, và liệt kê khả dụng bằng MGET, không bao giờ dùng KEYS.
+3. Xác nhận thanh toán bằng UPDATE có điều kiện (WHERE status = 'AVAILABLE'), sau đó mới nhả Redis, và hoàn tiền nếu update ảnh hưởng 0 row.
+4. Nhả hold bằng compare-and-delete để chỉ xóa hold của chính mình.
+5. Dùng Lua Script cho hold nhiều ghế kiểu all-or-nothing, AOF everysec cho trường hợp restart, và hash tag trên Redis Cluster.
     `
   }
 ];
@@ -605,62 +479,64 @@ const EnhancedBlog: React.FC = () => {
         </motion.div>
 
         {/* Featured Posts */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-12"
-        >
-          <h2 className="text-2xl font-bold mb-6 text-green-400 flex items-center gap-2">
-            <Star className="w-6 h-6" />
-            Featured Articles
-          </h2>
+        {featuredPosts.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mb-12"
+          >
+            <h2 className="text-2xl font-bold mb-6 text-green-400 flex items-center gap-2">
+              <Star className="w-6 h-6" />
+              Featured Articles
+            </h2>
           
-          <div className="grid md:grid-cols-2 gap-6">
-            {featuredPosts.map((post) => (
-              <motion.article
-                key={post.id}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => handlePostClick(post)}
-                className="bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden cursor-pointer group"
-              >
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <TechBadge name={post.category} category={post.category} size="sm" />
-                    <span className="text-xs text-yellow-400 font-medium">⭐ Featured</span>
-                  </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              {featuredPosts.map((post) => (
+                <motion.article
+                  key={post.id}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => handlePostClick(post)}
+                  className="bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden cursor-pointer group"
+                >
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TechBadge name={post.category} category={post.category} size="sm" />
+                      <span className="text-xs text-yellow-400 font-medium">⭐ Featured</span>
+                    </div>
                   
-                  <h3 className="text-xl font-bold text-neutral-200 mb-3 group-hover:text-green-400 transition-colors">
-                    {post.title}
-                  </h3>
+                    <h3 className="text-xl font-bold text-neutral-200 mb-3 group-hover:text-green-400 transition-colors">
+                      {post.title}
+                    </h3>
                   
-                  <p className="text-gray-400 mb-4 line-clamp-2">
-                    {post.excerpt}
-                  </p>
+                    <p className="text-gray-400 mb-4 line-clamp-2">
+                      {post.excerpt}
+                    </p>
                   
-                  <div className="flex items-center justify-between">
-                    <EngagementMetrics
-                      featured={post.featured}
-                    />
+                    <div className="flex items-center justify-between">
+                      <EngagementMetrics
+                        featured={post.featured}
+                      />
                     
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>{post.readTime}</span>
-                      <span>{new Date(post.date).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>{post.readTime}</span>
+                        <span>{new Date(post.date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {post.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="px-2 py-1 bg-gray-800 text-green-400 text-xs rounded">
+                          #{tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {post.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="px-2 py-1 bg-gray-800 text-green-400 text-xs rounded">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </div>
-        </motion.section>
+                </motion.article>
+              ))}
+            </div>
+          </motion.section>
+        )}
 
         {/* Filters and Search */}
         <motion.div

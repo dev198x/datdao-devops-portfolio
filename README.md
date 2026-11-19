@@ -96,12 +96,6 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 - Search, sort by date / views / likes
 - Featured article highlights
 
-### 📊 Case Studies (`/case-studies`)
-- Detailed challenge → solution → impact breakdowns
-- Realistic performance metrics
-- Before/after comparisons
-- Full technology stack context per project
-
 ### 🛠️ DevOps-Ready Deployment
 - GitHub Pages deployment on push to `main` (`.github/workflows`), served at the custom domain `profile.247.id.vn`
 - SPA fallback: the workflow copies `dist/index.html` to `404.html` so deep links such as `/projects/<id>` work
@@ -172,14 +166,6 @@ After adding, **redeploy** the project (push a commit, re-run the workflow, or u
 | Skills & proficiency | `src/pages/Skills.tsx` |
 | Contact details | `src/data/portfolio.ts` |
 
-### Your Projects & Case Studies
-
-Edit the `caseStudies` array in:
-```
-src/components/case-studies/EnhancedCaseStudies.tsx
-```
-
-Each entry supports: title, problem statement, solution, tech stack, and before/after metrics.
 
 ### Your Blog Posts
 
@@ -215,8 +201,6 @@ devops-portfolio/
 │   ├── components/
 │   │   ├── blog/
 │   │   │   └── EnhancedBlog.tsx          # Blog with modal reading + metrics
-│   │   ├── case-studies/
-│   │   │   └── EnhancedCaseStudies.tsx   # Case studies with impact data
 │   │   ├── visual/
 │   │   │   └── VisualComponents.tsx      # Reusable animated UI components
 │   │   ├── Navbar.tsx
