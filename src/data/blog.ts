@@ -1199,6 +1199,171 @@ Advisory lock đặc biệt hữu ích cho ví dụ cấp số chứng từ ở 
 4. Hàng chờ lock là rủi ro thật: một lock đang chờ cũng chặn các truy vấn đến sau. Luôn dùng NOWAIT hoặc \`lock_timeout\`.
 5. Có row lock, advisory lock, constraint hoặc \`CONCURRENTLY\` đáp ứng được thì ưu tiên chúng.
     `
+  },
+  {
+    id: 13,
+    slug: 'advisory-lock-postgresql-don-gian',
+    title: "Advisory Lock trong PostgreSQL: khóa theo ý bạn, không cần khóa bảng hay dòng",
+    category: "Full-Stack",
+    difficulty: "Intermediate",
+    readTime: "7 min read",
+    date: "2026-11-19",
+    featured: false,
+    excerpt: "Advisory lock là ổ khóa do bạn tự đặt tên bằng một con số. Giải thích đơn giản bằng ví dụ: chặn cron job chạy trùng, chặn bấm thanh toán hai lần, và những lỗi hay gặp khi dùng.",
+    tags: ["PostgreSQL", "Advisory Lock", "Concurrency", "Locking", "Database"],
+    content: `
+# Advisory Lock trong PostgreSQL: khóa theo ý bạn, không cần khóa bảng hay dòng
+
+Row lock khóa một dòng. Table lock khóa cả bảng. Nhưng đôi khi thứ bạn muốn khóa không phải dòng hay bảng, mà là một việc: "đang chạy báo cáo tháng này", "đang xử lý thanh toán của user 42". Với những trường hợp đó, PostgreSQL có advisory lock.
+
+## Advisory lock là gì
+
+Hãy hình dung một cái phòng họp có một ổ khóa. Ổ khóa không gắn vào bàn hay ghế nào cả. Ai vào trước thì khóa lại, người đến sau phải chờ hoặc quay về.
+
+Advisory lock hoạt động giống vậy:
+
+1. Bạn chọn một con số bất kỳ làm "tên" của ổ khóa, ví dụ \`42\`.
+2. Ai xin khóa số \`42\` trước thì được. Người xin sau phải chờ hoặc bị từ chối.
+3. PostgreSQL không biết số 42 nghĩa là gì và không gắn nó vào bảng nào. Ý nghĩa do ứng dụng của bạn quy định.
+
+Chữ "advisory" nghĩa là "mang tính thỏa thuận": database chỉ giữ ổ khóa, còn việc mọi đoạn code đều chịu xin khóa trước khi làm là do bạn tự bảo đảm.
+
+## Ví dụ 1: ổ khóa đơn giản nhất
+
+\`\`\`sql
+-- Session 1
+SELECT pg_advisory_lock(42);        -- lấy được ngay
+
+-- Session 2
+SELECT pg_advisory_lock(42);        -- bị TREO, chờ Session 1
+
+-- Session 1
+SELECT pg_advisory_unlock(42);      -- nhả khóa, Session 2 chạy tiếp
+\`\`\`
+
+Hai session không cần bảng nào cả. Chúng chỉ cùng xin ổ khóa số 42.
+
+## Hai loại: theo session và theo transaction
+
+\`\`\`sql
+-- Theo session: giữ cho đến khi bạn tự unlock hoặc ngắt kết nối
+SELECT pg_advisory_lock(42);
+SELECT pg_advisory_unlock(42);
+
+-- Theo transaction: tự nhả khi COMMIT hoặc ROLLBACK
+BEGIN;
+SELECT pg_advisory_xact_lock(42);
+-- ... làm việc ...
+COMMIT;                              -- khóa tự nhả, không có hàm unlock
+\`\`\`
+
+Nên ưu tiên loại \`xact\`. Bạn không thể quên nhả khóa, vì transaction kết thúc là khóa mất. Loại session dễ bị "rò khóa" khi code lỗi giữa chừng.
+
+## Ví dụ 2: cron job không được chạy hai lần
+
+Bạn có job gửi email nhắc lịch chạy mỗi phút. Chạy trên 3 server thì cả 3 cùng chạy và khách nhận 3 email. Dùng \`pg_try_advisory_lock\`: hàm này không chờ mà trả về ngay true hoặc false.
+
+\`\`\`sql
+SELECT pg_try_advisory_lock(1001);
+-- true  -> bạn được chạy job
+-- false -> server khác đang chạy, bỏ qua lượt này
+\`\`\`
+
+Ba server cùng hỏi cùng lúc, chỉ một server nhận được \`true\`. Chạy xong thì nhả:
+
+\`\`\`sql
+SELECT pg_advisory_unlock(1001);
+\`\`\`
+
+Số \`1001\` ở đây là số bạn tự quy ước cho job "gửi email nhắc lịch". Hãy ghi quy ước này vào code, ví dụ một hằng số \`JOB_REMINDER_EMAIL = 1001\`.
+
+## Ví dụ 3: chặn một user thanh toán hai lần cùng lúc
+
+Khách hàng bấm nút "Thanh toán" hai lần, hai request chạy song song. Ta muốn các request của cùng một user phải xếp hàng, còn user khác vẫn chạy bình thường. Dùng chính \`user_id\` làm tên ổ khóa:
+
+\`\`\`sql
+BEGIN;
+SELECT pg_advisory_xact_lock(42);    -- 42 là user_id
+
+-- kiểm tra và tạo đơn thanh toán an toàn, vì không ai khác của user 42 chen vào được
+SELECT count(*) FROM payments
+WHERE user_id = 42 AND status = 'pending';
+
+INSERT INTO payments (user_id, amount, status)
+VALUES (42, 150000, 'pending');
+
+COMMIT;                              -- khóa tự nhả
+\`\`\`
+
+Request thứ hai của user 42 sẽ chờ ở dòng \`pg_advisory_xact_lock\` cho đến khi request đầu COMMIT, rồi thấy đơn \`pending\` đã tồn tại và dừng lại. Request của user 7 dùng ổ khóa số 7 nên không bị ảnh hưởng.
+
+Điểm hay: cách này hoạt động ngay cả khi dòng chưa tồn tại, nơi \`SELECT ... FOR UPDATE\` không có gì để khóa.
+
+## Khóa bằng chuỗi thay vì số
+
+Ổ khóa cần là số nguyên. Nếu tên của bạn là chuỗi, hãy băm ra số:
+
+\`\`\`sql
+SELECT pg_advisory_xact_lock(hashtextextended('report:2026-11', 0));
+\`\`\`
+
+Với ví dụ trên, mọi session xin khóa cho cùng chuỗi \`report:2026-11\` sẽ cùng ra một số, nên xếp hàng với nhau. Đây là cách dễ đọc hơn việc nhớ các số tự quy ước.
+
+## Cách chọn: chờ, thử, hay báo lỗi
+
+\`\`\`
+Hàm                              Hành vi khi ổ khóa đang bị giữ
+pg_advisory_xact_lock(k)         Chờ đến khi có khóa
+pg_try_advisory_xact_lock(k)     Trả về false ngay, không chờ
+\`\`\`
+
+Dùng \`try\` khi bỏ qua được (cron job, tác vụ nền). Dùng bản chờ khi bắt buộc phải làm tuần tự (thanh toán). Với bản chờ, nên đặt \`SET LOCAL lock_timeout = '5s'\` để không bị treo vô hạn.
+
+## Xem ai đang giữ khóa
+
+\`\`\`sql
+SELECT pid, objid AS khoa, granted
+FROM pg_locks
+WHERE locktype = 'advisory';
+\`\`\`
+
+Cột \`granted = false\` nghĩa là session đó đang đứng chờ.
+
+## Những lỗi hay gặp
+
+### 1. Quên nhả khóa kiểu session
+
+Nếu code lỗi trước khi gọi \`pg_advisory_unlock\`, khóa vẫn còn đến khi kết nối đóng. Dùng loại \`xact\` để tránh.
+
+### 2. Dùng khóa session cùng connection pool
+
+Với PgBouncer ở chế độ transaction pooling, câu lệnh lock và câu lệnh unlock có thể chạy trên hai kết nối khác nhau. Khóa kẹt ở kết nối này, còn unlock lại chạy ở kết nối kia. Với pool, chỉ dùng loại \`xact\` trong một transaction.
+
+### 3. Hai chức năng vô tình dùng chung một số
+
+Nếu job A và job B cùng chọn số \`1001\`, chúng sẽ chặn nhau mà không ai hiểu vì sao. Hãy gom các số quy ước vào một chỗ trong code.
+
+### 4. Nhầm hành vi khi ROLLBACK
+
+Khóa theo transaction luôn được nhả khi COMMIT hoặc ROLLBACK. Khóa theo session thì ROLLBACK không nhả, nó vẫn nằm đó cho đến khi bạn unlock hoặc đóng kết nối. Hãy chắc chắn bạn đang dùng đúng loại cho nhu cầu của mình.
+
+## So sánh nhanh
+
+\`\`\`
+Loại khóa          Khóa cái gì          Gắn với dữ liệu thật   Dùng khi
+Row lock           Một hoặc vài dòng    Có                     Sửa dòng đang tồn tại
+Table lock         Cả bảng              Có                     Migration, batch lớn
+Advisory lock      Một con số tự đặt    Không                  Khóa một việc hoặc tài nguyên logic
+\`\`\`
+
+## Key Takeaways
+
+1. Advisory lock là ổ khóa mang tên một con số do bạn tự đặt, PostgreSQL không gắn nó vào bảng hay dòng nào.
+2. Ưu tiên \`pg_advisory_xact_lock\`: khóa tự nhả khi COMMIT hoặc ROLLBACK, không sợ quên.
+3. Dùng \`pg_try_advisory_lock\` cho cron job hoặc tác vụ có thể bỏ qua, dùng bản chờ cho việc bắt buộc tuần tự.
+4. Rất hợp để khóa theo \`user_id\` hoặc theo tên tác vụ, kể cả khi dòng dữ liệu chưa tồn tại.
+5. Đừng dùng khóa kiểu session với connection pool theo transaction, và hãy ghi lại các số quy ước để không bị trùng.
+    `
   }
 ];
 
