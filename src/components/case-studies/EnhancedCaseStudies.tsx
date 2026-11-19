@@ -1640,26 +1640,22 @@ const EnhancedCaseStudies: React.FC = () => {
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12"
         >
           <StatsCard
-            title="Projects Completed"
-            value="3"
+            title="Case Studies"
+            value={caseStudies.length}
             icon={<FileText className="w-6 h-6" />}
             color="completed"
           />
           <StatsCard
-            title="Cost Savings"
-            value="35%"
-            change="Average across projects"
-            icon={<TrendingUp className="w-6 h-6" />}
+            title="Categories"
+            value={new Set(caseStudies.map((study) => study.category)).size}
+            icon={<Globe className="w-6 h-6" />}
             color="completed"
-            trend="up"
           />
           <StatsCard
-            title="Uptime Achieved"
-            value="99.5%"
-            change="Production reliability"
-            icon={<Target className="w-6 h-6" />}
+            title="Technologies Covered"
+            value={new Set(caseStudies.flatMap((study) => study.technologies)).size}
+            icon={<Code className="w-6 h-6" />}
             color="completed"
-            trend="up"
           />
         </motion.div>
 

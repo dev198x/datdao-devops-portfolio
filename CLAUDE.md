@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static personal portfolio site ("cyber terminal" themed) for a Cloud/DevOps/SRE engineer. Single-page React app, no backend — deployed as a static SPA to Vercel.
+A static personal portfolio site ("cyber terminal" themed) for a Cloud/DevOps/SRE engineer. Single-page React app, no backend — deployed as a static SPA to GitHub Pages at the custom domain `profile.247.id.vn` (`.github/workflows`, served from the root path, `base: '/'` in `vite.config.ts`). `vercel.json` is kept for Vercel compatibility.
 
 ## Commands
 
@@ -30,4 +30,4 @@ The contact form requires `VITE_WEB3FORMS_KEY` in `.env` (copy from `.env.exampl
 - `src/components/visual/VisualComponents.tsx` holds shared animated UI primitives reused across pages; `Grid3D.tsx` is the animated terminal background — despite the name and README claims, it's pure CSS/DOM (gradients + `Math.random()`-positioned divs), not a Three.js scene. There is no Three.js dependency in `package.json`.
 - Styling is Tailwind-only (`tailwind.config.js` defines the neon-green terminal theme via `primary`/`bg-page`/`bg-surface` colors); `clsx` + `tailwind-merge` are used for conditional class composition (see `src/lib/utils.ts`).
 - `@/*` path alias maps to `src/*` (configured in both `vite.config.ts` and `tsconfig.json`).
-- `vercel.json` rewrites all paths to `/index.html` — required because routing is client-side only.
+- Client-side routing needs a SPA fallback on every host: the GitHub Pages workflow copies `dist/index.html` to `404.html`, and `vercel.json` rewrites all paths to `/index.html` for Vercel.

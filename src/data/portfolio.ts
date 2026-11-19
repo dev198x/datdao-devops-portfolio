@@ -86,7 +86,7 @@ export const SKILLS: Skill[] = [
     name: "Ansible",
     icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ansible/ansible-original-wordmark.svg",
     category: "infrastructure",
-    level: 'expert',
+    level: 'intermediate',
   },
   {
     name: "AWS CloudFormation",

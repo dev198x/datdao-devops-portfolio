@@ -590,14 +590,9 @@ const EnhancedBlog: React.FC = () => {
     return views > 1000 ? `${(views / 1000).toFixed(1)}k` : views.toString();
   };
 
-  const getTotalViews = () => {
-    return blogPosts.reduce((total, post) => {
-      return total + (blogViews[post.id] || parseInt(post.views.replace('k', '000')));
-    }, 0);
-  };
-
-  const totalViews = getTotalViews();
-  const totalViewsFormatted = totalViews > 1000 ? `${(totalViews / 1000).toFixed(1)}k` : totalViews.toString();
+  const avgReadMinutes = Math.round(
+    blogPosts.reduce((total, post) => total + parseInt(post.readTime, 10), 0) / blogPosts.length
+  );
 
   return (
     <AnimatedBackground>
@@ -625,33 +620,27 @@ const EnhancedBlog: React.FC = () => {
         >
           <StatsCard
             title="Total Articles"
-            value="4"
+            value={blogPosts.length}
             icon={<BookOpen className="w-6 h-6" />}
             color="completed"
           />
           <StatsCard
-            title="Total Views"
-            value={totalViewsFormatted}
-            change="Real-time tracking"
-            icon={<Eye className="w-6 h-6" />}
+            title="Categories"
+            value={new Set(blogPosts.map((post) => post.category)).size}
+            icon={<Tag className="w-6 h-6" />}
             color="completed"
-            trend="up"
           />
           <StatsCard
-            title="Engagement Rate"
-            value="72%"
-            change="Active readership"
-            icon={<Heart className="w-6 h-6" />}
+            title="Featured"
+            value={featuredPosts.length}
+            icon={<Star className="w-6 h-6" />}
             color="completed"
-            trend="up"
           />
           <StatsCard
             title="Avg. Read Time"
-            value="8 min"
-            change="Industry average: 7 min"
+            value={`${avgReadMinutes} min`}
             icon={<Clock className="w-6 h-6" />}
             color="completed"
-            trend="up"
           />
         </motion.div>
 

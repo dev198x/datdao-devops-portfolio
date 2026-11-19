@@ -103,8 +103,9 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 - Full technology stack context per project
 
 ### 🛠️ DevOps-Ready Deployment
-- Vercel auto-deployment on push to `main`
-- SPA redirect rules pre-configured (`vercel.json`)
+- GitHub Pages deployment on push to `main` (`.github/workflows`), served at the custom domain `profile.247.id.vn`
+- SPA fallback: the workflow copies `dist/index.html` to `404.html` so deep links such as `/projects/<id>` work
+- Vercel-compatible (`vercel.json` SPA rewrite)
 - Environment variable support for secrets
 - Netlify-compatible with one config file
 
@@ -122,7 +123,7 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 | Terminal Background | CSS/DOM grid & particle effects (no 3D engine) |
 | Icons | Lucide React |
 | Contact Form | Web3Forms (free, no backend) |
-| Deployment | Vercel |
+| Deployment | GitHub Pages (custom domain) / Vercel-compatible |
 
 ---
 
@@ -143,14 +144,16 @@ Edit `.env`:
 VITE_WEB3FORMS_KEY=your_access_key_here
 ```
 
-### Step 3 — Add to Vercel (for production)
-In your Vercel project → **Settings** → **Environment Variables**:
+### Step 3 — Add the key for production
+**GitHub Pages (current deployment):** repo → **Settings** → **Secrets and variables** → **Actions** → add a repository secret named `VITE_WEB3FORMS_KEY`, then re-run the *Deploy to GitHub Pages* workflow.
+
+**Vercel (alternative):** in your Vercel project → **Settings** → **Environment Variables**:
 
 | Key | Value | Environments |
 |---|---|---|
 | `VITE_WEB3FORMS_KEY` | `your_access_key_here` | Production, Preview, Development |
 
-After adding, **redeploy** the project (push a commit or use Vercel dashboard → Redeploy).
+After adding, **redeploy** the project (push a commit, re-run the workflow, or use Vercel dashboard → Redeploy).
 
 > **Never commit your `.env` file.** It is already in `.gitignore`.
 
@@ -297,7 +300,7 @@ MIT — free to use, fork, and deploy for personal and commercial use.
 
 ## 👨‍💻 About This Project
 
-Originally built by **Neeraj Chandra Nakka** as an open-source DevOps portfolio template for cloud, SRE, and infrastructure engineers. This instance is maintained by **Dao Man Dat**, a Software Architect and Full-Stack Engineer expanding into DevOps, SRE, and GitOps.
+Originally built by **Neeraj Chandra Nakka** as an open-source DevOps portfolio template for cloud, SRE, and infrastructure engineers. This instance is maintained by **Dat Dao**, a Software Engineer working across backend development, DevOps, and AI engineering.
 
 This portfolio is designed for DevOps engineers who want something that looks like it belongs in a terminal — not a Wix page. If you're targeting product-based companies, a portfolio like this helps recruiters quickly understand your technical depth and project experience.
 
