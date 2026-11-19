@@ -96,3 +96,55 @@ img {
 ::-webkit-scrollbar-thumb:hover {
   background: #1A7F37;
 }
+
+/* Syntax highlighting for blog code blocks (GitHub Light palette, matches the site theme) */
+.hljs-comment,
+.hljs-quote {
+  color: #6e7781;
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-doctag,
+.hljs-meta .hljs-keyword {
+  color: #cf222e;
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-meta .hljs-string {
+  color: #0a3069;
+}
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet {
+  color: #0550ae;
+}
+.hljs-built_in,
+.hljs-type,
+.hljs-class .hljs-title,
+.hljs-title.class_ {
+  color: #953800;
+}
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: #8250df;
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-property {
+  color: #0550ae;
+}
+.hljs-variable,
+.hljs-template-variable,
+.hljs-params {
+  color: #953800;
+}
+.hljs-operator,
+.hljs-punctuation {
+  color: #1f2328;
+}
+.hljs-subst {
+  color: #1f2328;
+}

@@ -7,6 +7,7 @@ import { Skills } from './pages/Skills';
 import { Projects } from './pages/Projects';
 import { ProjectDetail } from './pages/ProjectDetail';
 import Blog from './pages/Blog';
+import BlogPostPage from './pages/BlogPost';
 import Commands from './pages/Commands';
 import { Contact } from './pages/Contact';
 import './App.css';
@@ -24,6 +25,7 @@ function App() {
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:projectId" element={<ProjectDetail />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/commands" element={<Commands />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>

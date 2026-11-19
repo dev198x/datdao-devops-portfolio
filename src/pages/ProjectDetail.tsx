@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, ExternalLink, Github, Layers, User, Tag, Star } from 'lucide-react';
 import { TerminalHeader } from '../components/TerminalHeader';
+import CodeBlock from '../components/blog/CodeBlock';
 import { PROJECTS_BY_CATEGORY, getProjectBySlug } from '../data/portfolio';
 
 const SectionTitle = ({ cmd }: { cmd: string }) => (
@@ -148,11 +149,15 @@ export const ProjectDetail = () => {
                           >
                             <h4 className="font-semibold text-neutral-200">{item.heading}</h4>
                             {item.body && <p className="text-neutral-400 text-sm leading-relaxed">{item.body}</p>}
-                            {item.code && (
-                              <pre className="bg-bg-page border border-neutral-700 rounded-lg p-3 overflow-x-auto font-mono text-xs text-primary-500 whitespace-pre-wrap">
-                                {item.code}
-                              </pre>
-                            )}
+                            {item.code && <CodeBlock code={item.code} />}
+                            {item.examples?.map((example) => (
+                              <CodeBlock
+                                key={example.caption ?? example.code}
+                                code={example.code}
+                                language={example.language}
+                                title={example.caption}
+                              />
+                            ))}
                             {item.points && (
                               <ul className="space-y-1.5">
                                 {item.points.map((point) => (

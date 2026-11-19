@@ -1,7 +1,7 @@
 # 🖥️ DevOps Portfolio Template — Cyber Terminal Aesthetic
 
 > A free, open-source DevOps portfolio website template for Cloud Engineers, SREs, and DevOps professionals.  
-> Built with **React + TypeScript**, featuring a cyber terminal design, interactive blog, case studies, and CI/CD-ready deployment on Vercel.
+> Built with **React + TypeScript**, featuring a cyber terminal design, a blog with syntax-highlighted code, and CI/CD-ready deployment on Vercel.
 
 <p align="center">
   <a href="https://github.com/dev198x/devops-portfolio/stargazers">
@@ -45,8 +45,7 @@ Recruiters spend an average of 6 seconds on a resume. A portfolio like this help
 | 🏠 Home | Animated terminal hero, typewriter effect, neon aesthetic |
 | 🛠️ Skills | Visual proficiency indicators for full DevOps toolchain |
 | 📁 Projects | Filterable project cards with tech stack tags |
-| 📊 Case Studies | Challenge → Solution → Impact breakdowns with metrics |
-| 📝 Blog | Modal-based reading, view counts, category filters |
+| 📝 Blog | One page per article (`/blog/{slug}`), syntax-highlighted code, category filters |
 | 📬 Contact | Web3Forms-powered contact form, no backend required |
 
 ---
@@ -90,11 +89,11 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 - **Project Filtering** — Filter projects by technology stack
 
 ### 📝 Interactive Tech Blog (`/blog`)
-- Full article modal reading experience
-- Real-time view count tracking
+- Every article has its own page at `/blog/{slug}` (readable URL, shareable, works with browser back/forward; old `/blog/{id}` links redirect). Each page sets its own `<title>`, meta description and canonical URL
+- Syntax-highlighted code blocks (SQL, JavaScript, Bash, Lua, JSON) with a language label
 - Category filtering (DevOps, Cloud Infrastructure, Full-Stack)
-- Search, sort by date / views / likes
-- Featured article highlights
+- Search, newest first
+- Featured article highlights (the section is hidden when no post is featured)
 
 ### 🛠️ DevOps-Ready Deployment
 - GitHub Pages deployment on push to `main` (`.github/workflows`), served at the custom domain `profile.247.id.vn`
@@ -169,9 +168,47 @@ After adding, **redeploy** the project (push a commit, re-run the workflow, or u
 
 ### Your Blog Posts
 
-Edit the `blogPosts` array in:
-```
-src/components/blog/EnhancedBlog.tsx
+Posts live in the `blogPosts` array in `src/data/blog.ts`. Add an object like this:
+
+````ts
+{
+  id: 12,                       // unique number
+  slug: "row-locking-select-for-update", // URL: /blog/row-locking-select-for-update (lowercase ASCII + hyphens, unique, never change once published)
+  title: "Row Locking in SQL",
+  category: "Full-Stack",       // DevOps | Cloud Infrastructure | Full-Stack
+  difficulty: "Intermediate",   // Beginner | Intermediate | Advanced
+  readTime: "8 min read",
+  date: "2026-12-01",           // YYYY-MM-DD, the list is sorted newest first
+  featured: false,
+  excerpt: "One or two sentences shown on the blog cards.",
+  tags: ["PostgreSQL", "Concurrency"],
+  content: `
+# Row Locking in SQL
+
+A normal paragraph. Use \`inline code\` for identifiers.
+
+## Example
+
+\`\`\`sql
+BEGIN;
+SELECT stock FROM products WHERE id = 42 FOR UPDATE;
+UPDATE products SET stock = stock - 1 WHERE id = 42;
+COMMIT;
+\`\`\`
+  `
+}
+````
+
+`content` is a template literal, so **every backtick inside it must be escaped as `` \` ``** (as above), and `${` must be written `\${`.
+
+**Supported syntax** (rendered by `src/pages/BlogPost.tsx`): `#` / `##` / `###` headings, paragraphs, `` `inline code` ``, and fenced code blocks. Lists, tables, bold and links are **not** parsed and show as plain text, so write numbered points as ordinary lines (`1. ...`) and put tables or diagrams in an untagged code fence.
+
+**Code highlighting:** put the language right after the opening fence. Supported: `sql`, `javascript`, `bash`, `lua`, `json`. A fence with no language (or an unsupported one, e.g. `hcl`) is shown as plain text. To add a language, register it in `src/components/blog/CodeBlock.tsx`:
+
+```ts
+import yaml from 'highlight.js/lib/languages/yaml';
+hljs.registerLanguage('yaml', yaml);
+// then add it to LANGUAGE_LABELS in the same file
 ```
 
 ### Colors & Branding
@@ -200,14 +237,16 @@ devops-portfolio/
 ├── src/
 │   ├── components/
 │   │   ├── blog/
-│   │   │   └── EnhancedBlog.tsx          # Blog with modal reading + metrics
+│   │   │   ├── EnhancedBlog.tsx          # Blog list: search, filters, cards
+│   │   │   └── CodeBlock.tsx             # Syntax-highlighted code block (highlight.js)
 │   │   ├── visual/
 │   │   │   └── VisualComponents.tsx      # Reusable animated UI components
 │   │   ├── Navbar.tsx
 │   │   └── Footer.tsx
 │   ├── data/
-│   │   └── portfolio.ts                  # ← your name, links, contact info
-│   ├── pages/                            # Route-level page components
+│   │   ├── portfolio.ts                  # ← your name, links, contact info
+│   │   └── blog.ts                       # ← your blog posts (blogPosts array)
+│   ├── pages/                            # Route-level pages (BlogPost.tsx = /blog/:slug)
 │   ├── App.tsx
 │   └── main.tsx
 ├── public/

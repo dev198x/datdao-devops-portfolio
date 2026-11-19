@@ -22,11 +22,12 @@ The contact form requires `VITE_WEB3FORMS_KEY` in `.env` (copy from `.env.exampl
 ## Architecture
 
 - Routing is a flat `react-router-dom` v6 table in `src/App.tsx` — one route per page in `src/pages/`, wrapped in a persistent `Navbar` + `Footer`. There is no nesting, layouts, or lazy loading.
-- Content is not colocated with the components that render it. Three separate places hold copy/data:
-  - `src/data/portfolio.ts` — hero/about text, skills list, contact info.
-  - `src/components/case-studies/EnhancedCaseStudies.tsx` — a `caseStudies` array (problem/solution/tech/metrics per project) plus the component that renders it.
-  - `src/components/blog/EnhancedBlog.tsx` — a `blogPosts` array plus the modal-based reading UI.
-  - When asked to update site content (name, projects, blog posts, case studies), check these three files rather than the page components in `src/pages/`.
+- Content is not colocated with the components that render it. Two places hold copy/data:
+  - `src/data/portfolio.ts` — hero/about text, skills list, contact info, projects.
+  - `src/data/blog.ts` — the `blogPosts` array (and `getBlogPostBySlug`). Each post's `slug` is its URL (`/blog/:slug`): lowercase ASCII + hyphens, unique, never change once published. The old numeric `/blog/{id}` URLs redirect to the slug.
+  - When asked to update site content (name, projects, blog posts), check these files rather than the page components in `src/pages/`.
+- Blog: `src/components/blog/EnhancedBlog.tsx` is the list page (cards navigate to `/blog/{slug}`); `src/pages/BlogPost.tsx` is the article page and contains the content renderer. The renderer only understands `#`/`##`/`###` headings, paragraphs, `` `inline code` `` and fenced code blocks; lists, tables, bold and links are NOT parsed. Code fences are highlighted by `src/components/blog/CodeBlock.tsx` (highlight.js, only `sql`, `javascript`, `bash`, `lua`, `json` are registered; register more there). Post `content` is a template literal: escape every backtick as `` \` `` and `${` as `\${`.
+- The Case Studies page was removed; do not look for `EnhancedCaseStudies.tsx` (it is only in git history).
 - `src/components/visual/VisualComponents.tsx` holds shared animated UI primitives reused across pages; `Grid3D.tsx` is the animated terminal background — despite the name and README claims, it's pure CSS/DOM (gradients + `Math.random()`-positioned divs), not a Three.js scene. There is no Three.js dependency in `package.json`.
 - Styling is Tailwind-only (`tailwind.config.js` defines the neon-green terminal theme via `primary`/`bg-page`/`bg-surface` colors); `clsx` + `tailwind-merge` are used for conditional class composition (see `src/lib/utils.ts`).
 - `@/*` path alias maps to `src/*` (configured in both `vite.config.ts` and `tsconfig.json`).

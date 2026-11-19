@@ -302,11 +302,20 @@ export const SKILLS: Skill[] = [
   },
 ];
 
+export interface CodeExample {
+  /** Fence language: sql | javascript | bash | lua | json (see CodeBlock.tsx). */
+  language: string;
+  code: string;
+  /** Short label shown in the block header, e.g. "Khoá dòng + trừ tồn kho". */
+  caption?: string;
+}
+
 export interface ChallengeItem {
   heading: string;
   body?: string;
   points?: string[];
   code?: string;
+  examples?: CodeExample[];
 }
 
 export interface Challenge {
@@ -409,6 +418,23 @@ export const PROJECTS: Project[] = [
           items: [
             {
               heading: 'Record / Row Locking ở database',
+              examples: [
+                {
+                  language: 'sql',
+                  caption: 'Khoá dòng tồn kho rồi trừ số lượng',
+                  code: `BEGIN;
+
+-- khoá dòng: giao dịch khác phải chờ đến khi COMMIT / ROLLBACK
+SELECT quantity FROM inventory WHERE id = 42 FOR UPDATE;
+
+-- điều kiện quantity >= :needed giúp số lượng không bao giờ âm
+UPDATE inventory
+SET quantity = quantity - 2
+WHERE id = 42 AND quantity >= 2;   -- 0 dòng bị ảnh hưởng = hết hàng, hãy ROLLBACK
+
+COMMIT;`,
+                },
+              ],
               body: 'Dùng cho tài nguyên có số lượng giới hạn (tồn kho flash sale, vé máy bay, voucher). Khoá từng dòng dữ liệu tương ứng để chỉ một transaction được kiểm tra và trừ số lượng tại một thời điểm, tránh bán quá số lượng (overselling) hoặc ghi đè sai lệch khi nhiều người truy cập đồng thời.',
               points: [
                 'Đặt khoá lên dòng ngay khi đọc để chuẩn bị sửa (thường dùng SELECT ... FOR UPDATE). Các transaction khác phải chờ đến khi transaction hiện tại COMMIT hoặc ROLLBACK.',
@@ -417,11 +443,48 @@ export const PROJECTS: Project[] = [
             },
             {
               heading: 'Distributed lock (Redis SETNX / Redlock) theo key resource_id:date_or_slot',
+              examples: [
+                {
+                  language: 'bash',
+                  caption: 'Xin khoá cho một slot (Redis)',
+                  code: `# chỉ thành công nếu key chưa tồn tại (NX), tự hết hạn sau 10 giây (PX 10000)
+# value là token ngẫu nhiên để biết ai đang giữ khoá
+SET lock:san_bong_1:2026-12-01T09 8f14e45f-ceea-467f NX PX 10000`,
+                },
+                {
+                  language: 'lua',
+                  caption: 'Nhả khoá an toàn (chỉ xoá nếu đúng chủ)',
+                  code: `-- KEYS[1] = lock key, ARGV[1] = token của người đang gọi
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0`,
+                },
+              ],
               body: 'Khi ứng dụng chạy trên nhiều server (microservices hoặc auto-scaling), khoá trên RAM của từng server (synchronized trong Java, Mutex trong Go) không thể giao tiếp với nhau. Distributed lock dùng một kho lưu trữ trung gian (thường là Redis) làm "trọng tài" để tất cả các server cùng xin quyền truy cập trước khi xử lý.',
               points: ['Cấu trúc key, ví dụ: san_bong_1, bac_si_A, ghe_B12'],
             },
             {
               heading: 'Reservation Hold (giữ chỗ tạm thời)',
+              examples: [
+                {
+                  language: 'bash',
+                  caption: 'Giữ chỗ 10 phút, tự nhả khi hết hạn',
+                  code: `# NX: chỉ giữ được nếu chưa ai giữ, EX 600: tự xoá sau 600 giây
+SET hold:event_1:seat_A1 user_A NX EX 600
+
+# còn bao nhiêu giây (-2 = key không còn, tức ghế đã trống lại)
+TTL hold:event_1:seat_A1`,
+                },
+                {
+                  language: 'sql',
+                  caption: 'Xác nhận thanh toán: DB là nguồn sự thật',
+                  code: `-- chỉ một giao dịch lật được ghế sang BOOKED; 0 dòng = ghế đã thuộc người khác
+UPDATE event_seats
+SET status = 'BOOKED', user_id = 'user_A', updated_at = NOW()
+WHERE event_id = 'event_1' AND seat_id = 'seat_A1' AND status = 'AVAILABLE';`,
+                },
+              ],
               body: 'Khoá tạm slot trong 5–15 phút khi khách đang thanh toán, tự nhả slot nếu hết hạn (qua TTL Redis, delayed queue hoặc cron/scheduler). Tránh treo slot vĩnh viễn khi người dùng tắt app, rớt mạng hoặc bỏ giỏ hàng.',
               points: ['Lưu key giữ chỗ (ví dụ hold:event_1:seat_A1) kèm EX 600 (10 phút).'],
             },
@@ -432,6 +495,42 @@ export const PROJECTS: Project[] = [
           items: [
             {
               heading: '2.1. Kiểm tra tính khả dụng (Availability Check) và chống trùng lịch (Conflict Detection)',
+              examples: [
+                {
+                  language: 'javascript',
+                  caption: 'Công thức trong code',
+                  code: `const isOverlapping = (newStart, newEnd, existingStart, existingEnd) =>
+  newStart < existingEnd && newEnd > existingStart;
+
+// lịch cũ 09:00-10:00
+isOverlapping(t('10:00'), t('11:00'), t('09:00'), t('10:00')); // false, đặt nối tiếp được
+isOverlapping(t('09:30'), t('10:30'), t('09:00'), t('10:00')); // true, bị trùng`,
+                },
+                {
+                  language: 'sql',
+                  caption: 'Để database lọc thay vì kéo dữ liệu về',
+                  code: `SELECT EXISTS (
+  SELECT 1
+  FROM bookings
+  WHERE resource_id = 1
+    AND status <> 'CANCELLED'                      -- bỏ qua lịch đã huỷ
+    AND start_time < '2026-12-01 10:30:00+07'      -- newEnd
+    AND end_time   > '2026-12-01 09:30:00+07'      -- newStart
+) AS is_overlapping;`,
+                },
+                {
+                  language: 'sql',
+                  caption: 'PostgreSQL: để constraint chặn cả race condition',
+                  code: `CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+ALTER TABLE bookings
+  ADD CONSTRAINT no_overlapping_bookings
+  EXCLUDE USING gist (
+    resource_id WITH =,
+    tstzrange(start_time, end_time, '[)') WITH &&
+  ) WHERE (status <> 'CANCELLED');`,
+                },
+              ],
               body: 'Khi người dùng muốn đặt khoảng thời gian [newStart, newEnd], hệ thống phải đối chiếu với tất cả lịch đã tồn tại [existingStart, existingEnd] trong cơ sở dữ liệu. Hai khoảng thời gian giao nhau (bị trùng) khi và chỉ khi khoảng này bắt đầu trước khi khoảng kia kết thúc, và ngược lại.',
               code: 'isOverlapping = (newStart < existingEnd) AND (newEnd > existingStart)',
               points: [
@@ -440,6 +539,22 @@ export const PROJECTS: Project[] = [
             },
             {
               heading: '2.2. Xử lý múi giờ (Timezone Handling)',
+              examples: [
+                {
+                  language: 'javascript',
+                  caption: 'Lưu UTC, hiển thị theo múi giờ local',
+                  code: `// người dùng ở UTC+7 chọn 14:00 -> lưu xuống database theo UTC (ISO 8601)
+const startUtc = new Date('2026-11-20T14:00:00+07:00').toISOString();
+// '2026-11-20T07:00:00.000Z'
+
+// hiển thị theo múi giờ của địa điểm (ví dụ khách sạn ở Nhật, UTC+9)
+new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Tokyo',
+  dateStyle: 'medium',
+  timeStyle: 'short',
+}).format(new Date(startUtc)); // '20 Nov 2026, 16:00'`,
+                },
+              ],
               body: 'Người dùng có thể ở bất kỳ đâu trên thế giới (ví dụ người Việt ở UTC+7 đặt khách sạn ở Nhật UTC+9). Nếu không chuẩn hoá, dữ liệu sẽ bị lệch giờ nghiêm trọng.',
               points: [
                 'Lưu trữ chuẩn UTC: toàn bộ mốc thời gian (startTime, endTime) khi lưu xuống database (PostgreSQL, MySQL, MongoDB...) phải quy đổi về UTC, thường theo chuẩn ISO 8601, ví dụ 2026-11-20T07:00:00Z. Mọi phép so sánh ở backend nhờ đó nằm trên cùng một hệ quy chiếu.',
@@ -461,14 +576,66 @@ export const PROJECTS: Project[] = [
           items: [
             {
               heading: 'Idempotency key',
+              examples: [
+                {
+                  language: 'bash',
+                  caption: 'Client gửi lại đúng key khi retry',
+                  code: `curl -X POST https://api.example.com/payments -H 'Content-Type: application/json' -H 'Idempotency-Key: 6f1c2b7e-3a54-4d0e-9a52-0c1f5d8b7a11' -d '{"orderId":"A1","amount":150000}'`,
+                },
+                {
+                  language: 'sql',
+                  caption: 'Lưu key bằng ràng buộc UNIQUE, trong cùng transaction',
+                  code: `INSERT INTO idempotency_keys (idempotency_key, request_hash, status)
+VALUES ('6f1c2b7e-3a54-4d0e-9a52-0c1f5d8b7a11', 'e3b0c442...', 'IN_PROGRESS')
+ON CONFLICT (idempotency_key) DO NOTHING;
+-- 1 dòng: request đầu tiên, được xử lý
+-- 0 dòng: request trùng, trả lại kết quả đã lưu (hoặc 409 nếu đang xử lý)`,
+                },
+              ],
               body: 'Tránh trừ tiền hoặc tạo hai đơn trùng khi mạng chập chờn và client retry request.',
             },
             {
               heading: 'State machine rõ ràng',
+              examples: [
+                {
+                  language: 'javascript',
+                  caption: 'Chỉ cho phép các bước chuyển hợp lệ',
+                  code: `const TRANSITIONS = {
+  PENDING_HOLD: ['PAYMENT_PROCESSING', 'EXPIRED', 'CANCELLED'],
+  PAYMENT_PROCESSING: ['CONFIRMED', 'EXPIRED', 'CANCELLED'],
+  CONFIRMED: ['REFUNDED'],
+  EXPIRED: [],
+  CANCELLED: [],
+  REFUNDED: [],
+};
+
+const canTransition = (from, to) => TRANSITIONS[from]?.includes(to) ?? false;
+
+canTransition('PAYMENT_PROCESSING', 'CONFIRMED'); // true
+canTransition('CONFIRMED', 'EXPIRED');            // false`,
+                },
+                {
+                  language: 'sql',
+                  caption: 'Ép luật ngay trong câu UPDATE (Optimistic Locking)',
+                  code: `UPDATE orders
+SET status = 'CONFIRMED', updated_at = NOW()
+WHERE id = 1 AND status = 'PAYMENT_PROCESSING';
+-- 0 dòng: bên khác (webhook / response đồng bộ) đã đổi trạng thái trước, bỏ qua`,
+                },
+              ],
               code: 'PENDING_HOLD → PAYMENT_PROCESSING → CONFIRMED / EXPIRED / CANCELLED / REFUNDED',
             },
             {
               heading: 'Xử lý bất đồng bộ và hoàn tiền',
+              examples: [
+                {
+                  language: 'sql',
+                  caption: 'Chống xử lý trùng webhook bằng event id',
+                  code: `INSERT INTO webhook_events (event_id) VALUES ('evt_1') ON CONFLICT DO NOTHING;
+-- 1 dòng: event mới, xử lý tiếp
+-- 0 dòng: cổng thanh toán gửi lặp, bỏ qua`,
+                },
+              ],
               body: 'Webhook từ cổng thanh toán có thể đến trễ hoặc gửi lặp; cần đối soát trạng thái và xử lý hoàn tiền, giữ cọc an toàn.',
             },
           ],
