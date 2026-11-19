@@ -211,6 +211,14 @@ hljs.registerLanguage('yaml', yaml);
 // then add it to LANGUAGE_LABELS in the same file
 ```
 
+### SEO: static pages per route
+
+`npm run build` runs `scripts/prerender.mjs` after Vite. It writes a real `index.html` for every page (`dist/blog/<slug>/index.html`, `dist/projects/<slug>/index.html`, ...) with its own title, description, canonical and Open Graph tags, and generates `sitemap.xml` and `robots.txt`. Without it, GitHub Pages would serve deep links through `404.html` with HTTP status 404, and Google does not index those. The pages are still the normal React app; the script only adds the real files and the `<head>`.
+
+- Production domain: set `SITE_URL` when building for another domain (default `https://profile.247.id.vn`).
+- Adding a blog post or project needs nothing extra: the script reads `src/data/blog.ts` and `src/data/portfolio.ts`. A brand-new static page must be added to the list in `scripts/prerender.mjs`.
+- Submit `https://<your-domain>/sitemap.xml` in Google Search Console.
+
 ### Colors & Branding
 
 ```js

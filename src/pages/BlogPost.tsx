@@ -90,7 +90,8 @@ const useArticleMeta = (title: string | undefined, description: string | undefin
       document.head.appendChild(canonicalTag);
     }
     const previousCanonical = canonicalTag.href;
-    canonicalTag.href = `${window.location.origin}${window.location.pathname}`;
+    // Same form as the prerendered pages (scripts/prerender.mjs): trailing slash, so there is one canonical URL.
+    canonicalTag.href = `${window.location.origin}${window.location.pathname.replace(/\/?$/, '/')}`;
 
     return () => {
       document.title = previousTitle;
