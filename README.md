@@ -105,6 +105,7 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 ### 🛠️ DevOps-Ready Deployment
 - GitHub Pages deployment on push to `main` (`.github/workflows`), served at the custom domain `profile.247.id.vn`
 - SPA fallback: the workflow copies `dist/index.html` to `404.html` so deep links such as `/projects/<id>` work
+- Step-by-step guide: [docs/deploy-github-pages.md](docs/deploy-github-pages.md)
 - Vercel-compatible (`vercel.json` SPA rewrite)
 - Environment variable support for secrets
 - Netlify-compatible with one config file
