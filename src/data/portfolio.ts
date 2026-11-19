@@ -1,3 +1,5 @@
+import { CHATBOT_DATABASE, type DatabaseSection } from './chatbot-database';
+
 export const HERO_CONTENT = "Software engineer with 10+ years in backend development, system architecture, and cloud engineering. I build AI-powered engineering solutions, including a production-used observability platform that uses the Claude API with logs and distributed traces to cut incident investigation time by 50–75%, and I run systems on AWS with Terraform, Docker, and GitHub Actions.";
 
 export type SkillLevel = 'expert' | 'advanced' | 'intermediate' | 'beginner';
@@ -332,6 +334,8 @@ export interface ProjectDetail {
   highlights: string[];
   architecture: string[];
   challenges?: Challenge[];
+  /** Optional database schema section (tables, relations, end-to-end data flow). */
+  database?: DatabaseSection;
 }
 
 export interface Project {
@@ -384,6 +388,7 @@ export const PROJECTS: Project[] = [
       solution: 'Dùng RAG để trả lời câu hỏi chính sách từ tài liệu của cửa hàng, và tool calling để khách đã đăng nhập chỉ tra cứu được đơn hàng của chính họ. Log và span đi qua OTel Collector rồi vào grafana/otel-lgtm.',
       highlights: ['RAG trả lời câu hỏi về giao hàng, bảo hành, đổi trả', 'Tool calling tra cứu đơn hàng, giới hạn theo khách đã đăng nhập', 'OTel Collector xoá header nhạy cảm và gom lô trước khi lưu', 'Dashboard Grafana trên Loki (log), Tempo (trace), Prometheus (metric)'],
       architecture: ['Khách hàng (chat UI)', 'Chatbot API (RAG + LLM + tool calling)', 'OpenTelemetry Collector (scrub header, batch)', 'grafana/otel-lgtm: Loki / Tempo / Prometheus', 'Grafana dashboard'],
+      database: CHATBOT_DATABASE,
     },
   },
   {

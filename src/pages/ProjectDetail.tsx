@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, ExternalLink, Github, Layers, User, Tag, Star } from 'lucide-react';
 import { TerminalHeader } from '../components/TerminalHeader';
 import CodeBlock from '../components/blog/CodeBlock';
+import DatabaseSchemaSection from '../components/project/DatabaseSchemaSection';
 import { PROJECTS_BY_CATEGORY, getProjectBySlug } from '../data/portfolio';
 
 const SectionTitle = ({ cmd }: { cmd: string }) => (
@@ -174,6 +175,13 @@ export const ProjectDetail = () => {
                     </div>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {detail.database && (
+              <section>
+                <SectionTitle cmd="cat database/schema.md" />
+                <DatabaseSchemaSection data={detail.database} />
               </section>
             )}
 
