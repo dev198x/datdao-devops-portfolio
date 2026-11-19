@@ -9,7 +9,6 @@ import {
   Tag,
   ArrowRight,
   Users,
-  Eye,
   Heart,
   MessageCircle,
   Star,
@@ -44,7 +43,6 @@ interface BlogPost {
   readTime: string;
   date: string;
   featured: boolean;
-  views: string;
   likes: string;
   comments: string;
   excerpt: string;
@@ -62,7 +60,6 @@ const blogPosts: BlogPost[] = [
     readTime: "12 min read",
     date: "2025-01-10",
     featured: false,
-    views: "1.8k",
     likes: "98",
     comments: "15",
     excerpt: "Master Terraform infrastructure management with proven patterns, state management, and security practices for AWS deployments.",
@@ -142,7 +139,6 @@ Following these best practices will help you maintain scalable, secure, and main
     readTime: "6 min read",
     date: "2025-01-05",
     featured: false,
-    views: "3.2k",
     likes: "234",
     comments: "41",
     excerpt: "Explore the latest DevOps trends shaping the industry in 2025, from AI-powered automation to enhanced GitOps workflows.",
@@ -202,7 +198,6 @@ The future of DevOps is bright, with these trends setting the stage for more eff
     readTime: "10 min read",
     date: "2024-12-28",
     featured: true,
-    views: "1.9k",
     likes: "127",
     comments: "19",
     excerpt: "Build scalable real-time applications using WebSocket architecture with Node.js, Redis, and message queues.",
@@ -273,7 +268,6 @@ This architecture provides a solid foundation for building real-time application
     readTime: "3 min read",
     date: "2026-07-21",
     featured: true,
-    views: "412",
     likes: "34",
     comments: "4",
     excerpt: "A raw reference note on the DevOps lifecycle: the six phases of the infinity loop (Plan, Code, Build/Test, Release, Deploy, Operate, Monitor), what happens in each, and the key tools for each phase.",
@@ -352,7 +346,6 @@ It is usually visualized as an **infinity loop ($\\infty$)**, representing an on
     readTime: "10 min read",
     date: "2026-07-30",
     featured: false,
-    views: "0",
     likes: "0",
     comments: "0",
     excerpt: "How I used dgreenheck's webgpu-claude-skill — a packaged Claude Code skill for WebGPU + TSL — to go from zero to a working 3D particle simulation in Three.js, and what's inside the skill that makes that possible.",
@@ -528,9 +521,8 @@ const EnhancedBlog: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<'date' | 'views' | 'likes'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
-  const [blogViews, setBlogViews] = useState<{[key: number]: number}>({});
 
   // Close the modal with the Esc key, same as clicking the X button
   useEffect(() => {
@@ -562,8 +554,6 @@ const EnhancedBlog: React.FC = () => {
     // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'views':
-          return parseInt(b.views.replace('k', '000')) - parseInt(a.views.replace('k', '000'));
         case 'likes':
           return parseInt(b.likes) - parseInt(a.likes);
         default:
@@ -578,16 +568,6 @@ const EnhancedBlog: React.FC = () => {
 
   const handlePostClick = (post: BlogPost) => {
     setSelectedPost(post);
-    // Simulate real-time view increment
-    setBlogViews(prev => ({
-      ...prev,
-      [post.id]: (prev[post.id] || parseInt(post.views.replace('k', '000'))) + 1
-    }));
-  };
-
-  const getPostViews = (post: BlogPost) => {
-    const views = blogViews[post.id] || parseInt(post.views.replace('k', '000'));
-    return views > 1000 ? `${(views / 1000).toFixed(1)}k` : views.toString();
   };
 
   const avgReadMinutes = Math.round(
@@ -680,7 +660,6 @@ const EnhancedBlog: React.FC = () => {
                   
                   <div className="flex items-center justify-between">
                     <EngagementMetrics
-                      views={getPostViews(post)}
                       likes={post.likes}
                       comments={post.comments}
                       featured={post.featured}
@@ -733,11 +712,10 @@ const EnhancedBlog: React.FC = () => {
           
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'date' | 'views' | 'likes')}
+            onChange={(e) => setSortBy(e.target.value as 'date' | 'likes')}
             className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-neutral-200 focus:outline-none focus:border-green-400"
           >
             <option value="date">Latest</option>
-            <option value="views">Most Viewed</option>
             <option value="likes">Most Liked</option>
           </select>
         </motion.div>
@@ -790,7 +768,6 @@ const EnhancedBlog: React.FC = () => {
                   </p>
                   
                   <EngagementMetrics
-                    views={getPostViews(post)}
                     likes={post.likes}
                     comments={post.comments}
                     featured={post.featured}
@@ -911,10 +888,6 @@ const EnhancedBlog: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
                       <span>{selectedPost.readTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Eye className="w-4 h-4" />
-                      <span>{getPostViews(selectedPost)} views</span>
                     </div>
                   </div>
                 </div>
