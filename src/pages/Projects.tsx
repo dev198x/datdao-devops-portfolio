@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TerminalHeader } from '../components/TerminalHeader';
-import { ExternalLink, Github, Filter, ArrowRight } from 'lucide-react';
+import { ExternalLink, Github, Filter, ArrowRight, Star } from 'lucide-react';
 import { PROJECTS_BY_CATEGORY, CONTACT } from '../data/portfolio';
 
 export const Projects = () => {
@@ -10,6 +10,7 @@ export const Projects = () => {
 
   const filters = [
     { id: 'all', label: 'All Projects', count: PROJECTS_BY_CATEGORY.all.length },
+    { id: 'featured', label: 'Featured', count: PROJECTS_BY_CATEGORY.featured.length },
     { id: 'devops', label: 'DevOps', count: PROJECTS_BY_CATEGORY.devops.length },
     { id: 'fullstack', label: 'Full-Stack', count: PROJECTS_BY_CATEGORY.fullstack.length },
   ];
@@ -83,6 +84,15 @@ export const Projects = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-bg-surface via-transparent to-transparent opacity-60" />
                   
+                  {project.featured && (
+                    <div className="absolute top-4 left-4">
+                      <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-mono font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                        <Star size={12} className="fill-current" />
+                        <span>Featured</span>
+                      </span>
+                    </div>
+                  )}
+
                   {/* Project Type Badge */}
                   <div className="absolute top-4 right-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-mono font-medium ${

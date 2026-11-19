@@ -302,14 +302,51 @@ export const SKILLS: Skill[] = [
   },
 ];
 
-export const PROJECTS = [
+export interface ChallengeItem {
+  heading: string;
+  body?: string;
+  points?: string[];
+  code?: string;
+}
+
+export interface Challenge {
+  title: string;
+  summary?: string;
+  items: ChallengeItem[];
+}
+
+export interface ProjectDetail {
+  summary: string;
+  role: string;
+  problem: string;
+  solution: string;
+  highlights: string[];
+  architecture: string[];
+  challenges?: Challenge[];
+}
+
+export interface Project {
+  slug: string;
+  title: string;
+  featured?: boolean;
+  image: string;
+  description: string;
+  technologies: string[];
+  category: 'devops' | 'fullstack';
+  githubLink: string;
+  websiteLink: string;
+  detail: ProjectDetail;
+}
+
+export const PROJECTS: Project[] = [
   {
     slug: 'ai-observability-platform',
+    featured: true,
     title: 'AI-Powered Observability & Incident Analysis Platform',
     image: `${import.meta.env.BASE_URL}images/ai-observability.svg`,
     description: 'Observability and incident analysis platform for microservices, used in a real environment. An error-scanner service pulls errors from Elasticsearch, correlates them with Jaeger trace spans, and sends the context to the Anthropic Claude Messages API for root-cause analysis and recommendations, with alerts delivered to Slack.',
     technologies: ['TypeScript', 'NestJS', 'Next.js', 'Claude API', 'OpenTelemetry', 'Jaeger', 'Prometheus', 'Grafana', 'Elasticsearch', 'Kibana', 'PostgreSQL', 'Slack', 'Docker', 'AWS EC2'],
-    category: 'devops',
+    category: 'fullstack',
     githubLink: '',
     websiteLink: 'https://obs.247.id.vn/obs',
     detail: {
@@ -323,13 +360,14 @@ export const PROJECTS = [
   },
   {
     slug: 'customer-support-chatbot-rag',
+    featured: true,
     title: 'Customer Support Chatbot — RAG + LLM',
     image: `${import.meta.env.BASE_URL}images/chatbot-cskh.svg`,
     description: 'Chatbot chăm sóc khách hàng cho cửa hàng điện tử: trả lời câu hỏi về chính sách (giao hàng, bảo hành, đổi trả) bằng RAG và giúp khách đã đăng nhập tra cứu đơn hàng của chính họ qua tool calling. Quan sát toàn bộ luồng bằng OpenTelemetry: log và span gửi qua OTel Collector (xoá header nhạy cảm, gom lô) vào grafana/otel-lgtm (Loki, Tempo, Prometheus, Grafana dashboard).',
     technologies: ['RAG', 'LLM', 'Tool Calling', 'OpenTelemetry', 'Grafana', 'Loki', 'Tempo', 'Prometheus'],
     category: 'fullstack',
     githubLink: '',
-    websiteLink: '',
+    websiteLink: 'https://demo.247.id.vn',
     detail: {
       summary: 'Chatbot CSKH cho cửa hàng điện tử, kết hợp RAG và tool calling, quan sát toàn bộ bằng OpenTelemetry.',
       role: 'Design & Implementation',
@@ -341,56 +379,206 @@ export const PROJECTS = [
   },
   {
     slug: 'booking-online-eks',
-    title: 'Booking online - EKS && GihubActions',
+    featured: true,
+    title: 'Booking online - EKS && GitHub Actions',
     image: `${import.meta.env.BASE_URL}images/booking-online.webp`,
-    description: 'Deployed a booking online application to AWS EKS with Helm in a development environment (basic Kubernetes exposure). Integrated CI/CD pipelines using GitHub Actions and containerized microservices with Docker.',
-    technologies: ['AWS EKS', 'Kubernetes', 'Helm', 'GitHub Actions', 'Docker', 'Full-Stack'],
-    category: 'devops',
+    description: 'Hệ thống booking online (khách sạn, vé máy bay, nhà hàng, dịch vụ) được thiết kế để đảm bảo tính nhất quán dữ liệu khi nhiều người đặt cùng lúc và chịu tải cao: row locking, distributed lock bằng Redis, giữ chỗ tạm thời có TTL, chống trùng lịch, chuẩn hoá thời gian theo UTC, thanh toán idempotent với state machine cho đơn hàng. Deploy lên AWS EKS bằng Helm trong môi trường development (mức làm quen với Kubernetes), với CI/CD GitHub Actions và Docker.',
+    technologies: ['AWS EKS', 'Kubernetes', 'Helm', 'GitHub Actions', 'Docker', 'Redis', 'PostgreSQL', 'BullMQ', 'Webhook', 'NestJS', 'Next.js', 'Full-Stack'],
+    category: 'fullstack',
     githubLink: '',
     websiteLink: '',
     detail: {
-      summary: 'Hệ thống booking online deploy lên AWS EKS bằng Helm trong môi trường development, với CI/CD GitHub Actions.',
-      role: 'DevOps Engineer',
-      problem: 'Cần triển khai ứng dụng booking dạng microservices một cách lặp lại được và tự động hoá việc build/deploy.',
-      solution: 'Container hoá từng microservice bằng Docker, đóng gói release bằng Helm chart và deploy lên EKS thông qua pipeline GitHub Actions.',
-      highlights: ['Deploy lên AWS EKS (môi trường development, mức làm quen với Kubernetes)', 'Helm chart cho cấu hình và release', 'Pipeline GitHub Actions tự động build và deploy', 'Microservices được container hoá bằng Docker'],
+      summary: 'Hệ thống booking online (khách sạn, vé máy bay, nhà hàng, dịch vụ) tập trung vào tính nhất quán dữ liệu khi nhiều người đặt cùng lúc; deploy lên AWS EKS bằng Helm với CI/CD GitHub Actions.',
+      role: 'Backend, Frontend, DevOps & System Design',
+      problem: 'Bài toán cốt lõi của hệ thống booking online (khách sạn, vé máy bay, nhà hàng, dịch vụ) là đảm bảo tính nhất quán dữ liệu khi nhiều người đặt cùng lúc và chịu tải cao: không đặt trùng, không bán quá số lượng, không thanh toán hay hoàn tiền hai lần.',
+      solution: 'Kết hợp khoá ở tầng database, distributed lock bằng Redis, giữ chỗ tạm thời có TTL, chuẩn hoá thời gian theo UTC, idempotency key và state machine cho đơn hàng. Ứng dụng được container hoá bằng Docker, đóng gói bằng Helm và deploy lên AWS EKS (môi trường development) qua pipeline GitHub Actions.',
+      highlights: [
+        'Row locking (SELECT ... FOR UPDATE) kết hợp điều kiện quantity >= :needed để số lượng không bao giờ bị âm',
+        'Distributed lock bằng Redis (SETNX / Redlock) theo key resource_id:date_or_slot cho hệ thống nhiều server',
+        'Reservation hold 5–15 phút, tự nhả slot khi hết hạn (TTL Redis, delayed queue hoặc scheduler)',
+        'Chống trùng lịch bằng điều kiện (newStart < existingEnd) AND (newEnd > existingStart), cho phép đặt lịch nối tiếp',
+        'Lưu mọi mốc thời gian theo UTC (ISO 8601), hiển thị theo múi giờ local',
+        'Idempotency key và state machine rõ ràng để tránh thanh toán hoặc hoàn tiền hai lần',
+        'Deploy lên AWS EKS bằng Helm (môi trường development, mức làm quen với Kubernetes) với CI/CD GitHub Actions',
+      ],
       architecture: ['Developer push code', 'GitHub Actions (build, push image)', 'Helm release', 'AWS EKS cluster', 'Booking microservices'],
+      challenges: [
+        {
+          title: '1. Chống tranh chấp và đặt trùng (Concurrency & Overbooking)',
+          summary: 'Race condition: hai người cùng chọn slot hoặc phòng cuối cùng tại cùng một thời điểm.',
+          items: [
+            {
+              heading: 'Record / Row Locking ở database',
+              body: 'Dùng cho tài nguyên có số lượng giới hạn (tồn kho flash sale, vé máy bay, voucher). Khoá từng dòng dữ liệu tương ứng để chỉ một transaction được kiểm tra và trừ số lượng tại một thời điểm, tránh bán quá số lượng (overselling) hoặc ghi đè sai lệch khi nhiều người truy cập đồng thời.',
+              points: [
+                'Đặt khoá lên dòng ngay khi đọc để chuẩn bị sửa (thường dùng SELECT ... FOR UPDATE). Các transaction khác phải chờ đến khi transaction hiện tại COMMIT hoặc ROLLBACK.',
+                'Kiểm tra điều kiện ngay lúc cập nhật: kết hợp khoá với điều kiện quantity >= :needed trong câu lệnh UPDATE để đảm bảo số lượng không bao giờ bị âm.',
+              ],
+            },
+            {
+              heading: 'Distributed lock (Redis SETNX / Redlock) theo key resource_id:date_or_slot',
+              body: 'Khi ứng dụng chạy trên nhiều server (microservices hoặc auto-scaling), khoá trên RAM của từng server (synchronized trong Java, Mutex trong Go) không thể giao tiếp với nhau. Distributed lock dùng một kho lưu trữ trung gian (thường là Redis) làm "trọng tài" để tất cả các server cùng xin quyền truy cập trước khi xử lý.',
+              points: ['Cấu trúc key, ví dụ: san_bong_1, bac_si_A, ghe_B12'],
+            },
+            {
+              heading: 'Reservation Hold (giữ chỗ tạm thời)',
+              body: 'Khoá tạm slot trong 5–15 phút khi khách đang thanh toán, tự nhả slot nếu hết hạn (qua TTL Redis, delayed queue hoặc cron/scheduler). Tránh treo slot vĩnh viễn khi người dùng tắt app, rớt mạng hoặc bỏ giỏ hàng.',
+              points: ['Lưu key giữ chỗ (ví dụ hold:event_1:seat_A1) kèm EX 600 (10 phút).'],
+            },
+          ],
+        },
+        {
+          title: '2. Kiểm tra khả dụng, múi giờ và quy tắc vận hành',
+          items: [
+            {
+              heading: '2.1. Kiểm tra tính khả dụng (Availability Check) và chống trùng lịch (Conflict Detection)',
+              body: 'Khi người dùng muốn đặt khoảng thời gian [newStart, newEnd], hệ thống phải đối chiếu với tất cả lịch đã tồn tại [existingStart, existingEnd] trong cơ sở dữ liệu. Hai khoảng thời gian giao nhau (bị trùng) khi và chỉ khi khoảng này bắt đầu trước khi khoảng kia kết thúc, và ngược lại.',
+              code: 'isOverlapping = (newStart < existingEnd) AND (newEnd > existingStart)',
+              points: [
+                'Dùng dấu < và > (thay vì <=) để cho phép đặt lịch nối tiếp nhau ngay lập tức. Ví dụ: lịch cũ kết thúc lúc 10:00, lịch mới bắt đầu lúc 10:00 thì 10:00 < 10:00 là False, không tính là trùng.',
+              ],
+            },
+            {
+              heading: '2.2. Xử lý múi giờ (Timezone Handling)',
+              body: 'Người dùng có thể ở bất kỳ đâu trên thế giới (ví dụ người Việt ở UTC+7 đặt khách sạn ở Nhật UTC+9). Nếu không chuẩn hoá, dữ liệu sẽ bị lệch giờ nghiêm trọng.',
+              points: [
+                'Lưu trữ chuẩn UTC: toàn bộ mốc thời gian (startTime, endTime) khi lưu xuống database (PostgreSQL, MySQL, MongoDB...) phải quy đổi về UTC, thường theo chuẩn ISO 8601, ví dụ 2026-11-20T07:00:00Z. Mọi phép so sánh ở backend nhờ đó nằm trên cùng một hệ quy chiếu.',
+                'Hiển thị theo local timezone: khi trả dữ liệu về giao diện, dựa vào múi giờ của trình duyệt người dùng (hoặc múi giờ của địa điểm cung cấp dịch vụ) để cộng/trừ số giờ tương ứng.',
+              ],
+            },
+            {
+              heading: '2.3. Giờ mở cửa, check-in, check-out (Business Hours & Rules)',
+              body: 'Ngay cả khi khoảng thời gian không trùng với ai và đã đúng múi giờ, hệ thống vẫn phải kiểm tra yêu cầu có tuân thủ quy định vận hành của cơ sở kinh doanh hay không.',
+              points: [
+                'Giờ mở cửa (Operating Hours): dùng cho dịch vụ theo giờ (sân bóng, spa, phòng khám). Kiểm tra newStart và newEnd có nằm trọn trong khung giờ làm việc của ngày đó không, ví dụ chỉ nhận khách từ 08:00 đến 22:00 và có thể nghỉ trưa từ 12:00 đến 13:00.',
+              ],
+            },
+          ],
+        },
+        {
+          title: '3. Thanh toán, Idempotency và trạng thái đơn (Payment & State Machine)',
+          summary: 'Giải quyết bài toán thanh toán hai lần và hoàn tiền hai lần.',
+          items: [
+            {
+              heading: 'Idempotency key',
+              body: 'Tránh trừ tiền hoặc tạo hai đơn trùng khi mạng chập chờn và client retry request.',
+            },
+            {
+              heading: 'State machine rõ ràng',
+              code: 'PENDING_HOLD → PAYMENT_PROCESSING → CONFIRMED / EXPIRED / CANCELLED / REFUNDED',
+            },
+            {
+              heading: 'Xử lý bất đồng bộ và hoàn tiền',
+              body: 'Webhook từ cổng thanh toán có thể đến trễ hoặc gửi lặp; cần đối soát trạng thái và xử lý hoàn tiền, giữ cọc an toàn.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
-    slug: 'nextjs-cicd-kubernetes',
-    title: 'Next.js CI/CD Pipeline with Docker & Kubernetes',
-    image: `${import.meta.env.BASE_URL}images/cicd-k8s.webp`,
-    description: 'Developed and containerized a Next.js application, deploying it to Kubernetes in a development environment (basic Kubernetes exposure) using GitHub Actions for automated CI/CD. Implemented multi-stage Docker builds, health probes, resource limits, and rolling updates.',
-    technologies: ['Next.js', 'Docker', 'Kubernetes', 'GitHub Actions', 'GHCR'],
-    category: 'devops',
+    slug: 'shaire-salon',
+    title: 'Shaire Salon using ParsePlatform/ReactJS',
+    image: `${import.meta.env.BASE_URL}images/shaire-salon.webp`,
+    description: 'Shaire Salon được xây dựng trên Parse Platform và React để ra mắt MVP nhanh: Parse cung cấp sẵn database, xác thực người dùng, lưu trữ tệp, push notification, LiveQuery, REST/GraphQL API và Cloud Code. Dữ liệu dùng MongoDB, cache bằng Redis, Firebase cho dịch vụ phụ trợ; deploy production trên AWS EC2 sau Nginx, asset tĩnh phân phối qua S3 và CloudFront.',
+    technologies: ['ParsePlatform', 'ReactJS', 'MongoDB', 'Redis', 'Firebase', 'EC2', 'Nginx', 'S3', 'CloudFront'],
+    category: 'fullstack',
     githubLink: '',
     websiteLink: '',
     detail: {
-      summary: 'Pipeline CI/CD tự động cho ứng dụng Next.js, build bằng Docker và deploy lên Kubernetes trong môi trường development.',
-      role: 'DevOps Engineer',
-      problem: 'Deploy thủ công dễ sai sót và khó cập nhật phiên bản mà không gián đoạn.',
-      solution: 'Container hoá Next.js bằng multi-stage build, publish image lên GHCR, deploy lên Kubernetes qua GitHub Actions với health probe, resource limit và rolling update.',
-      highlights: ['Multi-stage Docker build cho image gọn nhẹ', 'Health probes (liveness/readiness)', 'Resource requests/limits', 'Rolling update để giảm downtime', 'Image registry: GHCR'],
-      architecture: ['Git push', 'GitHub Actions (build + test)', 'Docker image -> GHCR', 'kubectl/manifest deploy', 'Kubernetes (rolling update)'],
+      summary: 'Nền tảng salon xây trên Parse Platform và React để rút ngắn thời gian ra mắt MVP, deploy trên AWS EC2 với S3 và CloudFront.',
+      role: 'Full-Stack Developer',
+      problem: 'Cần ra mắt sản phẩm nhanh (MVP, time-to-market) mà không phải tự viết lại các phần lặp lại như mô hình hoá dữ liệu, REST API, quản lý người dùng và xác thực, đồng thời vẫn có cache và phân phối static asset hiệu quả.',
+      solution: 'Chọn Parse Platform làm backend vì cung cấp sẵn database, xác thực, lưu trữ tệp, API tự sinh và Cloud Code, giúp giảm đáng kể boilerplate. Dữ liệu lưu trên MongoDB, cache bằng Redis, Firebase cho dịch vụ phụ trợ; ứng dụng chạy trên EC2 sau Nginx, asset lưu S3 và phân phối qua CloudFront.',
+      highlights: [
+        'Parse Platform + ReactJS giúp ra mắt MVP nhanh, giảm khối lượng boilerplate code',
+        'MongoDB cho dữ liệu, Redis cho cache',
+        'Firebase cho dịch vụ phụ trợ',
+        'Deploy trên AWS EC2 sau Nginx; S3 + CloudFront cho static asset',
+      ],
+      architecture: ['React client', 'CloudFront (static assets)', 'Nginx on EC2', 'Parse Server', 'MongoDB / Redis'],
+      challenges: [
+        {
+          title: 'Vì sao chọn Parse Platform',
+          summary: 'Parse Platform tự động hoá nhiều tác vụ lặp lại, phù hợp khi cần đưa sản phẩm ra thị trường nhanh.',
+          items: [
+            {
+              heading: 'Tăng tốc độ ra mắt (MVP)',
+              body: 'Tự động hoá các tác vụ lặp lại như mô hình hoá dữ liệu, tạo sẵn REST API, quản lý người dùng và xác thực OAuth.',
+            },
+            {
+              heading: 'Tăng tốc độ làm sản phẩm (Time-to-market)',
+              body: 'Cung cấp sẵn database, xác thực người dùng (đăng ký, đăng nhập, đặt lại mật khẩu), lưu trữ tệp, push notification và LiveQuery (cập nhật dữ liệu real-time), giúp giảm khối lượng boilerplate code.',
+            },
+            {
+              heading: 'Tự động sinh API và hỗ trợ đa nền tảng',
+              body: 'Tự động tạo REST API và GraphQL từ schema dữ liệu, kèm SDK cho nhiều nền tảng như iOS, Android, JavaScript/Node.js, Unity, .NET hay PHP.',
+            },
+            {
+              heading: 'Tuỳ biến logic linh hoạt qua Cloud Code',
+              body: 'Viết hàm xử lý phía server, database trigger và background job bằng Node.js khi cần nghiệp vụ riêng.',
+            },
+            {
+              heading: 'Phân quyền dữ liệu tích hợp',
+              body: 'Hỗ trợ Class-Level Permissions (CLP), Access Control Lists (ACL) và Protected Fields để kiểm soát quyền truy cập dữ liệu.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
     slug: 'realtime-chat-mern',
     title: 'Realtime Chat App — MERN + Socket.IO',
     image: `${import.meta.env.BASE_URL}images/todo-webapp.webp`,
-    description: 'Developed a real-time chat application using the MERN stack with Socket.IO for instant communication. Implemented custom hooks for efficient state management. Deployed behind Nginx as a reverse proxy, Dockerized for deployment.',
-    technologies: ['React', 'Node', 'Express', 'MongoDB', 'Socket.IO', 'Nginx', 'Docker'],
+    description: 'Bản demo ứng dụng nhắn tin thời gian thực trên MERN stack (MongoDB, Express.js, React, Node.js) kết hợp Socket.IO. Thiết kế schema Conversation/Message để truy vấn nhanh lịch sử chat và mở rộng từ chat 1-1 sang chat nhóm; xác thực bằng JWT cho cả REST API và kết nối socket; custom hooks quản lý state phía client. Chạy sau Nginx reverse proxy và đóng gói bằng Docker.',
+    technologies: ['React', 'Node', 'Express', 'MongoDB', 'Socket.IO', 'JWT', 'Nginx', 'Docker'],
     category: 'fullstack',
     githubLink: '',
     websiteLink: '',
     detail: {
-      summary: 'Ứng dụng chat thời gian thực trên MERN stack với Socket.IO, chạy sau Nginx reverse proxy.',
+      summary: 'Demo ứng dụng nhắn tin thời gian thực trên MERN stack với Socket.IO: schema chat 1-1 và nhóm, xác thực JWT cho REST và socket, chạy sau Nginx.',
       role: 'Full-Stack Developer',
-      problem: 'Cần giao tiếp tức thời giữa người dùng với state phía client dễ quản lý.',
-      solution: 'Dùng Socket.IO cho kênh realtime, custom hooks của React để quản lý state, Nginx làm reverse proxy và Docker để đóng gói deploy.',
-      highlights: ['Giao tiếp realtime bằng Socket.IO', 'Custom hooks quản lý state hiệu quả', 'Nginx reverse proxy phía trước', 'Dockerized để deploy'],
+      problem: 'Xây dựng ứng dụng nhắn tin thời gian thực hoạt động trơn tru đòi hỏi giải quyết các nhóm bài toán cốt lõi: thiết kế database để truy vấn nhanh lịch sử chat và mở rộng sang chat nhóm; xác thực và bảo mật để người dùng chỉ đọc và gửi tin nhắn trong phạm vi quyền hạn của mình; đồng thời giữ state phía client dễ quản lý.',
+      solution: 'Dùng MongoDB với hai model Conversation và Message, JWT cho REST API và cho kết nối Socket.IO, custom hooks của React để quản lý state, Nginx làm reverse proxy và Docker để đóng gói deploy.',
+      highlights: [
+        'Giao tiếp realtime bằng Socket.IO',
+        'Schema Conversation/Message hỗ trợ chat 1-1 và chat nhóm, lưu lastMessage để hiển thị nhanh danh sách hội thoại',
+        'JWT bảo vệ REST API và xác thực kết nối socket qua socket.handshake.auth',
+        'Custom hooks quản lý state hiệu quả',
+        'Nginx reverse proxy phía trước, Dockerized để deploy',
+      ],
       architecture: ['React client', 'Nginx reverse proxy', 'Node/Express + Socket.IO', 'MongoDB'],
+      challenges: [
+        {
+          title: '1. Thiết kế cơ sở dữ liệu (Database Schema Design)',
+          summary: 'Cấu trúc dữ liệu trên MongoDB cần tối ưu để truy vấn nhanh lịch sử chat và hỗ trợ mở rộng từ chat 1-1 sang chat nhóm.',
+          items: [
+            {
+              heading: 'Conversation (hoặc Room) model',
+              body: 'Quản lý danh sách người tham gia (participants), phân biệt chat 1-1 hay nhóm (isGroupChat), và lưu lastMessage để hiển thị nhanh ở danh sách bên ngoài.',
+            },
+            {
+              heading: 'Message model',
+              body: 'Lưu nội dung tin nhắn, người gửi (senderId), cuộc hội thoại tương ứng (conversationId), loại tin nhắn (text, hình ảnh, file) và trạng thái đã xem (seenBy).',
+            },
+          ],
+        },
+        {
+          title: '2. Xác thực và bảo mật kết nối (Authentication & Socket Auth)',
+          summary: 'Hệ thống cần đảm bảo người dùng chỉ đọc và gửi được tin nhắn trong phạm vi quyền hạn của mình.',
+          items: [
+            {
+              heading: 'Xác thực REST API',
+              body: 'Sử dụng JWT (JSON Web Token) để đăng ký, đăng nhập và bảo vệ các API lấy danh sách hội thoại hoặc lịch sử tin nhắn.',
+            },
+            {
+              heading: 'Xác thực kết nối Socket',
+              body: 'Gửi kèm JWT qua socket.handshake.auth khi client khởi tạo kết nối WebSocket, để server định danh chính xác userId của kết nối đó.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
@@ -409,42 +597,6 @@ export const PROJECTS = [
       solution: 'Viết Terraform module tái sử dụng cho EC2, VPC, S3 và tích hợp GitHub Actions để triển khai môi trường liên tục.',
       highlights: ['Reusable Terraform modules (EC2, VPC, S3)', 'Infrastructure as Code, tái lập được', 'CI/CD cho hạ tầng với GitHub Actions'],
       architecture: ['Terraform modules', 'Pull request / push', 'GitHub Actions (plan, apply)', 'AWS: VPC, EC2, S3'],
-    },
-  },
-  {
-    slug: 'shaire-salon',
-    title: 'Shaire Salon using ParsePlatform/ReactJS',
-    image: `${import.meta.env.BASE_URL}images/shaire-salon.webp`,
-    description: 'Built Shaire Salon on Parse Platform and React, with MongoDB and Redis for data and caching, Firebase for auxiliary services, and a production deployment on AWS EC2 behind Nginx, backed by S3 and CloudFront for static asset delivery.',
-    technologies: ['ParsePlatform', 'ReactJS', 'MongoDB', 'Redis', 'Firebase', 'EC2', 'Nginx', 'S3', 'CloudFront'],
-    category: 'fullstack',
-    githubLink: '',
-    websiteLink: '',
-    detail: {
-      summary: 'Nền tảng salon xây trên Parse Platform và React, deploy trên AWS EC2 với S3 và CloudFront.',
-      role: 'Full-Stack Developer',
-      problem: 'Cần backend nhanh để phát triển, có cache và phân phối static asset hiệu quả.',
-      solution: 'Parse Platform làm backend với MongoDB và Redis (cache), Firebase cho dịch vụ phụ trợ, deploy trên EC2 sau Nginx; asset lưu S3 và phân phối qua CloudFront.',
-      highlights: ['Parse Platform + ReactJS', 'MongoDB cho dữ liệu, Redis cho cache', 'Firebase cho dịch vụ phụ trợ', 'S3 + CloudFront cho static asset'],
-      architecture: ['React client', 'CloudFront (static assets)', 'Nginx on EC2', 'Parse Server', 'MongoDB / Redis'],
-    },
-  },
-  {
-    slug: 'wine-auction',
-    title: 'Wine Auction using Symfony/MySQL',
-    image: `${import.meta.env.BASE_URL}images/wine-auction.webp`,
-    description: 'Built a wine auction platform on Symfony with MySQL, deployed on AWS EC2 behind Nginx with S3 for asset storage.',
-    technologies: ['Symfony', 'MySQL', 'EC2', 'Nginx', 'S3'],
-    category: 'fullstack',
-    githubLink: '',
-    websiteLink: '',
-    detail: {
-      summary: 'Nền tảng đấu giá rượu vang xây trên Symfony và MySQL, deploy trên AWS EC2.',
-      role: 'Full-Stack Developer',
-      problem: 'Cần một nền tảng đấu giá web với dữ liệu quan hệ và lưu trữ asset đáng tin cậy.',
-      solution: 'Symfony + MySQL cho ứng dụng, deploy trên EC2 sau Nginx, dùng S3 lưu asset.',
-      highlights: ['Symfony + MySQL', 'Deploy EC2 sau Nginx', 'S3 lưu trữ asset'],
-      architecture: ['Browser', 'Nginx on EC2', 'Symfony app', 'MySQL / S3'],
     },
   },
   {
@@ -487,13 +639,17 @@ export const SKILLS_BY_CATEGORY = {
   database: SKILLS.filter(skill => skill.category === 'database'),
 };
 
-export const PROJECTS_BY_CATEGORY = {
-  all: PROJECTS,
-  devops: PROJECTS.filter(project => project.category === 'devops'),
-  fullstack: PROJECTS.filter(project => project.category === 'fullstack'),
-};
+// Featured projects are listed first; the sort is stable, so the original order is kept within each group.
+const PROJECTS_FEATURED_FIRST = [...PROJECTS].sort(
+  (a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured))
+);
 
-export type Project = (typeof PROJECTS)[number];
+export const PROJECTS_BY_CATEGORY = {
+  all: PROJECTS_FEATURED_FIRST,
+  featured: PROJECTS_FEATURED_FIRST.filter(project => project.featured),
+  devops: PROJECTS_FEATURED_FIRST.filter(project => project.category === 'devops'),
+  fullstack: PROJECTS_FEATURED_FIRST.filter(project => project.category === 'fullstack'),
+};
 
 export const getProjectBySlug = (slug: string | undefined): Project | undefined =>
   PROJECTS.find(project => project.slug === slug);

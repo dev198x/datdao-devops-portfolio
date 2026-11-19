@@ -1,8 +1,8 @@
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, ExternalLink, Github, Layers, User, Tag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ExternalLink, Github, Layers, User, Tag, Star } from 'lucide-react';
 import { TerminalHeader } from '../components/TerminalHeader';
-import { PROJECTS, getProjectBySlug } from '../data/portfolio';
+import { PROJECTS_BY_CATEGORY, getProjectBySlug } from '../data/portfolio';
 
 const SectionTitle = ({ cmd }: { cmd: string }) => (
   <h2 className="font-mono text-lg text-accent-500 mb-4">
@@ -34,9 +34,11 @@ export const ProjectDetail = () => {
     );
   }
 
-  const index = PROJECTS.findIndex((p) => p.slug === project.slug);
-  const prev = PROJECTS[(index - 1 + PROJECTS.length) % PROJECTS.length];
-  const next = PROJECTS[(index + 1) % PROJECTS.length];
+  // Same order as the list page, so prev/next match what the visitor just browsed.
+  const ordered = PROJECTS_BY_CATEGORY.all;
+  const index = ordered.findIndex((p) => p.slug === project.slug);
+  const prev = ordered[(index - 1 + ordered.length) % ordered.length];
+  const next = ordered[(index + 1) % ordered.length];
   const { detail } = project;
   const categoryLabel = project.category === 'devops' ? 'DevOps' : 'Full-Stack';
 
@@ -65,15 +67,23 @@ export const ProjectDetail = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-bg-surface via-bg-surface/30 to-transparent" />
           </div>
           <div className="p-6 sm:p-8 space-y-4">
-            <span
-              className={`inline-block px-3 py-1 rounded-full text-xs font-mono font-medium ${
-                project.category === 'devops'
-                  ? 'bg-green-500/20 text-green-500 border border-green-500/30'
-                  : 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
-              }`}
-            >
-              {categoryLabel}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-block px-3 py-1 rounded-full text-xs font-mono font-medium ${
+                  project.category === 'devops'
+                    ? 'bg-green-500/20 text-green-500 border border-green-500/30'
+                    : 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+                }`}
+              >
+                {categoryLabel}
+              </span>
+              {project.featured && (
+                <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-mono font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                  <Star size={12} className="fill-current" />
+                  <span>Featured</span>
+                </span>
+              )}
+            </div>
             <h1 className="font-mono text-2xl sm:text-4xl font-bold text-primary-500">{project.title}</h1>
             {(project.githubLink || project.websiteLink) && (
               <div className="flex flex-wrap gap-4 pt-2">
@@ -121,6 +131,46 @@ export const ProjectDetail = () => {
               <SectionTitle cmd="cat solution.md" />
               <p className="text-neutral-200 leading-relaxed">{detail.solution}</p>
             </section>
+
+            {detail.challenges && detail.challenges.length > 0 && (
+              <section>
+                <SectionTitle cmd="ls challenges/" />
+                <div className="space-y-8">
+                  {detail.challenges.map((challenge) => (
+                    <div key={challenge.title} className="space-y-4">
+                      <h3 className="font-mono text-primary-500 text-lg font-semibold">{challenge.title}</h3>
+                      {challenge.summary && <p className="text-neutral-300 leading-relaxed">{challenge.summary}</p>}
+                      <div className="space-y-4">
+                        {challenge.items.map((item) => (
+                          <div
+                            key={item.heading}
+                            className="bg-bg-surface border border-neutral-700 rounded-xl p-5 space-y-3"
+                          >
+                            <h4 className="font-semibold text-neutral-200">{item.heading}</h4>
+                            {item.body && <p className="text-neutral-400 text-sm leading-relaxed">{item.body}</p>}
+                            {item.code && (
+                              <pre className="bg-bg-page border border-neutral-700 rounded-lg p-3 overflow-x-auto font-mono text-xs text-primary-500 whitespace-pre-wrap">
+                                {item.code}
+                              </pre>
+                            )}
+                            {item.points && (
+                              <ul className="space-y-1.5">
+                                {item.points.map((point) => (
+                                  <li key={point} className="flex items-start space-x-2 text-neutral-400 text-sm leading-relaxed">
+                                    <span className="font-mono text-primary-500">&gt;</span>
+                                    <span>{point}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section>
               <SectionTitle cmd="ls highlights/" />
