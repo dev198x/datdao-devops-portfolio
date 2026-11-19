@@ -948,6 +948,257 @@ EXCLUDE constraint (PG)      Có                    Thấp          Gọn nhất
 4. Buffer time chỉ là cộng thêm khoảng nghỉ vào hai vế so sánh.
 5. Check-then-insert không an toàn khi đồng thời: dùng EXCLUDE constraint trên PostgreSQL, hoặc khóa row resource trong transaction trên các DB khác.
     `
+  },
+  {
+    id: 12,
+    slug: 'explicit-table-lock-postgresql',
+    title: "Explicit Table Lock trong PostgreSQL: LOCK TABLE khi nào dùng, khi nào tránh",
+    category: "Full-Stack",
+    difficulty: "Advanced",
+    readTime: "9 min read",
+    date: "2026-11-19",
+    featured: false,
+    excerpt: "LOCK TABLE hoạt động ra sao, tám chế độ khóa chặn nhau thế nào, những tình huống đáng dùng (migration, batch, tuần tự hóa toàn bảng) và cái bẫy hàng chờ lock khiến một lệnh nhỏ làm đứng cả ứng dụng.",
+    tags: ["PostgreSQL", "Locking", "Migration", "Concurrency", "Database"],
+    content: `
+# Explicit Table Lock trong PostgreSQL: LOCK TABLE khi nào dùng, khi nào tránh
+
+Row lock giải quyết xung đột ở mức từng dòng. Nhưng có những việc liên quan đến cả bảng: đổi cấu trúc, dọn dữ liệu hàng loạt, hay một quy tắc nghiệp vụ chỉ cho phép một transaction chạy tại một thời điểm. Khi đó PostgreSQL cho bạn khóa cả bảng một cách tường minh bằng \`LOCK TABLE\`.
+
+## LOCK TABLE hoạt động thế nào
+
+\`\`\`sql
+BEGIN;
+LOCK TABLE orders IN SHARE ROW EXCLUSIVE MODE;
+-- ... các câu lệnh cần bảng ổn định ...
+COMMIT;  -- khóa tự động được giải phóng ở đây
+\`\`\`
+
+Ba điều cần nhớ:
+
+1. \`LOCK TABLE\` chỉ dùng được trong một transaction. Chạy ngoài transaction sẽ báo lỗi, vì khóa sẽ được nhả ngay sau câu lệnh nên vô nghĩa.
+2. Không có lệnh UNLOCK. Khóa chỉ được giải phóng khi COMMIT hoặc ROLLBACK.
+3. Nếu bỏ qua tên chế độ, mặc định là ACCESS EXCLUSIVE, chế độ mạnh nhất.
+
+Bạn cũng đang dùng table lock mà không để ý: mỗi câu SELECT lấy ACCESS SHARE, mỗi INSERT/UPDATE/DELETE lấy ROW EXCLUSIVE, và hầu hết các dạng \`ALTER TABLE\` lấy ACCESS EXCLUSIVE. \`LOCK TABLE\` chỉ là cách chủ động chọn chế độ thay vì để PostgreSQL tự chọn.
+
+## Các chế độ khóa chặn nhau thế nào
+
+PostgreSQL có 8 chế độ, xếp từ nhẹ đến nặng. Những chế độ đáng nhớ nhất:
+
+\`\`\`
+Chế độ                  Chặn những thao tác nào                        Dùng khi
+ACCESS SHARE            Chỉ ACCESS EXCLUSIVE                           SELECT thông thường (tự động)
+ROW EXCLUSIVE           Từ SHARE trở lên                               INSERT/UPDATE/DELETE (tự động)
+SHARE                   Mọi ghi (UPDATE/DELETE/INSERT), vẫn cho đọc    Cần ảnh chụp bảng ổn định, CREATE INDEX
+SHARE ROW EXCLUSIVE     Mọi ghi và cả chính nó, vẫn cho đọc            Tuần tự hóa các writer, chặn ghi mà chỉ một bên được vào
+EXCLUSIVE               Mọi thứ trừ SELECT thường                      Chặn gần như toàn bộ, chỉ cho đọc
+ACCESS EXCLUSIVE        Tất cả, kể cả SELECT                           ALTER TABLE, DROP, TRUNCATE, VACUUM FULL
+\`\`\`
+
+Lưu ý một hiểu lầm hay gặp: chỉ ACCESS EXCLUSIVE mới chặn cả đọc. EXCLUSIVE vẫn cho phép SELECT thông thường chạy song song, chỉ chặn ghi và các câu như \`SELECT ... FOR UPDATE\`. Bảng đầy đủ về ma trận xung đột nằm trong tài liệu chính thức, mục Explicit Locking.
+
+## Ví dụ trực quan với hai session
+
+Mở hai cửa sổ psql với bảng \`orders(id, status, total)\` để tự quan sát. Mỗi ví dụ dưới đây là một kịch bản riêng.
+
+### Ví dụ A: SHARE chặn ghi nhưng vẫn cho đọc
+
+\`\`\`sql
+-- Session 1
+BEGIN;
+LOCK TABLE orders IN SHARE MODE;
+
+-- Session 2
+SELECT count(*) FROM orders;                      -- chạy ngay, bình thường
+UPDATE orders SET status = 'paid' WHERE id = 1;   -- bị TREO, chờ Session 1
+
+-- Session 1
+COMMIT;                                           -- Session 2 được chạy tiếp
+\`\`\`
+
+### Ví dụ B: ACCESS EXCLUSIVE chặn cả đọc
+
+\`\`\`sql
+-- Session 1
+BEGIN;
+LOCK TABLE orders IN ACCESS EXCLUSIVE MODE;
+
+-- Session 2
+SELECT * FROM orders LIMIT 1;                     -- bị TREO, ngay cả SELECT
+
+-- Session 1
+ROLLBACK;                                         -- Session 2 chạy tiếp
+\`\`\`
+
+### Ví dụ C: NOWAIT báo lỗi thay vì chờ
+
+\`\`\`sql
+-- Session 1
+BEGIN;
+LOCK TABLE orders IN EXCLUSIVE MODE;
+
+-- Session 2
+BEGIN;
+LOCK TABLE orders IN ROW EXCLUSIVE MODE NOWAIT;
+-- ERROR:  could not obtain lock on relation "orders"
+ROLLBACK;
+\`\`\`
+
+### Ví dụ D: lock_timeout cắt thời gian chờ
+
+\`\`\`sql
+-- Session 2 (Session 1 vẫn đang giữ EXCLUSIVE)
+BEGIN;
+SET LOCAL lock_timeout = '2s';
+UPDATE orders SET total = total + 1 WHERE id = 1;
+-- sau 2 giây: ERROR:  canceling statement due to lock timeout
+ROLLBACK;
+\`\`\`
+
+### Ví dụ E: nhìn thấy ai đang chờ ai
+
+Khi một session bị treo, mở session thứ ba và chạy:
+
+\`\`\`sql
+SELECT pid,
+       pg_blocking_pids(pid) AS bi_chan_boi,
+       wait_event_type,
+       state,
+       left(query, 60) AS query
+FROM pg_stat_activity
+WHERE cardinality(pg_blocking_pids(pid)) > 0;
+\`\`\`
+
+Cột \`bi_chan_boi\` cho biết PID đang giữ khóa. Nếu cần, bạn có thể hủy nó bằng \`SELECT pg_cancel_backend(<pid>)\`, nhưng hãy kiểm tra đó là transaction nào trước.
+
+## Bốn tình huống đáng dùng
+
+### 1. Migration và thay đổi cấu trúc an toàn
+
+\`ALTER TABLE\` vốn đã cần khóa mạnh. Điều bạn kiểm soát được là thời điểm và thời gian chờ, như phần bẫy hàng chờ bên dưới.
+
+\`\`\`sql
+BEGIN;
+SET LOCAL lock_timeout = '3s';
+ALTER TABLE orders ADD COLUMN note text;
+COMMIT;
+\`\`\`
+
+### 2. Batch update hoặc archival lớn
+
+Khi một job sửa hoặc xóa lượng lớn dòng liên quan đến nhiều bảng, khóa bảng ở chế độ phù hợp giúp tránh race condition và giảm nguy cơ deadlock với các transaction khác đang đan xen. Đổi lại, job phải chạy ngoài giờ cao điểm.
+
+\`\`\`sql
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+-- khóa theo thứ tự cố định để tránh deadlock
+LOCK TABLE orders, order_items IN SHARE ROW EXCLUSIVE MODE;
+
+INSERT INTO orders_archive
+SELECT * FROM orders WHERE created_at < now() - interval '1 year';
+
+DELETE FROM order_items
+WHERE order_id IN (SELECT id FROM orders WHERE created_at < now() - interval '1 year');
+
+DELETE FROM orders WHERE created_at < now() - interval '1 year';
+COMMIT;
+\`\`\`
+
+### 3. Tuần tự hóa tuyệt đối trên toàn bảng
+
+Có nghiệp vụ mà khóa dòng không đủ bao quát: ví dụ cấp số chứng từ liên tục không được hở, hoặc tổng hợp số dư trên cả bảng. Row lock không bảo vệ được dòng chưa tồn tại (phantom), còn table lock thì có:
+
+\`\`\`sql
+BEGIN;
+LOCK TABLE invoices IN SHARE ROW EXCLUSIVE MODE;
+INSERT INTO invoices (number, customer_id, amount)
+SELECT COALESCE(MAX(number), 0) + 1, 42, 150000
+FROM invoices;
+COMMIT;
+\`\`\`
+
+SHARE ROW EXCLUSIVE tự xung đột với chính nó, nên chỉ một transaction chạy đoạn này mỗi lần, trong khi các truy vấn đọc vẫn bình thường.
+
+### 4. Giữ bảng ổn định trong chuỗi nhiều bước
+
+Ví dụ thay thế bảng bằng cách tạo bảng mới, nạp dữ liệu rồi đổi tên, cả chuỗi nằm trong một transaction để không ai thấy trạng thái nửa vời.
+
+\`\`\`sql
+BEGIN;
+SET LOCAL lock_timeout = '3s';
+LOCK TABLE products IN ACCESS EXCLUSIVE MODE;
+
+CREATE TABLE products_new (LIKE products INCLUDING ALL);
+INSERT INTO products_new SELECT * FROM products WHERE is_active;
+
+ALTER TABLE products RENAME TO products_old;
+ALTER TABLE products_new RENAME TO products;
+COMMIT;
+\`\`\`
+
+## Cái bẫy lớn nhất: hàng chờ lock
+
+Giả sử bạn chạy \`ALTER TABLE\` (cần ACCESS EXCLUSIVE) trong lúc một báo cáo chạy 10 phút đang giữ ACCESS SHARE. Lệnh ALTER phải chờ. Điều tệ là mọi SELECT mới đến sau cũng phải xếp hàng đằng sau ALTER, vì PostgreSQL không cho "chen ngang" qua một yêu cầu khóa đang chờ.
+
+\`\`\`
+t0   Báo cáo dài     giữ ACCESS SHARE
+t1   ALTER TABLE     xin ACCESS EXCLUSIVE   -> chờ báo cáo
+t2   SELECT mới       xin ACCESS SHARE       -> chờ ALTER (dù chỉ đọc)
+t3   Pool cạn kết nối, ứng dụng đứng
+\`\`\`
+
+Một lệnh migration nhỏ có thể làm đứng cả ứng dụng, dù bản thân nó chạy chưa tới một giây khi được cấp khóa. Cách phòng:
+
+\`\`\`sql
+-- báo lỗi ngay thay vì xếp hàng
+LOCK TABLE orders IN ACCESS EXCLUSIVE MODE NOWAIT;
+
+-- hoặc chờ có giới hạn
+SET LOCAL lock_timeout = '3s';
+\`\`\`
+
+Nếu bị từ chối, retry sau một lúc, ngoài giờ cao điểm.
+
+## Nguyên tắc sử dụng an toàn
+
+1. Chọn chế độ yếu nhất đủ dùng. Cần chặn ghi mà vẫn cho đọc thì dùng SHARE hoặc SHARE ROW EXCLUSIVE, đừng mặc định ACCESS EXCLUSIVE.
+2. Luôn đặt \`lock_timeout\` hoặc dùng NOWAIT, và code phải biết retry khi bị từ chối.
+3. Giữ transaction ngắn. Khóa sống đến COMMIT, nên đừng gọi API ngoài hay chờ con người giữa chừng.
+4. Khóa nhiều bảng theo cùng một thứ tự ở mọi nơi để tránh deadlock.
+5. Chạy ngoài giờ cao điểm và theo dõi \`pg_locks\` khi cần:
+
+\`\`\`sql
+SELECT l.pid, l.mode, l.granted, a.query
+FROM pg_locks l
+JOIN pg_stat_activity a USING (pid)
+WHERE l.relation = 'orders'::regclass
+ORDER BY l.granted, l.pid;
+\`\`\`
+
+## Ưu tiên giải pháp nhẹ hơn
+
+Table lock là công cụ nặng. Trước khi dùng, hãy cân nhắc:
+
+\`\`\`
+Nhu cầu                                  Giải pháp nhẹ hơn
+Khóa từng bản ghi                        SELECT ... FOR UPDATE (row lock)
+Khóa theo logic hoặc tài nguyên ngoài    pg_advisory_xact_lock(key)
+Tạo index trên bảng đang chạy            CREATE INDEX CONCURRENTLY
+Chống trùng dữ liệu                      UNIQUE hoặc EXCLUDE constraint
+Số thứ tự tăng                           SEQUENCE (chấp nhận có khoảng hở)
+\`\`\`
+
+Advisory lock đặc biệt hữu ích cho ví dụ cấp số chứng từ ở trên: khóa một key logic thay vì cả bảng, nên các truy vấn khác không bị ảnh hưởng.
+
+## Key Takeaways
+
+1. \`LOCK TABLE ... IN <mode> MODE\` chỉ chạy trong transaction và tự nhả khi COMMIT hoặc ROLLBACK. Mặc định là ACCESS EXCLUSIVE.
+2. Chỉ ACCESS EXCLUSIVE chặn cả đọc. Các chế độ SHARE, SHARE ROW EXCLUSIVE và EXCLUSIVE vẫn cho SELECT thường chạy.
+3. Dùng cho migration, batch lớn, tuần tự hóa toàn bảng hoặc chuỗi bước cần bảng ổn định.
+4. Hàng chờ lock là rủi ro thật: một lock đang chờ cũng chặn các truy vấn đến sau. Luôn dùng NOWAIT hoặc \`lock_timeout\`.
+5. Có row lock, advisory lock, constraint hoặc \`CONCURRENTLY\` đáp ứng được thì ưu tiên chúng.
+    `
   }
 ];
 
