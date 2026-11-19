@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
-  // GitHub Pages serves under /<repo>/; Vercel and local dev serve from root.
-  base: process.env.GITHUB_ACTIONS ? '/datdao-devops-portfolio/' : '/',
+  // Served from the root of the custom domain (profile.247.id.vn), Vercel, and local dev.
+  base: '/',
   plugins: [react()],
   resolve: {
     alias: {
