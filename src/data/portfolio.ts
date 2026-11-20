@@ -366,25 +366,6 @@ export interface Project {
 
 export const PROJECTS: Project[] = [
   {
-    slug: 'ai-observability-platform',
-    featured: true,
-    title: 'AI-Powered Observability & Incident Analysis Platform',
-    image: `${import.meta.env.BASE_URL}images/ai-observability.svg`,
-    description: 'Observability and incident analysis platform for microservices, used in a real environment. An error-scanner service pulls errors from Elasticsearch, correlates them with Jaeger trace spans, and sends the context to the Anthropic Claude Messages API for root-cause analysis and recommendations, with alerts delivered to Slack.',
-    technologies: ['TypeScript', 'NestJS', 'Next.js', 'Claude API', 'OpenTelemetry', 'Jaeger', 'Prometheus', 'Grafana', 'Elasticsearch', 'Kibana', 'PostgreSQL', 'Slack', 'Docker', 'AWS EC2'],
-    category: 'fullstack',
-    githubLink: '',
-    websiteLink: 'https://obs.247.id.vn/obs',
-    detail: {
-      summary: 'AI-powered root-cause analysis for microservice incidents, built on logs, traces, and the Claude Messages API.',
-      role: 'Backend, AI Integration & Infrastructure Engineering',
-      problem: 'Investigating incidents meant manually searching logs and cross-referencing traces across services, which took about 10 minutes for simple issues and about 40 minutes for complex, multi-service ones.',
-      solution: 'An automated error-scanner periodically retrieves Elasticsearch errors and correlates them with Jaeger trace spans via request-ID and trace-ID. The context is analyzed by the Claude Messages API, alerts go to Slack, and analysis activity is recorded in PostgreSQL.',
-      highlights: ['Investigation time reduced from ~10 to ~5 minutes (simple) and from ~40 to ~10 minutes (complex)', 'TypeScript pnpm monorepo with auth-service, product-service, and payment-service (NestJS)', 'Distributed tracing (OpenTelemetry, Jaeger), metrics (Prometheus, Grafana), centralized logging (Pino, Filebeat, Elasticsearch, Kibana)', 'PII and credential masking, internal service authentication, DTO validation, parameterized queries', 'Seven custom Claude Code subagents for security, logging, dashboard, Dockerfile, and testing reviews'],
-      architecture: ['Microservices', 'OpenTelemetry / Structured Logging', 'Jaeger / Prometheus / Elasticsearch', 'Error Scanner', 'Claude AI Analysis', 'Slack Alerts'],
-    },
-  },
-  {
     slug: 'customer-support-chatbot-rag',
     featured: true,
     title: 'Customer Support Chatbot — RAG + LLM',
@@ -771,75 +752,22 @@ WHERE id = 1 AND status = 'PAYMENT_PROCESSING';
     },
   },
   {
-    slug: 'realtime-chat-mern',
-    title: 'Realtime Chat App — MERN + Socket.IO',
-    image: `${import.meta.env.BASE_URL}images/todo-webapp.webp`,
-    description: 'Bản demo ứng dụng nhắn tin thời gian thực trên MERN stack (MongoDB, Express.js, React, Node.js) kết hợp Socket.IO. Thiết kế schema Conversation/Message để truy vấn nhanh lịch sử chat và mở rộng từ chat 1-1 sang chat nhóm; xác thực bằng JWT cho cả REST API và kết nối socket; custom hooks quản lý state phía client. Chạy sau Nginx reverse proxy và đóng gói bằng Docker.',
-    technologies: ['React', 'Node', 'Express', 'MongoDB', 'Socket.IO', 'JWT', 'Nginx', 'Docker'],
+    slug: 'ai-observability-platform',
+    featured: true,
+    title: 'AI-Powered Observability & Incident Analysis Platform',
+    image: `${import.meta.env.BASE_URL}images/ai-observability.svg`,
+    description: 'Observability and incident analysis platform for microservices, used in a real environment. An error-scanner service pulls errors from Elasticsearch, correlates them with Jaeger trace spans, and sends the context to the Anthropic Claude Messages API for root-cause analysis and recommendations, with alerts delivered to Slack.',
+    technologies: ['TypeScript', 'NestJS', 'Next.js', 'Claude API', 'OpenTelemetry', 'Jaeger', 'Prometheus', 'Grafana', 'Elasticsearch', 'Kibana', 'PostgreSQL', 'Slack', 'Docker', 'AWS EC2'],
     category: 'fullstack',
     githubLink: '',
-    websiteLink: '',
+    websiteLink: 'https://obs.247.id.vn/obs',
     detail: {
-      summary: 'Demo ứng dụng nhắn tin thời gian thực trên MERN stack với Socket.IO: schema chat 1-1 và nhóm, xác thực JWT cho REST và socket, chạy sau Nginx.',
-      role: 'Full-Stack Developer',
-      problem: 'Xây dựng ứng dụng nhắn tin thời gian thực hoạt động trơn tru đòi hỏi giải quyết các nhóm bài toán cốt lõi: thiết kế database để truy vấn nhanh lịch sử chat và mở rộng sang chat nhóm; xác thực và bảo mật để người dùng chỉ đọc và gửi tin nhắn trong phạm vi quyền hạn của mình; đồng thời giữ state phía client dễ quản lý.',
-      solution: 'Dùng MongoDB với hai model Conversation và Message, JWT cho REST API và cho kết nối Socket.IO, custom hooks của React để quản lý state, Nginx làm reverse proxy và Docker để đóng gói deploy.',
-      highlights: [
-        'Giao tiếp realtime bằng Socket.IO',
-        'Schema Conversation/Message hỗ trợ chat 1-1 và chat nhóm, lưu lastMessage để hiển thị nhanh danh sách hội thoại',
-        'JWT bảo vệ REST API và xác thực kết nối socket qua socket.handshake.auth',
-        'Custom hooks quản lý state hiệu quả',
-        'Nginx reverse proxy phía trước, Dockerized để deploy',
-      ],
-      architecture: ['React client', 'Nginx reverse proxy', 'Node/Express + Socket.IO', 'MongoDB'],
-      challenges: [
-        {
-          title: '1. Thiết kế cơ sở dữ liệu (Database Schema Design)',
-          summary: 'Cấu trúc dữ liệu trên MongoDB cần tối ưu để truy vấn nhanh lịch sử chat và hỗ trợ mở rộng từ chat 1-1 sang chat nhóm.',
-          items: [
-            {
-              heading: 'Conversation (hoặc Room) model',
-              body: 'Quản lý danh sách người tham gia (participants), phân biệt chat 1-1 hay nhóm (isGroupChat), và lưu lastMessage để hiển thị nhanh ở danh sách bên ngoài.',
-            },
-            {
-              heading: 'Message model',
-              body: 'Lưu nội dung tin nhắn, người gửi (senderId), cuộc hội thoại tương ứng (conversationId), loại tin nhắn (text, hình ảnh, file) và trạng thái đã xem (seenBy).',
-            },
-          ],
-        },
-        {
-          title: '2. Xác thực và bảo mật kết nối (Authentication & Socket Auth)',
-          summary: 'Hệ thống cần đảm bảo người dùng chỉ đọc và gửi được tin nhắn trong phạm vi quyền hạn của mình.',
-          items: [
-            {
-              heading: 'Xác thực REST API',
-              body: 'Sử dụng JWT (JSON Web Token) để đăng ký, đăng nhập và bảo vệ các API lấy danh sách hội thoại hoặc lịch sử tin nhắn.',
-            },
-            {
-              heading: 'Xác thực kết nối Socket',
-              body: 'Gửi kèm JWT qua socket.handshake.auth khi client khởi tạo kết nối WebSocket, để server định danh chính xác userId của kết nối đó.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    slug: 'cloud-infrastructure-automation',
-    title: 'Cloud Infrastructure Automation',
-    image: `${import.meta.env.BASE_URL}images/terraform-aws.webp`,
-    description: 'Automated AWS infrastructure provisioning using Terraform with reusable modules for EC2, VPC, and S3. Integrated CI/CD with GitHub Actions for continuous deployment of cloud environments.',
-    technologies: ['AWS', 'Terraform', 'GitHub Actions', 'EC2', 'S3'],
-    category: 'devops',
-    githubLink: '',
-    websiteLink: '',
-    detail: {
-      summary: 'Tự động hoá provisioning hạ tầng AWS bằng Terraform module và GitHub Actions.',
-      role: 'DevOps Engineer',
-      problem: 'Tạo hạ tầng thủ công chậm, khó tái lập và dễ lệch giữa các môi trường.',
-      solution: 'Viết Terraform module tái sử dụng cho EC2, VPC, S3 và tích hợp GitHub Actions để triển khai môi trường liên tục.',
-      highlights: ['Reusable Terraform modules (EC2, VPC, S3)', 'Infrastructure as Code, tái lập được', 'CI/CD cho hạ tầng với GitHub Actions'],
-      architecture: ['Terraform modules', 'Pull request / push', 'GitHub Actions (plan, apply)', 'AWS: VPC, EC2, S3'],
+      summary: 'AI-powered root-cause analysis for microservice incidents, built on logs, traces, and the Claude Messages API.',
+      role: 'Backend, AI Integration & Infrastructure Engineering',
+      problem: 'Investigating incidents meant manually searching logs and cross-referencing traces across services, which took about 10 minutes for simple issues and about 40 minutes for complex, multi-service ones.',
+      solution: 'An automated error-scanner periodically retrieves Elasticsearch errors and correlates them with Jaeger trace spans via request-ID and trace-ID. The context is analyzed by the Claude Messages API, alerts go to Slack, and analysis activity is recorded in PostgreSQL.',
+      highlights: ['Investigation time reduced from ~10 to ~5 minutes (simple) and from ~40 to ~10 minutes (complex)', 'TypeScript pnpm monorepo with auth-service, product-service, and payment-service (NestJS)', 'Distributed tracing (OpenTelemetry, Jaeger), metrics (Prometheus, Grafana), centralized logging (Pino, Filebeat, Elasticsearch, Kibana)', 'PII and credential masking, internal service authentication, DTO validation, parameterized queries', 'Seven custom Claude Code subagents for security, logging, dashboard, Dockerfile, and testing reviews'],
+      architecture: ['Microservices', 'OpenTelemetry / Structured Logging', 'Jaeger / Prometheus / Elasticsearch', 'Error Scanner', 'Claude AI Analysis', 'Slack Alerts'],
     },
   },
   {
@@ -945,6 +873,78 @@ cp dist/index.html dist/404.html`,
       ],
     },
   },
+  {
+    slug: 'realtime-chat-mern',
+    title: 'Realtime Chat App — MERN + Socket.IO',
+    image: `${import.meta.env.BASE_URL}images/todo-webapp.webp`,
+    description: 'Bản demo ứng dụng nhắn tin thời gian thực trên MERN stack (MongoDB, Express.js, React, Node.js) kết hợp Socket.IO. Thiết kế schema Conversation/Message để truy vấn nhanh lịch sử chat và mở rộng từ chat 1-1 sang chat nhóm; xác thực bằng JWT cho cả REST API và kết nối socket; custom hooks quản lý state phía client. Chạy sau Nginx reverse proxy và đóng gói bằng Docker.',
+    technologies: ['React', 'Node', 'Express', 'MongoDB', 'Socket.IO', 'JWT', 'Nginx', 'Docker'],
+    category: 'fullstack',
+    githubLink: '',
+    websiteLink: '',
+    detail: {
+      summary: 'Demo ứng dụng nhắn tin thời gian thực trên MERN stack với Socket.IO: schema chat 1-1 và nhóm, xác thực JWT cho REST và socket, chạy sau Nginx.',
+      role: 'Full-Stack Developer',
+      problem: 'Xây dựng ứng dụng nhắn tin thời gian thực hoạt động trơn tru đòi hỏi giải quyết các nhóm bài toán cốt lõi: thiết kế database để truy vấn nhanh lịch sử chat và mở rộng sang chat nhóm; xác thực và bảo mật để người dùng chỉ đọc và gửi tin nhắn trong phạm vi quyền hạn của mình; đồng thời giữ state phía client dễ quản lý.',
+      solution: 'Dùng MongoDB với hai model Conversation và Message, JWT cho REST API và cho kết nối Socket.IO, custom hooks của React để quản lý state, Nginx làm reverse proxy và Docker để đóng gói deploy.',
+      highlights: [
+        'Giao tiếp realtime bằng Socket.IO',
+        'Schema Conversation/Message hỗ trợ chat 1-1 và chat nhóm, lưu lastMessage để hiển thị nhanh danh sách hội thoại',
+        'JWT bảo vệ REST API và xác thực kết nối socket qua socket.handshake.auth',
+        'Custom hooks quản lý state hiệu quả',
+        'Nginx reverse proxy phía trước, Dockerized để deploy',
+      ],
+      architecture: ['React client', 'Nginx reverse proxy', 'Node/Express + Socket.IO', 'MongoDB'],
+      challenges: [
+        {
+          title: '1. Thiết kế cơ sở dữ liệu (Database Schema Design)',
+          summary: 'Cấu trúc dữ liệu trên MongoDB cần tối ưu để truy vấn nhanh lịch sử chat và hỗ trợ mở rộng từ chat 1-1 sang chat nhóm.',
+          items: [
+            {
+              heading: 'Conversation (hoặc Room) model',
+              body: 'Quản lý danh sách người tham gia (participants), phân biệt chat 1-1 hay nhóm (isGroupChat), và lưu lastMessage để hiển thị nhanh ở danh sách bên ngoài.',
+            },
+            {
+              heading: 'Message model',
+              body: 'Lưu nội dung tin nhắn, người gửi (senderId), cuộc hội thoại tương ứng (conversationId), loại tin nhắn (text, hình ảnh, file) và trạng thái đã xem (seenBy).',
+            },
+          ],
+        },
+        {
+          title: '2. Xác thực và bảo mật kết nối (Authentication & Socket Auth)',
+          summary: 'Hệ thống cần đảm bảo người dùng chỉ đọc và gửi được tin nhắn trong phạm vi quyền hạn của mình.',
+          items: [
+            {
+              heading: 'Xác thực REST API',
+              body: 'Sử dụng JWT (JSON Web Token) để đăng ký, đăng nhập và bảo vệ các API lấy danh sách hội thoại hoặc lịch sử tin nhắn.',
+            },
+            {
+              heading: 'Xác thực kết nối Socket',
+              body: 'Gửi kèm JWT qua socket.handshake.auth khi client khởi tạo kết nối WebSocket, để server định danh chính xác userId của kết nối đó.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    slug: 'cloud-infrastructure-automation',
+    title: 'Cloud Infrastructure Automation',
+    image: `${import.meta.env.BASE_URL}images/terraform-aws.webp`,
+    description: 'Automated AWS infrastructure provisioning using Terraform with reusable modules for EC2, VPC, and S3. Integrated CI/CD with GitHub Actions for continuous deployment of cloud environments.',
+    technologies: ['AWS', 'Terraform', 'GitHub Actions', 'EC2', 'S3'],
+    category: 'devops',
+    githubLink: '',
+    websiteLink: '',
+    detail: {
+      summary: 'Tự động hoá provisioning hạ tầng AWS bằng Terraform module và GitHub Actions.',
+      role: 'DevOps Engineer',
+      problem: 'Tạo hạ tầng thủ công chậm, khó tái lập và dễ lệch giữa các môi trường.',
+      solution: 'Viết Terraform module tái sử dụng cho EC2, VPC, S3 và tích hợp GitHub Actions để triển khai môi trường liên tục.',
+      highlights: ['Reusable Terraform modules (EC2, VPC, S3)', 'Infrastructure as Code, tái lập được', 'CI/CD cho hạ tầng với GitHub Actions'],
+      architecture: ['Terraform modules', 'Pull request / push', 'GitHub Actions (plan, apply)', 'AWS: VPC, EC2, S3'],
+    },
+  },
 ];
 
 export interface Certification {
@@ -999,16 +999,13 @@ export const SKILLS_BY_CATEGORY = {
   database: SKILLS.filter(skill => skill.category === 'database'),
 };
 
-// Featured projects are listed first; the sort is stable, so the original order is kept within each group.
-const PROJECTS_FEATURED_FIRST = [...PROJECTS].sort(
-  (a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured))
-);
-
+// Projects are listed in the order of the PROJECTS array (edit that array to reorder them).
+// The "featured" flag only drives the Featured filter and badge, it does not change the order.
 export const PROJECTS_BY_CATEGORY = {
-  all: PROJECTS_FEATURED_FIRST,
-  featured: PROJECTS_FEATURED_FIRST.filter(project => project.featured),
-  devops: PROJECTS_FEATURED_FIRST.filter(project => project.category === 'devops'),
-  fullstack: PROJECTS_FEATURED_FIRST.filter(project => project.category === 'fullstack'),
+  all: PROJECTS,
+  featured: PROJECTS.filter(project => project.featured),
+  devops: PROJECTS.filter(project => project.category === 'devops'),
+  fullstack: PROJECTS.filter(project => project.category === 'fullstack'),
 };
 
 export const getProjectBySlug = (slug: string | undefined): Project | undefined =>
