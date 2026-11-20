@@ -795,11 +795,11 @@ WHERE id = 1 AND status = 'PAYMENT_PROCESSING';
     slug: 'portfolio-website',
     featured: true,
     title: 'Portfolio Website — React, Vite & GitHub Pages',
-    image: `${import.meta.env.BASE_URL}images/portfolio-personal.webp`,
+    image: `${import.meta.env.BASE_URL}images/portfolio-website.webp`,
     description: 'Chính trang portfolio này: SPA theme cyber-terminal bằng React 18, TypeScript và Vite, không backend. Build xong tự prerender 23 trang HTML tĩnh kèm title, meta, canonical, Open Graph, sitemap.xml và robots.txt để Google đọc được từng route. Deploy tự động bằng GitHub Actions lên GitHub Pages với tên miền riêng profile.247.id.vn.',
     technologies: ['React', 'TypeScript', 'Vite', 'React Router', 'Tailwind CSS', 'Framer Motion', 'highlight.js', 'GitHub Actions', 'GitHub Pages', 'SEO', 'Web3Forms'],
     category: 'fullstack',
-    githubLink: '',
+    githubLink: 'https://github.com/dev198x/datdao-devops-portfolio',
     websiteLink: 'https://profile.247.id.vn/',
     detail: {
       summary: 'Portfolio cá nhân dạng SPA tĩnh: theme cyber-terminal, prerender cho SEO, CI/CD tự động lên GitHub Pages, không cần backend.',
