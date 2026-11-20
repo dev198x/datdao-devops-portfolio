@@ -68,6 +68,7 @@ const pages = [
       'Builder làm việc cùng AI agents: từ ý tưởng đến sản phẩm production, cyber security, monitoring production bằng Grafana LGTM stack, giải pháp web, app và hệ thống nội bộ cho doanh nghiệp vừa và nhỏ, kèm các sản phẩm chạy thật.'
     ),
     ogType: 'website',
+    locale: 'vi_VN',
   },
   ...projects.map((project) => ({
     route: `/projects/${project.slug}`,
@@ -102,9 +103,11 @@ const renderPage = (page) => {
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${page.description}" />`,
     `<meta property="og:url" content="${canonical}" />`,
+    `<meta property="og:locale" content="${page.locale ?? 'en_US'}" />`,
     `<meta property="og:image" content="${siteUrl}/og-image.png" />`,
     `<meta property="og:image:width" content="1200" />`,
     `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${escapeHtml(siteName)} - Backend, DevOps &amp; AI Engineer" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${page.description}" />`,
@@ -130,6 +133,17 @@ for (const page of pages) {
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'index.html'), renderPage(page), 'utf8');
 }
+
+// The home page: dist/index.html itself, so https://<site>/ (the link people share) carries the
+// same title, canonical, Open Graph and Twitter tags as every other page. The workflow later copies
+// this file to 404.html, which is only served with HTTP 404 and so is not indexed.
+const homeTitle = /<title>([^<]*)<\/title>/.exec(template)?.[1];
+if (!homeTitle) throw new Error('index.html has no <title>; cannot build the home page head.');
+await writeFile(
+  path.join(dist, 'index.html'),
+  renderPage({ route: '', title: homeTitle, description: defaultDescription, ogType: 'website' }),
+  'utf8'
+);
 
 const urls = [
   { loc: `${siteUrl}/` },
