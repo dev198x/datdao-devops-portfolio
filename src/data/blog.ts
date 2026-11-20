@@ -1495,6 +1495,168 @@ Mỗi bước của giai đoạn Expand đều có thể quay lui (drop cột ho
 4. Đổi tên cột hay đổi kiểu cần rewrite thì dùng cột mới, trigger đồng bộ và backfill theo batch, đừng đổi trực tiếp.
 5. Test trên bản clone, chạy ngoài giờ cao điểm, có người trực và có rollback plan. Chỉ bước Contract là không quay lại được.
     `
+  },
+  {
+    id: 15,
+    slug: 'aws-cdk-lab-typescript-cdk-nag-oidc',
+    title: "AWS CDK: viết hạ tầng bằng TypeScript, test và kiểm tra bảo mật trước khi deploy",
+    category: "Cloud Infrastructure",
+    difficulty: "Intermediate",
+    readTime: "7 min read",
+    date: "2026-11-20",
+    featured: false,
+    excerpt: "Những thế mạnh thực sự của AWS CDK qua một lab nhỏ: default an toàn, grant() cho IAM, tách dev/prod bằng code, cdk-nag, unit test và CI/CD với OIDC, kèm cạm bẫy Budget luôn hiện $0.",
+    tags: ["AWS CDK", "TypeScript", "cdk-nag", "IaC", "GitHub Actions", "OIDC"],
+    content: `
+# AWS CDK: viết hạ tầng bằng TypeScript, test và kiểm tra bảo mật trước khi deploy
+
+AWS CDK cho phép bạn mô tả hạ tầng AWS bằng một ngôn ngữ lập trình thật (ở đây là TypeScript) thay vì viết YAML. Bài này dùng một lab nhỏ gồm S3, IAM và Budget để chỉ ra những thế mạnh thực sự của CDK, và vài cạm bẫy cần tránh.
+
+## CDK thực chất là gì
+
+\`\`\`
+code TypeScript -> cdk synth -> template CloudFormation -> cdk deploy -> tài nguyên AWS
+\`\`\`
+
+CDK không tạo tài nguyên trực tiếp. Nó sinh ra template CloudFormation rồi giao cho CloudFormation làm. Điều này quan trọng vì mọi bước trước \`deploy\` (test, kiểm tra bảo mật, xem diff) đều chạy được mà không tốn tiền.
+
+## Thế mạnh 1: default an toàn, code ngắn
+
+Đây là toàn bộ code để tạo một bucket an toàn:
+
+\`\`\`javascript
+const bucket = new s3.Bucket(this, 'DataBucket', {
+  encryption: s3.BucketEncryption.S3_MANAGED,
+  blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+  enforceSSL: true,
+});
+\`\`\`
+
+Ba dòng cấu hình này tự sinh ra mã hóa, chặn public access và một bucket policy từ chối request không dùng HTTPS. Viết tay bằng CloudFormation, bạn phải khai báo từng phần đó riêng.
+
+## Thế mạnh 2: IAM least privilege chỉ một dòng
+
+\`\`\`javascript
+const role = new iam.Role(this, 'ReaderRole', {
+  assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+});
+bucket.grantRead(role); // CDK tự sinh IAM policy
+\`\`\`
+
+\`grantRead\` sinh policy chỉ có quyền đọc, giới hạn đúng vào bucket này. Bạn không cần nhớ danh sách action của S3, và quyền luôn khớp với bucket thật dù tên bucket do CDK tự đặt.
+
+## Thế mạnh 3: một code, nhiều môi trường
+
+Vì là code thật, bạn dùng biến và điều kiện thay vì copy template:
+
+\`\`\`javascript
+const isProd = props.stage === 'prod';
+
+new s3.Bucket(this, 'DataBucket', {
+  removalPolicy: isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+  autoDeleteObjects: !isProd,
+});
+\`\`\`
+
+Stage được truyền từ dòng lệnh: \`cdk deploy -c stage=prod\`. Dev dùng \`DESTROY\` để dọn lab bằng một lệnh. Prod dùng \`RETAIN\` để lỡ tay xóa stack cũng không mất dữ liệu. Tên stack chứa stage (\`Lab-dev\`, \`Lab-prod\`) nên hai môi trường độc lập hoàn toàn.
+
+## Thế mạnh 4: kiểm tra bảo mật tự động với cdk-nag
+
+cdk-nag quét template lúc \`cdk synth\` theo bộ luật \`AwsSolutionsChecks\`. Có finding chưa xử lý thì synth thất bại, nên pipeline đỏ trước khi tài nguyên được tạo:
+
+\`\`\`javascript
+cdk.Validations.of(app).addPlugins(new AwsSolutionsChecks(app, { verbose: true }));
+\`\`\`
+
+Khi một luật báo đúng nhưng bạn có lý do hợp lệ, hãy acknowledge kèm lý do, không tắt cả luật. Ví dụ \`grantRead\` sinh wildcard \`s3:List*\`, bị luật IAM5 báo. Đây là chủ ý (chỉ đọc, trong một bucket):
+
+\`\`\`javascript
+Validations.of(role).acknowledge({
+  id: 'AwsSolutions-IAM5[Action::s3:List*]',
+  reason: 'Wildcard sinh từ bucket.grantRead(): read-only, giới hạn trong DataBucket.',
+});
+\`\`\`
+
+Lưu ý với cdk-nag v3: mỗi finding phải acknowledge riêng, không còn \`NagSuppressions\` như bản cũ. Hơi dài dòng, nhưng buộc bạn đọc từng finding.
+
+## Thế mạnh 5: test hạ tầng như test code
+
+Test chạy local, không cần AWS credentials. CDK dựng stack trong bộ nhớ, sinh template, rồi bạn assert:
+
+\`\`\`javascript
+const template = Template.fromStack(stack);
+
+test('enforces SSL via bucket policy', () => {
+  template.hasResourceProperties('AWS::S3::BucketPolicy', {
+    PolicyDocument: {
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Effect: 'Deny',
+          Condition: { Bool: { 'aws:SecureTransport': 'false' } },
+        }),
+      ]),
+    },
+  });
+});
+\`\`\`
+
+Test đáng giá nhất là test phủ định: khẳng định \`ReaderRole\` không có action ghi hay xóa. Nếu ai đó đổi \`grantRead\` thành \`grantReadWrite\`, test đỏ ngay trong PR. cdk-nag bắt lỗi cấu hình chung, còn unit test bắt quy tắc riêng của bạn. Hai thứ bổ sung cho nhau.
+
+## Thế mạnh 6: CI/CD không cần access key
+
+\`\`\`
+PR   -> validate (test + cdk-nag) -> cdk diff
+main -> validate -> deploy-dev -> deploy-prod (cần người duyệt)
+\`\`\`
+
+Pipeline GitHub Actions dùng OIDC: workflow xin token ngắn hạn rồi assume một IAM role, nên không có access key dài hạn nào nằm trong GitHub. Prod được chặn bởi **Required reviewers** của GitHub Environment. Nếu quên bật, pipeline sẽ deploy prod ngay sau dev.
+
+## Cạm bẫy: Budget luôn hiện $0
+
+CDK chưa có L2 construct cho AWS Budgets, nên phải dùng L1 \`CfnBudget\` (map 1-1 với CloudFormation, dài dòng hơn). Budget lọc theo tag \`Project=cdk-lab\` để chỉ tính chi phí của lab:
+
+\`\`\`javascript
+costFilters: { TagKeyValue: ['user:Project$cdk-lab'] },
+\`\`\`
+
+Cạm bẫy: tag \`Project\` phải được bật làm *cost allocation tag* trong Billing console, và dữ liệu chỉ có sau khoảng 24 giờ. Quên bước này thì budget luôn hiện $0 và không bao giờ cảnh báo, trong khi mọi thứ trông vẫn bình thường. Nhớ cũng truyền email thật bằng \`-c alertEmail=<email>\`, vì deploy bằng email giả thì cảnh báo không tới bạn.
+
+## Chạy thử, không tốn tiền
+
+\`\`\`bash
+npm ci
+npm test
+npx cdk synth -c stage=dev -c alertEmail=you@example.com
+\`\`\`
+
+Bài tập hay: bỏ \`enforceSSL: true\` rồi chạy lại \`cdk synth\` để xem cdk-nag chặn thế nào. Chỉ \`cdk deploy\` mới tạo tài nguyên thật: chỉ deploy \`dev\` từ máy local, và dọn bằng \`cdk destroy -c stage=dev\`.
+
+## Ưu điểm, nhược điểm và chi phí
+
+\`\`\`
+Ưu điểm                                    Nhược điểm
+Default an toàn, grant() cho IAM           Phải hiểu CloudFormation phía dưới khi debug
+Một code, nhiều môi trường                 Một số dịch vụ chỉ có L1, code dài (như Budget)
+Test + cdk-nag chặn lỗi trước deploy       Chỉ bắt được các case đã có luật hoặc test
+CI dùng OIDC, không có key dài hạn         Setup OIDC role và Environments ban đầu mất công
+\`\`\`
+
+\`\`\`
+Hạng mục                   Chi phí tham khảo
+S3 + Budgets ở quy mô lab  Gần như $0/tháng (kiểm tra lại trang pricing)
+Công sức dựng lab          Khoảng 1-2 ngày nếu chưa quen CDK và OIDC
+Rủi ro lớn nhất            Quên cdk destroy. Hãy tạo Budget $5 trong account sandbox trước
+\`\`\`
+
+## Key Takeaways
+
+1. CDK sinh template CloudFormation, nên test, cdk-nag và \`cdk diff\` chạy được trước khi tốn tiền.
+2. L2 construct cho default an toàn, và \`grant*()\` cho IAM least privilege chỉ một dòng.
+3. Code thật nghĩa là dùng biến và điều kiện để tách dev/prod, đặc biệt \`RemovalPolicy\`.
+4. cdk-nag chặn lỗi bảo mật chung, unit test chặn quy tắc riêng. Acknowledge luôn kèm lý do.
+5. CI/CD dùng OIDC thay access key, và bật Required reviewers trước prod.
+6. Budget lọc theo tag chỉ hoạt động sau khi bật cost allocation tag.
+    `
   }
 ];
 
