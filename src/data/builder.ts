@@ -91,7 +91,7 @@ export const BUILDER_EVIDENCE: BuilderEvidence[] = [
   {
     slug: 'booking-online-eks',
     proves: 'Bài toán khó của hệ thống đặt chỗ: không đặt trùng, không bán quá số lượng, thanh toán idempotent; đóng gói và deploy bằng Helm và GitHub Actions.',
-    status: 'Production, có link live',
+    status: 'Production trên Kubernetes (dev, UAT, production)',
   },
   {
     slug: 'customer-support-chatbot-rag',
