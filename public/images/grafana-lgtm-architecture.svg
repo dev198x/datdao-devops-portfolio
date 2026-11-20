@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="ui-monospace, Menlo, Consolas, monospace" role="img" aria-labelledby="t d">
 <title id="t">Luồng dữ liệu của Grafana LGTM stack</title>
-<desc id="d">Ứng dụng gửi log, trace và metric qua OpenTelemetry Collector tới Loki, Tempo và Mimir, rồi hiển thị trên Grafana và gửi cảnh báo.</desc>
+<desc id="d">Ứng dụng gửi log, trace và metric qua OpenTelemetry Collector tới Loki, Tempo và Prometheus, rồi hiển thị trên Grafana và gửi cảnh báo.</desc>
 <defs>
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#22c55e"/></marker>
 </defs>
@@ -42,7 +42,7 @@
 <g text-anchor="middle">
 <text x="615" y="150" fill="#fde047" font-size="18" font-weight="700">Loki</text><text x="615" y="172" fill="#fef08a" font-size="12">Logs</text>
 <text x="615" y="245" fill="#fdba74" font-size="18" font-weight="700">Tempo</text><text x="615" y="267" fill="#fed7aa" font-size="12">Traces</text>
-<text x="615" y="340" fill="#7dd3fc" font-size="18" font-weight="700">Mimir</text><text x="615" y="362" fill="#bae6fd" font-size="12">Metrics (Prometheus)</text>
+<text x="615" y="340" fill="#7dd3fc" font-size="18" font-weight="700">Prometheus</text><text x="615" y="362" fill="#bae6fd" font-size="12">Metrics</text>
 </g>
 
 <!-- Grafana -->

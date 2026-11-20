@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="ui-monospace, Menlo, Consolas, monospace" role="img" aria-labelledby="t d">
 <title id="t">Minh hoạ dashboard Grafana</title>
-<desc id="d">Bản minh hoạ (dữ liệu mẫu) một dashboard Grafana gồm chỉ số tổng quan, biểu đồ metric từ Mimir, trace từ Tempo, log từ Loki và danh sách cảnh báo.</desc>
+<desc id="d">Bản minh hoạ (dữ liệu mẫu) một dashboard Grafana gồm chỉ số tổng quan, biểu đồ metric từ Prometheus, trace từ Tempo, log từ Loki và danh sách cảnh báo.</desc>
 <rect width="960" height="540" fill="#0b0f14"/>
 
 <!-- Window bar -->
@@ -21,9 +21,9 @@
 <g font-size="12" fill="#9ca3af"><text x="30" y="90">Request rate</text><text x="265" y="90">Error rate</text><text x="500" y="90">Latency p95</text><text x="735" y="90">Pods ready</text></g>
 <g font-size="28" font-weight="700"><text x="30" y="125" fill="#4ade80">1.2k/s</text><text x="265" y="125" fill="#f87171">0.4%</text><text x="500" y="125" fill="#fdba74">180ms</text><text x="735" y="125" fill="#4ade80">6 / 6</text></g>
 
-<!-- Metrics panel (Mimir) -->
+<!-- Metrics panel (Prometheus) -->
 <rect x="14" y="154" width="458" height="180" rx="8" fill="#0f141b" stroke="#1f2937"/>
-<text x="30" y="178" fill="#7dd3fc" font-size="13" font-weight="700">Metrics · Mimir / Prometheus</text>
+<text x="30" y="178" fill="#7dd3fc" font-size="13" font-weight="700">Metrics · Prometheus</text>
 <g stroke="#1f2937" stroke-width="1"><path d="M30 205H456M30 240H456M30 275H456M30 310H456"/></g>
 <polyline fill="none" stroke="#38bdf8" stroke-width="2.5" points="30,285 80,278 130,282 180,270 230,274 280,262 330,200 360,214 410,268 456,272"/>
 <polyline fill="none" stroke="#22c55e" stroke-width="2" points="30,300 90,296 150,298 210,292 270,294 330,286 390,292 456,290"/>

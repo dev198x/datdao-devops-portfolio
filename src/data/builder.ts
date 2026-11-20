@@ -30,11 +30,11 @@ export const BUILDER_STRENGTHS: BuilderStrength[] = [
   },
   {
     title: 'Cyber security',
-    body: 'Bảo mật từ thiết kế: xác thực và phân quyền tối thiểu, kiểm tra dữ liệu đầu vào, truy vấn tham số hoá, che dữ liệu nhạy cảm trong log, quản lý bí mật (không lưu khoá trong mã), quét lỗ hổng và rà soát bảo mật bằng AI agents trước khi triển khai.',
+    body: 'Mọi bản phát hành đều được AI review bảo mật trước khi lên production. Bảo mật được đưa vào từ thiết kế: xác thực và phân quyền tối thiểu, kiểm tra dữ liệu đầu vào, truy vấn tham số hoá, che dữ liệu nhạy cảm trong log, quản lý bí mật (không lưu khoá trong mã).',
   },
   {
     title: 'Monitoring production với Grafana LGTM stack',
-    body: 'Giám sát hệ thống đang chạy bằng Grafana LGTM stack (Loki cho log, Grafana cho dashboard, Tempo cho trace, Mimir/Prometheus cho metric) cùng OpenTelemetry: nhìn thấy sự cố sớm, lần theo request qua các service và đặt cảnh báo trước khi người dùng phát hiện.',
+    body: 'Giám sát hệ thống đang chạy bằng Grafana LGTM stack (Loki cho log, Grafana cho dashboard, Tempo cho trace, Prometheus cho metric) cùng OpenTelemetry: nhìn thấy sự cố sớm, lần theo request qua các service và đặt cảnh báo trước khi người dùng phát hiện.',
   },
   {
     title: 'Vận hành hệ thống nội bộ, AI agents làm trung tâm',
@@ -91,7 +91,7 @@ export const BUILDER_EVIDENCE: BuilderEvidence[] = [
   {
     slug: 'booking-online-eks',
     proves: 'Bài toán khó của hệ thống đặt chỗ: không đặt trùng, không bán quá số lượng, thanh toán idempotent; đóng gói và deploy bằng Helm và GitHub Actions.',
-    status: 'Môi trường development trên AWS EKS',
+    status: 'Production, có link live',
   },
   {
     slug: 'customer-support-chatbot-rag',
@@ -119,8 +119,8 @@ export const BUILDER_MONITORING = {
   figures: [
     {
       file: 'grafana-lgtm-architecture.svg',
-      alt: 'Sơ đồ luồng dữ liệu Grafana LGTM stack: ứng dụng, OpenTelemetry Collector, Loki, Tempo, Mimir, Grafana và cảnh báo',
-      caption: 'Luồng dữ liệu: ứng dụng gửi log, trace, metric qua OpenTelemetry Collector (gom lô, xoá dữ liệu nhạy cảm) vào Loki, Tempo, Mimir; Grafana hiển thị và gửi cảnh báo.',
+      alt: 'Sơ đồ luồng dữ liệu Grafana LGTM stack: ứng dụng, OpenTelemetry Collector, Loki, Tempo, Prometheus, Grafana và cảnh báo',
+      caption: 'Luồng dữ liệu: ứng dụng gửi log, trace, metric qua OpenTelemetry Collector (gom lô, xoá dữ liệu nhạy cảm) vào Loki, Tempo, Prometheus; Grafana hiển thị và gửi cảnh báo.',
     },
     {
       file: 'grafana-lgtm-dashboard.svg',
