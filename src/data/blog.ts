@@ -20,22 +20,22 @@ export const blogPosts: BlogPost[] = [
   {
     id: 2,
     slug: 'terraform-best-practices-for-aws',
-    title: "Infrastructure as Code: Terraform Best Practices for AWS",
+    title: "Infrastructure as Code: Best Practices khi dùng Terraform trên AWS",
     category: "Cloud Infrastructure",
     difficulty: "Advanced",
     readTime: "12 min read",
     date: "2025-01-10",
     featured: false,
-    excerpt: "Master Terraform infrastructure management with proven patterns, state management, and security practices for AWS deployments.",
+    excerpt: "Quản lý hạ tầng AWS bằng Terraform với các pattern đã được kiểm chứng: cấu trúc project, remote state và state locking, bảo mật, và module tái sử dụng.",
     tags: ["Terraform", "AWS", "IaC", "Security", "Best Practices"],
     content: `
-# Infrastructure as Code: Terraform Best Practices for AWS
+# Infrastructure as Code: Best Practices khi dùng Terraform trên AWS
 
-Terraform has revolutionized how we manage infrastructure. This guide covers essential best practices for managing AWS resources with Terraform.
+Terraform đã thay đổi cách chúng ta quản lý hạ tầng. Bài này tóm tắt các best practice cốt lõi khi quản lý tài nguyên AWS bằng Terraform.
 
-## Project Structure
+## Cấu trúc project
 
-Organize your Terraform code for maintainability and reusability:
+Tổ chức code Terraform sao cho dễ bảo trì và dễ tái sử dụng:
 
 \`\`\`
 terraform/
@@ -51,9 +51,11 @@ terraform/
     └── variables.tf
 \`\`\`
 
+Mỗi thư mục trong \`modules/\` là một khối hạ tầng dùng lại được. Mỗi thư mục trong \`environments/\` gọi các module đó với giá trị riêng của môi trường, nên dev, staging và prod có cùng hình dạng nhưng khác cấu hình.
+
 ## State Management
 
-Use remote state storage to maintain state across team members:
+Dùng remote state để cả team cùng chia sẻ một state, thay vì mỗi người giữ một file trên máy:
 
 \`\`\`hcl
 terraform {
@@ -67,17 +69,19 @@ terraform {
 }
 \`\`\`
 
+Bucket S3 chứa file state, còn bảng DynamoDB làm state lock: khi một người đang chạy \`terraform apply\`, người khác phải chờ, tránh hai lệnh cùng ghi đè state. Terraform 1.10 trở lên cũng hỗ trợ khóa ngay trên S3 bằng \`use_lockfile = true\`, không cần bảng DynamoDB nữa. File state có thể chứa dữ liệu nhạy cảm, nên hãy bật encryption, bật versioning và giới hạn quyền truy cập bucket.
+
 ## Security Best Practices
 
-1. Use separate AWS accounts for different environments
-2. Implement least privilege IAM policies
-3. Enable encryption at rest and in transit
-4. Use Terraform variables for sensitive data
-5. Implement state encryption
+1. Dùng các AWS account riêng cho từng môi trường.
+2. Áp dụng IAM policy theo nguyên tắc least privilege.
+3. Bật encryption at rest và in transit.
+4. Không ghi dữ liệu nhạy cảm vào code. Dùng Terraform variable (đánh dấu \`sensitive = true\`) hoặc lấy từ secret manager.
+5. Mã hóa state.
 
 ## Module Reusability
 
-Create reusable modules that can be shared across projects:
+Tạo các module dùng lại được, chia sẻ giữa nhiều project:
 
 \`\`\`hcl
 module "vpc" {
@@ -90,9 +94,9 @@ module "vpc" {
 }
 \`\`\`
 
-## Conclusion
+## Kết luận
 
-Following these best practices will help you maintain scalable, secure, and maintainable infrastructure with Terraform.
+Áp dụng các best practice này giúp bạn duy trì hạ tầng Terraform có khả năng mở rộng, an toàn và dễ bảo trì.
     `
   },
   {
@@ -350,45 +354,57 @@ MGET và Lua Script nhiều key sẽ lỗi CROSSSLOT khi các key nằm ở hash
     slug: 'idempotency-key-tranh-tru-tien-2-lan',
     title: "Idempotency Key: Tránh Trừ Tiền 2 Lần",
     category: "Full-Stack",
-    difficulty: "Advanced",
-    readTime: "13 min read",
+    difficulty: "Intermediate",
+    readTime: "9 min read",
     date: "2026-11-19",
     featured: false,
-    excerpt: "Giải quyết triệt để bài toán thanh toán hai lần khi mạng chập chờn, client retry hoặc người dùng bấm lặp lại: Idempotency Key lưu cùng transaction, Payment State Machine và Reconciliation làm lưới an toàn.",
+    excerpt: "Khách bấm thanh toán, mạng chập chờn, app tự gửi lại và bị trừ tiền hai lần. Giải thích đơn giản cách chặn lỗi này bằng Idempotency Key lưu cùng database, State Machine và Reconciliation làm lưới an toàn.",
     tags: ["Idempotency", "Payment", "State Machine", "Concurrency", "System Design"],
     content: `
 # Idempotency Key: Tránh Trừ Tiền 2 Lần
 
-Người dùng bấm "Thanh toán", mạng chập chờn, app không nhận được response nên tự retry. Hoặc người dùng thấy nút đứng yên và bấm thêm lần nữa. Nếu server coi mỗi request là một ý định mới, khách bị trừ tiền hai lần. Cách xử lý triệt để là kết hợp hai thứ: Idempotency để lặp lại cùng một ý định chỉ tạo ra một tác động nghiệp vụ, và Payment State Machine để kiểm soát các bước chuyển trạng thái hợp lệ.
+Người dùng bấm "Thanh toán", mạng chập chờn, app không nhận được kết quả nên tự gửi lại request. Hoặc người dùng thấy nút đứng yên và bấm thêm lần nữa. Server nhận hai request giống hệt nhau và trừ tiền hai lần.
 
-## 1. Thiết kế Idempotency đúng cách
+Bài này giải thích cách chặn lỗi đó bằng ba thứ đơn giản: Idempotency Key, State Machine và Reconciliation.
 
-### Sinh key theo ý định (Intent)
+## Idempotency là gì
 
-Client sinh một key duy nhất (ví dụ UUID) cho mỗi lần người dùng chủ động bấm thanh toán một đơn cụ thể, rồi gửi kèm qua header:
+Hãy nghĩ đến nút gọi thang máy. Bạn bấm một lần hay mười lần thì thang máy vẫn chỉ đến một lần. Đó là idempotency: làm một việc nhiều lần cho kết quả giống như làm một lần.
+
+Với thanh toán, ta muốn: dù request bị gửi lại bao nhiêu lần, khách cũng chỉ bị trừ tiền đúng một lần.
+
+Cách làm: mỗi lần khách chủ động bấm thanh toán, app tạo ra một "số phiếu" duy nhất, gọi là Idempotency Key. Server nhìn số phiếu đó để biết request này là mới hay chỉ là bản gửi lại.
+
+## Bước 1: Client tạo key theo ý định, rồi giữ nguyên khi retry
 
 \`\`\`
 POST /payments
 Idempotency-Key: 6f1c2b7e-3a54-4d0e-9a52-0c1f5d8b7a11
 \`\`\`
 
-Quy tắc quan trọng: retry do lỗi mạng dùng lại đúng key đó, còn một lần thanh toán mới với ý định khác (đơn khác, số tiền khác) phải dùng key mới. Nếu sinh key mới cho mỗi lần retry thì idempotency không còn tác dụng.
+Quy tắc:
 
-### Lưu key trong cùng transaction với dữ liệu nghiệp vụ
+1. Mỗi lần khách bấm thanh toán một đơn, tạo một key mới (thường là UUID).
+2. Gửi lại vì lỗi mạng thì dùng lại đúng key cũ.
+3. Khách thanh toán đơn khác hoặc số tiền khác thì dùng key mới.
 
-Hai cách làm sai phổ biến là check-then-insert (kiểm tra key chưa có rồi mới insert, dễ dính race condition) và dual write (ghi key sang Redis, ghi đơn sang SQL, hai nơi có thể lệch nhau). Cách an toàn là lưu key ngay trong database nghiệp vụ, với ràng buộc UNIQUE, trong cùng một ACID transaction:
+Nếu mỗi lần retry lại tạo key mới, server sẽ tưởng là request mới và trừ tiền tiếp. Idempotency khi đó không còn tác dụng.
+
+## Bước 2: Server lưu key trong database, có ràng buộc UNIQUE
+
+Server cần nhớ key nào đã gặp. Hãy lưu nó ngay trong database của hệ thống, cùng nơi lưu đơn hàng:
 
 \`\`\`sql
 CREATE TABLE idempotency_keys (
-  idempotency_key   VARCHAR(64) PRIMARY KEY,   -- UNIQUE chặn race condition
-  request_hash      CHAR(64)    NOT NULL,      -- hash của body request
+  idempotency_key   VARCHAR(64) PRIMARY KEY,   -- UNIQUE: không thể có hai dòng cùng key
+  request_hash      CHAR(64)    NOT NULL,      -- hash của nội dung request
   status            VARCHAR(16) NOT NULL,      -- IN_PROGRESS | COMPLETED
   response_snapshot JSONB,                     -- kết quả đã trả cho client
   created_at        TIMESTAMP   NOT NULL DEFAULT NOW()
 );
 \`\`\`
 
-Việc insert dựa vào ràng buộc UNIQUE thay vì kiểm tra trước:
+Khi có request, đừng "kiểm tra xem key có chưa rồi mới thêm", vì hai request đến cùng lúc đều thấy "chưa có" và cả hai cùng đi tiếp. Hãy thêm thẳng và để database quyết định:
 
 \`\`\`sql
 INSERT INTO idempotency_keys (idempotency_key, request_hash, status)
@@ -396,55 +412,46 @@ VALUES ($1, $2, 'IN_PROGRESS')
 ON CONFLICT (idempotency_key) DO NOTHING;
 \`\`\`
 
-Nếu insert được 1 row, request này là request đầu tiên và được phép xử lý. Nếu 0 row, key đã tồn tại và bạn phải xem trạng thái của nó.
+Nếu thêm được 1 dòng, đây là request đầu tiên và được xử lý. Nếu 0 dòng, key đã có và bạn xem trạng thái của nó. Ràng buộc UNIQUE đảm bảo chỉ một request thắng, kể cả khi hai request đến cùng một mili-giây.
 
-### Xử lý request trùng key
+Nên lưu key trong database nghiệp vụ, không lưu riêng ở Redis. Hai nơi lưu khác nhau có thể lệch nhau (đã ghi key nhưng chưa ghi đơn, hoặc ngược lại).
 
-\`\`\`javascript
-const existing = await db.findIdempotencyKey(key);
-
-if (existing.request_hash !== requestHash) {
-  return res.status(422).json({ error: 'Idempotency key reused with a different request' });
-}
-if (existing.status === 'IN_PROGRESS') {
-  return res.status(409).json({ error: 'Request is still being processed' }); // hoặc 202
-}
-return res.status(200).json(existing.response_snapshot); // COMPLETED: trả lại kết quả cũ
-\`\`\`
-
-- Đang xử lý (IN_PROGRESS): trả 409 Conflict hoặc 202 Accepted để client retry sau, tuyệt đối không gọi sang cổng thanh toán lần nữa.
-- Đã hoàn tất (COMPLETED): trả lại đúng kết quả đã lưu mà không trừ tiền lại.
-- Cùng key nhưng khác nội dung request: trả 422, vì đó là lỗi của client chứ không phải retry hợp lệ. Đây là lý do cần lưu request_hash.
-
-### Truyền key sang Payment Gateway
-
-Chuyển tiếp idempotency key (hoặc một mã giao dịch nội bộ bất biến) khi gọi cổng thanh toán, và dùng event id của webhook để chống xử lý trùng. Như vậy cổng thanh toán cũng nhận ra một lệnh gọi lặp lại thay vì tạo thêm một giao dịch.
-
-\`\`\`javascript
-await gateway.charge(
-  { amount, currency, orderId },
-  { headers: { 'Idempotency-Key': paymentId } } // mã nội bộ bất biến
-);
-\`\`\`
-
-### Đừng giữ transaction trong lúc gọi cổng thanh toán
-
-Gọi một dịch vụ bên ngoài giữa BEGIN và COMMIT sẽ giữ lock và connection quá lâu. Chia làm hai transaction: transaction 1 insert idempotency key (IN_PROGRESS) và tạo payment ở trạng thái INITIATED rồi commit; sau đó gọi gateway; transaction 2 cập nhật trạng thái payment và đánh dấu key COMPLETED kèm response_snapshot. Nếu server sập giữa hai bước, key vẫn ở IN_PROGRESS, và phần Reconciliation bên dưới sẽ xử lý.
-
-## 2. Quản lý trạng thái bằng State Machine
-
-Không dùng \`is_paid = true/false\`. Một cờ boolean không phản ánh được các pha trung gian và bất đồng bộ của thanh toán. Hãy mô hình hóa bằng các trạng thái rõ ràng:
+## Bước 3: Khi gặp key đã có, trả lời thế nào
 
 \`\`\`
-INITIATED / PENDING -> PROCESSING -> SUCCEEDED
-                                  -> FAILED
-                                  -> EXPIRED
-SUCCEEDED -> REFUNDED
+Tình huống                          Trả về
+Key có, đang IN_PROGRESS            409 Conflict (hoặc 202): "đang xử lý, chờ chút"
+Key có, đã COMPLETED                200 + kết quả cũ (response_snapshot), KHÔNG trừ tiền lại
+Key có, nhưng nội dung request khác 422: lỗi của client, không phải retry hợp lệ
 \`\`\`
 
-### Quy tắc chuyển trạng thái
+Dòng cuối là lý do ta lưu \`request_hash\`: cùng key mà khác số tiền thì chắc chắn là lỗi, không được âm thầm xử lý.
 
-Chỉ cho phép chuyển tiếp theo luật định. Ví dụ chỉ được đi từ PENDING hoặc PROCESSING sang SUCCEEDED, và không bao giờ đi từ SUCCEEDED về FAILED. Ép luật này ngay trong câu UPDATE:
+## Bước 4: Đừng giữ transaction mở khi gọi cổng thanh toán
+
+Gọi dịch vụ bên ngoài có thể mất vài giây. Nếu gọi giữa \`BEGIN\` và \`COMMIT\`, database giữ khóa và connection suốt thời gian đó. Hãy chia làm hai transaction:
+
+\`\`\`
+Transaction 1: lưu key (IN_PROGRESS) + tạo payment (PROCESSING)  -> COMMIT
+Gọi cổng thanh toán (ngoài transaction)
+Transaction 2: cập nhật payment (SUCCEEDED/FAILED) + key = COMPLETED  -> COMMIT
+\`\`\`
+
+Hãy truyền một mã bất biến (ví dụ \`payment.id\`) làm Idempotency-Key khi gọi cổng thanh toán. Như vậy chính cổng thanh toán cũng nhận ra lần gọi lặp, không tạo thêm giao dịch.
+
+Nếu server sập giữa hai transaction, key vẫn ở IN_PROGRESS. Phần Reconciliation bên dưới sẽ xử lý trường hợp này.
+
+## State Machine: thay cờ is_paid bằng các trạng thái rõ ràng
+
+Một cờ \`is_paid = true/false\` không diễn tả được "đang xử lý" hay "đã hoàn tiền". Hãy dùng các trạng thái:
+
+\`\`\`
+PENDING -> PROCESSING -> SUCCEEDED -> REFUNDED
+                      -> FAILED
+                      -> EXPIRED
+\`\`\`
+
+Và chỉ cho phép chuyển trạng thái hợp lệ, ngay trong câu \`UPDATE\`:
 
 \`\`\`sql
 UPDATE payments
@@ -452,11 +459,11 @@ SET status = 'SUCCEEDED', updated_at = NOW()
 WHERE id = $1 AND status IN ('PENDING', 'PROCESSING');
 \`\`\`
 
-Nếu câu lệnh ảnh hưởng 0 row, trạng thái đã đổi bởi bên khác, và bạn bỏ qua thay vì ghi đè. Đây là Optimistic Locking (điều kiện status trong WHERE). Nếu cần đọc trước rồi mới quyết định, dùng Pessimistic Locking với \`SELECT ... FOR UPDATE\` để khóa row. Cả hai cách đều chặn race condition giữa response đồng bộ từ cổng thanh toán và webhook bất đồng bộ đến cùng lúc, vì chỉ một bên chuyển được trạng thái.
+Nếu câu lệnh cập nhật được 0 dòng, nghĩa là có bên khác đã đổi trạng thái trước, và bạn bỏ qua thay vì ghi đè. Cách này gọi là Optimistic Locking. Nhờ nó, khi kết quả từ cổng thanh toán và webhook đến cùng lúc, chỉ một bên chốt được trạng thái, và một giao dịch đã SUCCEEDED không thể bị đổi ngược thành FAILED.
 
-## 3. Reconciliation làm lưới an toàn
+## Reconciliation: lưới an toàn cho những gì còn sót
 
-Dù đã có Idempotency và State Machine, vẫn có hai tình huống không tránh được: gọi cổng thanh toán bị timeout (không biết tiền đã bị trừ hay chưa) và mất webhook. Cần một job định kỳ đối soát:
+Vẫn có hai tình huống không tránh khỏi: gọi cổng thanh toán bị timeout (không biết tiền đã bị trừ chưa) và webhook bị mất. Hãy chạy một job định kỳ (ví dụ mỗi phút) để hỏi lại:
 
 \`\`\`sql
 SELECT id FROM payments
@@ -464,114 +471,41 @@ WHERE status IN ('PENDING', 'PROCESSING')
   AND updated_at < NOW() - INTERVAL '10 minutes';
 \`\`\`
 
-Với mỗi payment tìm được, hỏi cổng thanh toán trạng thái thật bằng mã giao dịch bất biến, rồi chuyển trạng thái qua đúng State Machine ở trên (SUCCEEDED, FAILED hoặc EXPIRED). Vì cập nhật dùng điều kiện trạng thái, việc job chạy lại hay chạy chồng với webhook đều an toàn. Ngoài ra nên đối soát hằng ngày với file settlement của cổng thanh toán để phát hiện các giao dịch lệch.
+Với mỗi payment tìm được, hỏi cổng thanh toán trạng thái thật bằng mã bất biến, rồi chuyển trạng thái bằng đúng câu \`UPDATE\` có điều kiện ở trên. Job chạy lại hay chạy chồng với webhook đều an toàn, và nhớ chuyển key đang kẹt IN_PROGRESS sang COMPLETED. Ngoài ra nên đối soát mỗi ngày với file settlement của cổng thanh toán.
 
-## Ví dụ triển khai đầy đủ (Node.js + PostgreSQL)
+## Ví dụ gọn: endpoint tạo thanh toán (Node.js + PostgreSQL)
 
-Phần dưới ghép các mảnh ở trên thành một luồng chạy được. Code dùng Express và thư viện \`pg\`. Đối tượng \`gateway\` là SDK của cổng thanh toán (giả định), bạn thay bằng SDK thật của mình.
-
-### Bước 0: schema
-
-\`\`\`sql
-CREATE TABLE payments (
-  id               BIGSERIAL PRIMARY KEY,
-  order_id         VARCHAR(64) NOT NULL,
-  amount           BIGINT      NOT NULL,
-  status           VARCHAR(16) NOT NULL,        -- PENDING | PROCESSING | SUCCEEDED | FAILED | EXPIRED | REFUNDED
-  idempotency_key  VARCHAR(64) NOT NULL UNIQUE,
-  updated_at       TIMESTAMP   NOT NULL DEFAULT NOW()
-);
-
--- chống xử lý trùng webhook
-CREATE TABLE webhook_events (
-  event_id    VARCHAR(64) PRIMARY KEY,
-  received_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-\`\`\`
-
-Cùng với bảng \`idempotency_keys\` ở phần 1.
-
-### Bước 1: client giữ key khi retry
-
-Sinh key một lần khi người dùng bấm nút, rồi dùng lại đúng key đó cho mọi lần retry của lần bấm này. Nên vô hiệu hóa nút trong lúc đang gửi để giảm bấm lặp.
+Code dưới đây chỉ giữ phần cốt lõi. \`gateway\` là SDK của cổng thanh toán (giả định), thay bằng SDK thật của bạn. Phần validate input, kiểm tra quyền và xử lý lỗi chi tiết được lược bớt.
 
 \`\`\`javascript
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function pay(orderId, amount) {
-  const idempotencyKey = crypto.randomUUID(); // sinh MỘT LẦN cho ý định này
-
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    try {
-      const res = await fetch('/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-        body: JSON.stringify({ orderId, amount }),
-      });
-      if (res.status === 409 || res.status === 202) {
-        await sleep(1000 * attempt); // server đang xử lý, chờ rồi hỏi lại
-        continue;
-      }
-      return await res.json();
-    } catch (err) {
-      await sleep(1000 * attempt); // lỗi mạng: retry với CÙNG key
-    }
-  }
-  throw new Error('Payment status unknown, please check your order');
-}
-\`\`\`
-
-### Bước 2: endpoint tạo thanh toán
-
-\`\`\`javascript
-import crypto from 'node:crypto';
-
-const hashBody = (body) =>
-  crypto.createHash('sha256').update(JSON.stringify(body)).digest('hex');
-
-// UPDATE có điều kiện: chỉ chuyển trạng thái khi đang ở trạng thái hợp lệ
-async function transition(paymentId, fromStates, toState) {
-  const r = await pool.query(
-    \`UPDATE payments SET status = $2, updated_at = NOW()
-     WHERE id = $1 AND status = ANY($3)\`,
-    [paymentId, toState, fromStates]
-  );
-  return r.rowCount === 1; // false = bên khác đã đổi trạng thái trước
-}
-
 app.post('/payments', async (req, res) => {
   const key = req.get('Idempotency-Key');
   if (!key) return res.status(400).json({ error: 'Idempotency-Key header is required' });
 
   const { orderId, amount } = req.body; // thực tế: validate bằng schema (zod, joi...)
-  const requestHash = hashBody({ orderId, amount });
+  const requestHash = sha256(JSON.stringify({ orderId, amount }));
 
-  // ---- Transaction 1: giành quyền xử lý key + tạo payment ----
+  // Transaction 1: giành quyền xử lý key + tạo payment
   const client = await pool.connect();
   let paymentId;
   try {
     await client.query('BEGIN');
     const claimed = await client.query(
       \`INSERT INTO idempotency_keys (idempotency_key, request_hash, status)
-       VALUES ($1, $2, 'IN_PROGRESS')
-       ON CONFLICT (idempotency_key) DO NOTHING\`,
+       VALUES ($1, $2, 'IN_PROGRESS') ON CONFLICT (idempotency_key) DO NOTHING\`,
       [key, requestHash]
     );
 
-    if (claimed.rowCount === 0) {
+    if (claimed.rowCount === 0) {            // key đã tồn tại
       await client.query('ROLLBACK');
       const { rows } = await pool.query(
         'SELECT request_hash, status, response_snapshot FROM idempotency_keys WHERE idempotency_key = $1',
         [key]
       );
-      const existing = rows[0];
-      if (existing.request_hash !== requestHash) {
-        return res.status(422).json({ error: 'Idempotency key reused with a different request' });
-      }
-      if (existing.status === 'IN_PROGRESS') {
-        return res.status(409).json({ error: 'Request is still being processed' });
-      }
-      return res.status(200).json(existing.response_snapshot); // replay kết quả cũ
+      const old = rows[0];
+      if (old.request_hash !== requestHash) return res.status(422).json({ error: 'Key reused with a different request' });
+      if (old.status === 'IN_PROGRESS')      return res.status(409).json({ error: 'Still being processed' });
+      return res.status(200).json(old.response_snapshot); // trả lại kết quả cũ
     }
 
     const created = await client.query(
@@ -588,85 +522,31 @@ app.post('/payments', async (req, res) => {
     client.release();
   }
 
-  // ---- Gọi cổng thanh toán NGOÀI transaction, kèm mã bất biến ----
+  // Gọi cổng thanh toán NGOÀI transaction, kèm mã bất biến
   let charge;
   try {
     charge = await gateway.charge({ amount, orderId }, { idempotencyKey: String(paymentId) });
   } catch (err) {
-    // Timeout: không biết tiền đã bị trừ chưa. Giữ nguyên PROCESSING,
-    // job reconcile sẽ hỏi lại cổng thanh toán.
+    // Timeout: chưa biết tiền đã bị trừ chưa. Giữ PROCESSING, job reconcile sẽ hỏi lại.
     return res.status(202).json({ paymentId, status: 'PROCESSING' });
   }
 
-  // ---- Transaction 2: chốt trạng thái và lưu response ----
-  await transition(paymentId, ['PROCESSING'], charge.ok ? 'SUCCEEDED' : 'FAILED');
-  const body = { paymentId, status: charge.ok ? 'SUCCEEDED' : 'FAILED' };
+  // Transaction 2: chốt trạng thái (UPDATE có điều kiện) và lưu kết quả
+  const status = charge.ok ? 'SUCCEEDED' : 'FAILED';
   await pool.query(
-    \`UPDATE idempotency_keys SET status = 'COMPLETED', response_snapshot = $2
-     WHERE idempotency_key = $1\`,
+    "UPDATE payments SET status = $2, updated_at = NOW() WHERE id = $1 AND status = 'PROCESSING'",
+    [paymentId, status]
+  );
+  const body = { paymentId, status };
+  await pool.query(
+    "UPDATE idempotency_keys SET status = 'COMPLETED', response_snapshot = $2 WHERE idempotency_key = $1",
     [key, body]
   );
   return res.status(200).json(body);
 });
 \`\`\`
 
-Để ý hai điểm: \`transition()\` chỉ thành công khi payment đang ở trạng thái cho phép, nên nếu webhook đã chốt trước đó thì lần chốt này không ghi đè; và nhánh timeout trả 202 chứ không báo lỗi, vì tiền có thể đã bị trừ.
-
-### Bước 3: webhook idempotent
-
-\`\`\`javascript
-app.post('/webhooks/payment', async (req, res) => {
-  // 1) Bắt buộc verify chữ ký HMAC của cổng thanh toán trước khi tin payload (bỏ qua ở đây cho ngắn)
-  const { eventId, paymentId, outcome } = req.body;
-
-  // 2) Chống xử lý trùng: event đã thấy rồi thì bỏ qua
-  const seen = await pool.query(
-    'INSERT INTO webhook_events (event_id) VALUES ($1) ON CONFLICT DO NOTHING',
-    [eventId]
-  );
-  if (seen.rowCount === 0) return res.sendStatus(200);
-
-  // 3) Chuyển trạng thái theo State Machine
-  await transition(paymentId, ['PENDING', 'PROCESSING'], outcome === 'paid' ? 'SUCCEEDED' : 'FAILED');
-  return res.sendStatus(200);
-});
-\`\`\`
-
-Nếu server sập giữa bước 2 và 3, event đã được ghi nhận nhưng trạng thái chưa đổi. Trường hợp này job reconcile bên dưới sẽ bù lại.
-
-### Bước 4: job reconcile
-
-\`\`\`javascript
-async function reconcile() {
-  const { rows } = await pool.query(
-    \`SELECT id, idempotency_key FROM payments
-     WHERE status IN ('PENDING', 'PROCESSING')
-       AND updated_at < NOW() - INTERVAL '10 minutes'
-     LIMIT 100\`
-  );
-
-  for (const { id, idempotency_key } of rows) {
-    const remote = await gateway.getCharge(String(id)); // tra theo mã bất biến
-    if (remote.status === 'pending') continue;          // cổng vẫn đang xử lý, để lần sau
-
-    const to = remote.status === 'paid' ? 'SUCCEEDED'
-             : remote.status === 'failed' ? 'FAILED'
-             : 'EXPIRED';
-    await transition(id, ['PENDING', 'PROCESSING'], to);
-
-    // giải phóng idempotency key đang kẹt IN_PROGRESS
-    await pool.query(
-      \`UPDATE idempotency_keys SET status = 'COMPLETED', response_snapshot = $2
-       WHERE idempotency_key = $1 AND status = 'IN_PROGRESS'\`,
-      [idempotency_key, { paymentId: id, status: to }]
-    );
-  }
-}
-
-setInterval(() => reconcile().catch(console.error), 60_000); // hoặc cron / scheduler của bạn
-\`\`\`
-
-Vì \`transition()\` có điều kiện trạng thái, job này an toàn khi chạy lặp hoặc chạy chồng với webhook. Nếu chạy nhiều instance, hãy thêm \`FOR UPDATE SKIP LOCKED\` vào câu SELECT để mỗi instance lấy các payment khác nhau.
+Hai điểm cần chú ý: nhánh timeout trả 202 chứ không báo lỗi, vì tiền có thể đã bị trừ; và \`UPDATE ... AND status = 'PROCESSING'\` đảm bảo nếu webhook đã chốt trước thì lần này không ghi đè.
 
 ### Kiểm tra nhanh bằng curl
 
@@ -677,24 +557,26 @@ curl -X POST localhost:3000/payments -H 'Content-Type: application/json' \\
 curl -X POST localhost:3000/payments -H 'Content-Type: application/json' \\
   -H 'Idempotency-Key: demo-key-001' -d '{"orderId":"A1","amount":150000}'
 
-# cùng key nhưng khác nội dung: phải trả 422
+# cùng key nhưng khác số tiền: phải trả 422
 curl -X POST localhost:3000/payments -H 'Content-Type: application/json' \\
   -H 'Idempotency-Key: demo-key-001' -d '{"orderId":"A1","amount":999999}'
 \`\`\`
 
-## Lưu ý vận hành
+## Những lỗi hay gặp
 
-1. Đặt thời hạn cho idempotency key (ví dụ 24 giờ) và dọn các key cũ, nếu không bảng sẽ phình mãi.
-2. Key IN_PROGRESS bị kẹt do server sập cần có cách giải phóng, thường là qua job Reconciliation hoặc một timeout trên created_at.
-3. Webhook cũng phải idempotent: lưu event id đã xử lý, vì cổng thanh toán thường gửi lại webhook nhiều lần.
+1. Tạo key mới cho mỗi lần retry. Key phải gắn với ý định của khách, không gắn với từng request.
+2. Check-then-insert. Kiểm tra rồi mới thêm sẽ dính race condition. Hãy dùng UNIQUE kèm \`ON CONFLICT\`.
+3. Giữ transaction mở khi gọi cổng thanh toán. Khóa và connection bị giữ quá lâu.
+4. Webhook không idempotent. Cổng thanh toán thường gửi lại webhook nhiều lần, nên hãy lưu event id đã xử lý (bảng có UNIQUE trên \`event_id\`) và bỏ qua event đã thấy. Luôn verify chữ ký HMAC trước khi tin payload.
+5. Quên dọn key cũ. Đặt thời hạn (ví dụ 24 giờ) và xóa key cũ, nếu không bảng sẽ phình mãi. Key IN_PROGRESS bị kẹt do server sập cần được job Reconciliation giải phóng.
 
 ## Key Takeaways
 
-1. Client sinh một Idempotency Key cho mỗi ý định thanh toán và dùng lại đúng key đó khi retry.
-2. Lưu key kèm request_hash, status và response_snapshot trong cùng database và cùng transaction với dữ liệu nghiệp vụ, dùng UNIQUE thay vì check-then-insert.
-3. Trùng key khi đang xử lý trả 409 hoặc 202, đã hoàn tất trả lại kết quả cũ, khác nội dung request trả 422.
-4. Truyền key sang Payment Gateway và chống trùng webhook bằng event id.
-5. Dùng State Machine với UPDATE có điều kiện status thay cho cờ boolean, và đừng giữ transaction trong lúc gọi dịch vụ bên ngoài.
+1. Idempotency Key biến "gửi lại nhiều lần" thành "chỉ xử lý một lần". Client tạo một key cho mỗi ý định thanh toán và dùng lại key đó khi retry.
+2. Lưu key trong database cùng với dữ liệu nghiệp vụ, dùng UNIQUE và \`ON CONFLICT\` thay vì check-then-insert.
+3. Gặp key đã có thì: đang xử lý trả 409 hoặc 202, đã xong trả lại kết quả cũ, khác nội dung request trả 422.
+4. Dùng State Machine với \`UPDATE\` có điều kiện status thay cho cờ boolean, để webhook và response đồng bộ không ghi đè nhau.
+5. Không gọi cổng thanh toán bên trong transaction, và truyền mã bất biến sang cổng thanh toán.
 6. Reconciliation là lưới an toàn cho timeout và webhook bị mất.
     `
   },
