@@ -1,7 +1,7 @@
 import { CHATBOT_DATABASE, type DatabaseSection } from './chatbot-database';
 import { BOOKING_DATABASE } from './booking-database';
 
-export const HERO_CONTENT = "Software engineer with 10+ years in backend development, system architecture, and cloud engineering. I build AI-powered engineering solutions, including a production-used observability platform that uses the Claude API with logs and distributed traces to cut incident investigation time by 50–75%, and I run systems on AWS with Terraform, Docker, and GitHub Actions.";
+export const HERO_CONTENT = "Building reliable systems, from code to cloud.";
 
 export type SkillLevel = 'expert' | 'advanced' | 'intermediate' | 'beginner';
 
@@ -401,7 +401,7 @@ export const PROJECTS: Project[] = [
     technologies: ['AWS EKS', 'Kubernetes', 'Helm', 'GitHub Actions', 'Docker', 'Redis', 'PostgreSQL', 'BullMQ', 'Webhook', 'NestJS', 'Next.js', 'Full-Stack'],
     category: 'fullstack',
     githubLink: '',
-    websiteLink: '',
+    websiteLink: 'https://ricokatsu.com/',
     detail: {
       summary: 'Hệ thống booking online (khách sạn, vé máy bay, nhà hàng, dịch vụ) tập trung vào tính nhất quán dữ liệu khi nhiều người đặt cùng lúc; deploy lên AWS EKS bằng Helm với CI/CD GitHub Actions.',
       role: 'Backend, Frontend, DevOps & System Design',
@@ -676,7 +676,7 @@ WHERE id = 1 AND status = 'PAYMENT_PROCESSING';
     technologies: ['ParsePlatform', 'ReactJS', 'MongoDB', 'Redis', 'Firebase', 'EC2', 'Nginx', 'S3', 'CloudFront'],
     category: 'fullstack',
     githubLink: '',
-    websiteLink: '',
+    websiteLink: 'https://shaire.app/',
     detail: {
       summary: 'Nền tảng salon xây trên Parse Platform và React để rút ngắn thời gian ra mắt MVP, deploy trên AWS EC2 với S3 và CloudFront.',
       role: 'Full-Stack Developer',
@@ -793,20 +793,105 @@ WHERE id = 1 AND status = 'PAYMENT_PROCESSING';
   },
   {
     slug: 'portfolio-website',
-    title: 'Portfolio Website',
+    featured: true,
+    title: 'Portfolio Website — React, Vite & GitHub Pages',
     image: `${import.meta.env.BASE_URL}images/portfolio-personal.webp`,
-    description: 'This portfolio site itself — a cyber-terminal-themed single-page app built with React, TypeScript, and Vite, deployed as a static SPA.',
-    technologies: ['React', 'TypeScript', 'Vite', 'React Router', 'Tailwind CSS', 'Framer Motion'],
+    description: 'Chính trang portfolio này: SPA theme cyber-terminal bằng React 18, TypeScript và Vite, không backend. Build xong tự prerender 23 trang HTML tĩnh kèm title, meta, canonical, Open Graph, sitemap.xml và robots.txt để Google đọc được từng route. Deploy tự động bằng GitHub Actions lên GitHub Pages với tên miền riêng profile.247.id.vn.',
+    technologies: ['React', 'TypeScript', 'Vite', 'React Router', 'Tailwind CSS', 'Framer Motion', 'highlight.js', 'GitHub Actions', 'GitHub Pages', 'SEO', 'Web3Forms'],
     category: 'fullstack',
     githubLink: '',
-    websiteLink: '',
+    websiteLink: 'https://profile.247.id.vn/',
     detail: {
-      summary: 'Chính trang portfolio này: SPA theme cyber-terminal bằng React, TypeScript và Vite.',
-      role: 'Design & Development',
-      problem: 'Cần một nơi trình bày kỹ năng, dự án và bài viết gọn gàng, không cần backend.',
-      solution: 'SPA tĩnh với React Router, Tailwind CSS và Framer Motion, deploy dạng static.',
-      highlights: ['Theme cyber-terminal', 'Client-side routing với React Router', 'Tailwind CSS + Framer Motion', 'Static deploy, không backend'],
-      architecture: ['Vite build', 'Static files (dist/)', 'Static hosting (Vercel / GitHub Pages)'],
+      summary: 'Portfolio cá nhân dạng SPA tĩnh: theme cyber-terminal, prerender cho SEO, CI/CD tự động lên GitHub Pages, không cần backend.',
+      role: 'Design, Development & Deployment',
+      problem: 'Cần một nơi trình bày kỹ năng, dự án và bài viết kỹ thuật, chạy gần như miễn phí và không phải vận hành server. SPA thuần có hai điểm yếu trên GitHub Pages: đường dẫn sâu như /blog/<slug> không có file thật nên bị trả HTTP 404 (Google coi là trang không tồn tại), và mọi trang đều dùng chung một title/meta.',
+      solution: 'React + TypeScript + Vite cho giao diện; nội dung tách khỏi component vào src/data. Sau vite build, script prerender dựng sẵn dist/<route>/index.html cho từng route với title, description, canonical và Open Graph riêng, cộng sitemap.xml và robots.txt. GitHub Actions build và deploy lên GitHub Pages ở tên miền riêng; Vercel vẫn được hỗ trợ qua vercel.json.',
+      highlights: [
+        'Stack gọn: React 18, TypeScript, Vite 6, React Router 6, Tailwind CSS, Framer Motion; không backend, không database',
+        'Prerender sau build: 23 trang HTML tĩnh (trang chính, /projects/<slug>, /blog/<slug>) trả HTTP 200 thay vì 404, mỗi trang có title, meta, canonical, Open Graph riêng',
+        'Tự sinh sitemap.xml và robots.txt từ cùng nguồn dữ liệu; thêm dự án hoặc bài viết mới không cần sửa tay',
+        'CI/CD bằng GitHub Actions: push vào main là build và deploy lên GitHub Pages, tên miền riêng profile.247.id.vn',
+        'Blog tự viết renderer nhẹ và CodeBlock dùng highlight.js (chỉ đăng ký sql, javascript, bash, lua, json để bundle nhỏ)',
+        'Theme terminal bằng Tailwind (primary, bg-page, bg-surface), hiệu ứng gõ chữ và nền CSS thuần, không dùng Three.js',
+        'Form liên hệ gửi thẳng tới Web3Forms từ client, key đưa qua biến môi trường VITE_WEB3FORMS_KEY và GitHub secret, không cần backend',
+        'Hỗ trợ cả GitHub Pages (copy index.html thành 404.html) và Vercel (rewrite về /index.html)',
+      ],
+      architecture: [
+        'Content: src/data/portfolio.ts, src/data/blog.ts',
+        'React SPA (Vite, React Router, Tailwind)',
+        'Build: tsc + vite build + prerender.mjs',
+        'dist/<route>/index.html + sitemap.xml + robots.txt',
+        'GitHub Actions → GitHub Pages (custom domain)',
+      ],
+      challenges: [
+        {
+          title: 'SPA trên GitHub Pages bị trả 404 cho đường dẫn sâu',
+          summary: 'GitHub Pages chỉ biết file thật. Mở thẳng /blog/<slug> sẽ nhận 404.html kèm HTTP 404, dù React vẫn render đúng; công cụ tìm kiếm hiểu là trang không tồn tại.',
+          items: [
+            {
+              heading: 'Prerender từng route thành file HTML thật',
+              body: 'Script chạy ngay sau vite build, đọc danh sách slug từ src/data rồi ghi dist/<route>/index.html. Mỗi file có title, description, canonical và Open Graph riêng nên Google đọc được trước khi chạy JavaScript. Đường dẫn không có trong danh sách vẫn rơi về 404.html, đúng với ý nghĩa HTTP.',
+              examples: [
+                {
+                  language: 'json',
+                  caption: 'package.json: prerender chạy sau build',
+                  code: `{
+  "scripts": {
+    "build": "tsc && vite build && node scripts/prerender.mjs"
+  }
+}`,
+                },
+                {
+                  language: 'bash',
+                  caption: 'Kết quả build',
+                  code: `prerender: 23 pages, sitemap.xml and robots.txt written to dist/`,
+                },
+              ],
+            },
+            {
+              heading: 'Vẫn giữ SPA fallback cho mọi host',
+              body: 'Workflow copy dist/index.html thành 404.html để client-side routing hoạt động trên GitHub Pages; vercel.json rewrite mọi đường dẫn về /index.html cho Vercel.',
+              examples: [
+                {
+                  language: 'bash',
+                  caption: 'GitHub Actions: bước cuối của job build',
+                  code: `npm run build
+cp dist/index.html dist/404.html`,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          title: 'Một nguồn dữ liệu cho cả giao diện và SEO',
+          summary: 'Nội dung không nằm trong component mà trong src/data, nên cùng một nguồn nuôi cả trang web, prerender và sitemap.',
+          items: [
+            {
+              heading: 'Thêm nội dung không cần bước thủ công',
+              points: [
+                'Thêm một dự án vào PROJECTS hoặc một bài vào blogPosts là có sẵn route, trang tĩnh, canonical và dòng trong sitemap',
+                'Slug là URL công khai: chữ thường ASCII, dùng dấu gạch nối, không trùng và không đổi sau khi đã đăng',
+                'URL cũ dạng /blog/{id} chuyển hướng sang slug để không gãy liên kết',
+              ],
+            },
+          ],
+        },
+        {
+          title: 'Giữ bundle nhỏ và bảo mật khi không có backend',
+          summary: 'Mọi thứ gửi xuống trình duyệt đều là công khai, nên chỉ đưa vào đó những gì được phép.',
+          items: [
+            {
+              heading: 'Quyết định kỹ thuật',
+              points: [
+                'highlight.js chỉ đăng ký 5 ngôn ngữ thực sự dùng trong bài viết thay vì nạp toàn bộ',
+                'Nền terminal dùng CSS và DOM thuần thay vì Three.js để tránh thêm dependency nặng',
+                'Form liên hệ dùng Web3Forms với public access key; không có secret nào nằm trong source, CI dùng GitHub secret',
+                'Quyền CI tối thiểu: contents read, pages write, id-token write',
+              ],
+            },
+          ],
+        },
+      ],
     },
   },
 ];
