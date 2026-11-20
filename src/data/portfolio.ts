@@ -399,8 +399,47 @@ export const PROJECTS: Project[] = [
       role: 'Design & Implementation',
       problem: 'Khách hỏi lặp đi lặp lại về chính sách (giao hàng, bảo hành, đổi trả) và tra cứu đơn hàng, tốn nhân lực hỗ trợ; đồng thời cần nhìn rõ chatbot đang trả lời gì và chậm ở đâu.',
       solution: 'Dùng RAG để trả lời câu hỏi chính sách từ tài liệu của cửa hàng, và tool calling để khách đã đăng nhập chỉ tra cứu được đơn hàng của chính họ. Log và span đi qua OTel Collector rồi vào grafana/otel-lgtm.',
-      highlights: ['RAG trả lời câu hỏi về giao hàng, bảo hành, đổi trả', 'Tool calling tra cứu đơn hàng, giới hạn theo khách đã đăng nhập', 'OTel Collector xoá header nhạy cảm và gom lô trước khi lưu', 'Dashboard Grafana trên Loki (log), Tempo (trace), Prometheus (metric)'],
+      highlights: ['RAG trả lời câu hỏi về giao hàng, bảo hành, đổi trả', 'Tool calling tra cứu đơn hàng, giới hạn theo khách đã đăng nhập', 'OTel Collector xoá header nhạy cảm và gom lô trước khi lưu', 'Dashboard Grafana trên Loki (log), Tempo (trace), Prometheus (metric)', 'Trace từng request /chat theo từng bước (che dữ liệu cá nhân, chống injection, router, vòng LLM, tool, kiểm tra đầu ra) với thời gian và chi phí trên mỗi span'],
       architecture: ['Khách hàng (chat UI)', 'Chatbot API (RAG + LLM + tool calling)', 'OpenTelemetry Collector (scrub header, batch)', 'grafana/otel-lgtm: Loki / Tempo / Prometheus', 'Grafana dashboard'],
+      challenges: [
+        {
+          title: 'Quan sát một request /chat bằng trace',
+          summary: 'Mỗi bước của pipeline là một span trong Tempo, nên nhìn một trace là biết thời gian và chi phí nằm ở đâu.',
+          items: [
+            {
+              heading: 'Trace thực tế của một câu hỏi tra cứu đơn hàng',
+              body: 'Khách đã đăng nhập hỏi về đơn hàng của mình. Request đi qua che dữ liệu cá nhân, chống prompt injection, chọn model, vòng lặp LLM có gọi tool get_order, rồi kiểm tra đầu ra.',
+              examples: [
+                {
+                  language: 'text',
+                  caption: 'Trace của POST /chat (status 200) trong Tempo',
+                  code: `http.request                                   5320 ms   (SERVER, url.path=/chat, status 200)
+├─ s2.pii_mask                                    0 ms
+├─ s2.injection_guard                             3 ms
+├─ s3.router                                      0 ms   route=model_large
+├─ s6.reply                                    5293 ms
+│  ├─ s6.llm_call                              3175 ms   vòng 1, cost 0,000269
+│  │  └─ anthropic.messages.create             3167 ms   (span của SDK, chỉ metadata)
+│  ├─ s6.tool_call                                3 ms   tool=get_order, outcome=ok
+│  └─ s6.llm_call                              2112 ms   vòng 2, cost 0,000124
+│     └─ anthropic.messages.create             2108 ms
+└─ s7.output_guard                                0 ms`,
+                },
+              ],
+            },
+            {
+              heading: 'Đọc trace này',
+              points: [
+                'Tổng 5320 ms, trong đó hai vòng gọi LLM chiếm 5287 ms (khoảng 99%): vòng 1 mất 3175 ms, vòng 2 mất 2112 ms',
+                'Tool get_order chỉ mất 3 ms; bước che dữ liệu cá nhân, chống injection, chọn model và kiểm tra đầu ra gần như không tốn thời gian (0 đến 3 ms)',
+                'Router chọn model_large cho request này; mỗi vòng LLM ghi sẵn chi phí trên span (0,000269 và 0,000124)',
+                'Span của SDK Anthropic chỉ chứa metadata (thời gian), không chứa nội dung hội thoại, nên trace không làm lộ dữ liệu khách',
+                'Kết luận: muốn giảm độ trễ thì nhắm vào số vòng gọi LLM và việc chọn model, không phải các lớp bảo vệ hay tool',
+              ],
+            },
+          ],
+        },
+      ],
       database: CHATBOT_DATABASE,
     },
   },
