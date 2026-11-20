@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Menu, X, ChevronRight, BookOpen, TerminalSquare } from 'lucide-react';
+import { Clock } from './Clock';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,6 +35,9 @@ export const Navbar = () => {
                 </span>
               </div>
             </Link>
+
+            {/* Live clock (visitor's local time). Hidden on md where the nav links need the room. */}
+            <Clock className="flex md:hidden lg:flex mr-auto ml-4" />
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
