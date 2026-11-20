@@ -94,6 +94,13 @@ const renderPage = (page) => {
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${page.description}" />`,
     `<meta property="og:url" content="${canonical}" />`,
+    `<meta property="og:image" content="${siteUrl}/og-image.png" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${title}" />`,
+    `<meta name="twitter:description" content="${page.description}" />`,
+    `<meta name="twitter:image" content="${siteUrl}/og-image.png" />`,
   ].join('\n  ');
 
   let html = template
