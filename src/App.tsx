@@ -10,6 +10,7 @@ import Blog from './pages/Blog';
 import BlogPostPage from './pages/BlogPost';
 import Commands from './pages/Commands';
 import { Contact } from './pages/Contact';
+import { Others } from './pages/Others';
 import './App.css';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
             <Route path="/projects/:projectId" element={<ProjectDetail />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/others" element={<Others />} />
             <Route path="/commands" element={<Commands />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>

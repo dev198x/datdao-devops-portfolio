@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Menu, X, ChevronRight, BookOpen, TerminalSquare } from 'lucide-react';
+import {
+  Menu,
+  X,
+  ChevronRight,
+  BookOpen,
+  TerminalSquare,
+  Home,
+  User,
+  Cpu,
+  FolderGit2,
+  Hammer,
+  Mail,
+} from 'lucide-react';
 import { Clock } from './Clock';
 
 export const Navbar = () => {
@@ -9,13 +21,14 @@ export const Navbar = () => {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/about', label: 'About' },
-    { path: '/skills', label: 'Skills' },
-    { path: '/projects', label: 'Projects' },
+    { path: '/', label: 'Home', icon: Home },
+    { path: '/about', label: 'About', icon: User },
+    { path: '/skills', label: 'Skills', icon: Cpu },
+    { path: '/projects', label: 'Projects', icon: FolderGit2 },
     { path: '/blog', label: 'Blog', icon: BookOpen },
+    { path: '/others', label: 'Others', icon: Hammer },
     { path: '/commands', label: 'Commands', icon: TerminalSquare },
-    { path: '/contact', label: 'Contact' },
+    { path: '/contact', label: 'Contact', icon: Mail },
   ];
 
   const isActive = (path: string) =>
@@ -40,7 +53,7 @@ export const Navbar = () => {
             <Clock className="flex md:hidden lg:flex mr-auto ml-4" />
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center space-x-4 xl:space-x-8">
               {navItems.map((item) => {
                 const IconComponent = item.icon;
                 return (
@@ -51,8 +64,9 @@ export const Navbar = () => {
                   >
                     {IconComponent && (
                       <IconComponent 
-                        size={16} 
-                        className={`${
+                        size={16}
+                        // Icons only from xl up: below that the eight links plus the clock need the width.
+                        className={`hidden xl:block ${
                           isActive(item.path)
                             ? 'text-primary-500'
                             : 'text-neutral-200 group-hover:text-primary-500'
