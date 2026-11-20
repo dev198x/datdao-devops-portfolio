@@ -1364,6 +1364,255 @@ Advisory lock      Một con số tự đặt    Không                  Khóa m
 4. Rất hợp để khóa theo \`user_id\` hoặc theo tên tác vụ, kể cả khi dòng dữ liệu chưa tồn tại.
 5. Đừng dùng khóa kiểu session với connection pool theo transaction, và hãy ghi lại các số quy ước để không bị trùng.
     `
+  },
+  {
+    id: 14,
+    slug: 'postgresql-migration-production-khong-downtime',
+    title: "Chạy PostgreSQL migration trên production tải cao mà không downtime",
+    category: "Database",
+    difficulty: "Advanced",
+    readTime: "12 min read",
+    date: "2026-11-20",
+    featured: false,
+    excerpt: "Quy trình Expand → Migrate → Contract cho PostgreSQL: lock_timeout, thêm cột, tạo index CONCURRENTLY, đổi tên cột, đổi kiểu dữ liệu, backfill theo batch và retry wrapper, kèm so sánh chi phí.",
+    tags: ["PostgreSQL", "Migration", "Zero Downtime", "Locking", "Database"],
+    content: `
+# Chạy PostgreSQL migration trên production tải cao mà không downtime
+
+Một câu \`ALTER TABLE\` chạy mất vài mili-giây trên máy dev có thể làm sập cả hệ thống production. Lý do không nằm ở việc nó chạy chậm, mà ở việc nó phải xin khóa mạnh nhất của PostgreSQL. Bài này tóm tắt quy trình chuẩn để chạy migration an toàn khi hệ thống đang có tải cao.
+
+## Nguyên tắc cốt lõi
+
+\`\`\`
+Nguyên tắc                              Lý do
+Expand -> Migrate -> Contract           Tách thành các bước tương thích ngược, deploy app và DB độc lập
+Luôn đặt lock_timeout (2-5s) và retry   ALTER TABLE cần ACCESS EXCLUSIVE. Nếu bị 1 transaction dài chặn,
+                                        mọi query sau đó xếp hàng chờ theo, hệ thống treo
+Đặt statement_timeout cho DDL           Tránh DDL chạy vô hạn
+Backfill theo batch, commit từng batch  Tránh long transaction, bloat, replication lag
+Không rewrite bảng giờ cao điểm         Rewrite = khóa cả bảng + I/O tăng gấp đôi
+Mỗi migration chỉ làm 1 việc            Dễ kiểm soát, có rollback plan rõ ràng
+\`\`\`
+
+Vì sao \`lock_timeout\` quan trọng đến vậy? \`ALTER TABLE\` cần \`ACCESS EXCLUSIVE\` lock. Giả sử có một transaction dài đang đọc bảng. DDL của bạn phải chờ nó. Trong lúc chờ, mọi query mới (kể cả \`SELECT\` đơn giản) đều xếp hàng sau DDL, nên chỉ một transaction dài là đủ làm cả bảng đứng im. Đặt \`lock_timeout\` ngắn để DDL tự bỏ cuộc thay vì kéo cả hệ thống chờ cùng.
+
+Phần thiết lập session dùng chung cho mọi DDL:
+
+\`\`\`sql
+SET lock_timeout = '3s';
+SET statement_timeout = '15min';  -- tăng nếu chạy CONCURRENTLY lâu
+\`\`\`
+
+## Checklist trước khi chạy
+
+1. Test trên bản restore hoặc clone của production, cùng khối lượng dữ liệu.
+2. Kiểm tra transaction chạy lâu:
+
+\`\`\`sql
+SELECT pid, now() - xact_start AS age, query
+FROM pg_stat_activity
+WHERE state <> 'idle'
+ORDER BY age DESC;
+\`\`\`
+
+3. Chạy ngoài giờ cao điểm và có người trực.
+4. Theo dõi lock waits, replication lag, CPU/IO và error rate trên Grafana/Prometheus.
+5. Lint migration tự động trong CI bằng squawk hoặc các rule kiểu strong_migrations.
+
+## Thêm cột mới
+
+Từ PostgreSQL 11, \`ADD COLUMN\` nullable, hoặc có default là hằng số, chỉ sửa metadata nên chạy tức thì.
+
+\`\`\`sql
+SET lock_timeout = '3s';
+ALTER TABLE orders ADD COLUMN status_v2 text;               -- instant
+ALTER TABLE orders ADD COLUMN source text DEFAULT 'web';    -- instant (PG11+, default hằng số)
+\`\`\`
+
+Cần \`NOT NULL\`? Đừng chạy \`SET NOT NULL\` trực tiếp, vì nó quét toàn bảng trong lúc giữ khóa mạnh. Hãy đi đường vòng bằng CHECK constraint:
+
+\`\`\`sql
+ALTER TABLE orders ADD CONSTRAINT orders_source_nn
+  CHECK (source IS NOT NULL) NOT VALID;                     -- instant
+
+ALTER TABLE orders VALIDATE CONSTRAINT orders_source_nn;
+-- quét bảng, nhưng chỉ giữ SHARE UPDATE EXCLUSIVE, không chặn đọc/ghi
+
+ALTER TABLE orders ALTER COLUMN source SET NOT NULL;
+-- PG12+: bỏ qua bước quét nhờ CHECK đã validated
+
+ALTER TABLE orders DROP CONSTRAINT orders_source_nn;
+\`\`\`
+
+Lưu ý: default kiểu volatile (ví dụ \`gen_random_uuid()\`) sẽ khiến PostgreSQL rewrite cả bảng. Khi đó hãy thêm cột nullable rồi backfill theo batch.
+
+## Thêm index
+
+Luôn dùng \`CONCURRENTLY\`. Nó không chặn write, đổi lại chậm hơn khoảng 2 lần và không chạy được bên trong transaction.
+
+\`\`\`sql
+SET lock_timeout = '3s';
+CREATE INDEX CONCURRENTLY idx_orders_customer_id ON orders (customer_id);
+
+-- Nếu bị lỗi hoặc bị cancel, PostgreSQL để lại index INVALID. Kiểm tra:
+SELECT indexrelid::regclass, indisvalid
+FROM pg_index
+WHERE indexrelid = 'idx_orders_customer_id'::regclass;
+
+-- Nếu invalid: drop rồi tạo lại
+DROP INDEX CONCURRENTLY IF EXISTS idx_orders_customer_id;
+\`\`\`
+
+Một vài lưu ý:
+
+1. Unique constraint: tạo \`UNIQUE INDEX CONCURRENTLY\` trước, sau đó \`ALTER TABLE ... ADD CONSTRAINT ... UNIQUE USING INDEX idx_name\`.
+2. Bảng partitioned: tạo index \`CONCURRENTLY\` trên từng partition, sau đó \`CREATE INDEX ON ONLY parent\` và \`ATTACH PARTITION INDEX\`.
+3. Tăng \`maintenance_work_mem\` cho session để build nhanh hơn.
+4. Với node-pg-migrate, phải tắt transaction cho migration này bằng \`pgm.noTransaction()\`.
+
+## Đổi tên cột không downtime
+
+\`RENAME COLUMN\` chỉ sửa metadata nên rất nhanh, nhưng nó làm vỡ code cũ đang chạy trong lúc rolling deploy. Cách an toàn nhất là Expand/Contract.
+
+Bước 1 và 2: thêm cột mới, rồi dùng trigger giữ hai cột đồng bộ (hoặc dual-write ở app).
+
+\`\`\`sql
+-- Bước 1 (Expand)
+ALTER TABLE users ADD COLUMN full_name text;
+
+-- Bước 2: đồng bộ dữ liệu ghi mới
+CREATE OR REPLACE FUNCTION users_sync_full_name() RETURNS trigger AS $$
+BEGIN
+  NEW.full_name := COALESCE(NEW.full_name, NEW.name);
+  NEW.name      := COALESCE(NEW.name, NEW.full_name);
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_users_sync BEFORE INSERT OR UPDATE ON users
+FOR EACH ROW EXECUTE FUNCTION users_sync_full_name();
+\`\`\`
+
+Bước 3: backfill dữ liệu cũ theo batch. Script lặp lại câu lệnh này, nghỉ một chút giữa các batch, cho đến khi không còn dòng nào được cập nhật.
+
+\`\`\`sql
+UPDATE users SET full_name = name
+WHERE id IN (
+  SELECT id FROM users WHERE full_name IS NULL ORDER BY id LIMIT 5000
+);
+\`\`\`
+
+Bước 4: deploy app đọc/ghi \`full_name\`. Bước 5 (Contract): sau khi chạy ổn định một release, drop trigger và \`ALTER TABLE users DROP COLUMN name;\`.
+
+Có cách B là rename rồi dùng view tương thích, hợp với bảng ít bị nhiều service truy cập trực tiếp. Khi nhiều service dùng chung DB thì cách này phức tạp hơn, nên ưu tiên cách A.
+
+## Đổi kiểu dữ liệu
+
+Trước hết kiểm tra xem thay đổi đó có cần rewrite bảng không:
+
+\`\`\`
+Thay đổi                                   Rewrite?
+varchar(n) -> tăng n, hoặc -> text         Không
+int -> bigint                              Có (khóa cả bảng)
+text -> jsonb, int -> text                 Có
+\`\`\`
+
+Nếu có rewrite, dùng Expand/Contract. Ví dụ đổi \`id\` từ \`int\` sang \`bigint\`:
+
+\`\`\`sql
+-- 1. Expand
+ALTER TABLE events ADD COLUMN id_new bigint;
+
+-- 2. Trigger giữ đồng bộ dữ liệu mới
+CREATE OR REPLACE FUNCTION events_sync_id() RETURNS trigger AS $$
+BEGIN NEW.id_new := NEW.id; RETURN NEW; END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_events_sync BEFORE INSERT OR UPDATE ON events
+FOR EACH ROW EXECUTE FUNCTION events_sync_id();
+\`\`\`
+
+Bước 3, backfill theo batch bằng Node.js (node-postgres). Mỗi batch là một transaction ngắn, có nghỉ giữa các lần:
+
+\`\`\`javascript
+const BATCH = 5000;
+for (;;) {
+  const { rowCount } = await pool.query(
+    \`UPDATE events SET id_new = id
+     WHERE id IN (SELECT id FROM events WHERE id_new IS NULL ORDER BY id LIMIT $1)\`,
+    [BATCH]
+  );
+  if (rowCount === 0) break;
+  // throttle; nếu có replica thì kiểm tra replication lag trước khi chạy tiếp
+  await new Promise((r) => setTimeout(r, 100));
+}
+\`\`\`
+
+Bước 4 và 5: tạo index trên cột mới, rồi hoán đổi trong một transaction rất ngắn (\`lock_timeout\` vẫn bật).
+
+\`\`\`sql
+-- 4. Index và constraint trên cột mới
+CREATE UNIQUE INDEX CONCURRENTLY events_id_new_key ON events (id_new);
+-- Khóa chính cần NOT NULL: dùng CHECK ... NOT VALID + VALIDATE như phần thêm cột
+
+-- 5. Swap
+BEGIN;
+ALTER TABLE events DROP CONSTRAINT events_pkey;
+ALTER TABLE events ADD CONSTRAINT events_pkey PRIMARY KEY USING INDEX events_id_new_key;
+ALTER TABLE events RENAME COLUMN id TO id_old;
+ALTER TABLE events RENAME COLUMN id_new TO id;
+COMMIT;
+
+-- 6. Contract: drop trigger, drop id_old sau khi xác nhận ổn định
+\`\`\`
+
+Với khóa chính, khóa ngoại và sequence phức tạp, hãy cân nhắc công cụ chuyên dụng: pg_repack hoặc pg-osc cho online schema change, pgroll cho expand/contract tự động.
+
+## Retry wrapper cho lock_timeout
+
+Khi \`lock_timeout\` hết hạn, PostgreSQL trả lỗi \`55P03\` (lock_not_available). Đó không phải lỗi thật, chỉ là "chưa lấy được khóa, thử lại sau". Hãy bọc DDL bằng một đoạn retry:
+
+\`\`\`javascript
+async function ddlWithRetry(pool, sql, { retries = 10, delayMs = 2000 } = {}) {
+  for (let i = 1; i <= retries; i++) {
+    const client = await pool.connect();
+    try {
+      await client.query(\`SET lock_timeout = '3s'\`);
+      await client.query(sql);
+      return;
+    } catch (e) {
+      if (e.code !== '55P03' || i === retries) throw e; // 55P03 = lock_not_available
+      await new Promise((r) => setTimeout(r, delayMs * i)); // backoff tăng dần
+    } finally {
+      client.release();
+    }
+  }
+}
+\`\`\`
+
+Dùng \`SET\` trên một client lấy từ pool rồi trả lại pool thì giá trị đó vẫn còn trên connection. Nếu pool được dùng chung cho traffic của app, hãy dùng \`SET LOCAL\` trong transaction hoặc một connection riêng cho migration.
+
+## So sánh phương pháp và chi phí
+
+\`\`\`
+Phương pháp                    Ưu điểm                   Nhược điểm                       Chi phí
+DDL trực tiếp (metadata-only)  Nhanh, đơn giản           Chỉ áp dụng cho vài loại đổi     Rất thấp
+CONCURRENTLY / NOT VALID       Không chặn traffic        Lâu hơn, phải dọn index invalid  Thấp
+Expand/Contract + backfill     An toàn, rollback dễ,     Nhiều bước, nhiều release,       Trung bình: khoảng 1-3 ngày
+                               zero downtime             code tạm thời phức tạp           công, +1 cột tạm, I/O và WAL tăng
+Công cụ ngoài (pg-osc, pgroll) Tự động hóa               Thêm dependency, cần học/test    Trung bình
+\`\`\`
+
+## Rollback
+
+Mỗi bước của giai đoạn Expand đều có thể quay lui (drop cột hoặc trigger mới) mà không ảnh hưởng dữ liệu cũ. Chỉ bước Contract, tức drop cột cũ, là không thể đảo ngược. Vì vậy hãy backup hoặc snapshot trước, và chờ đủ thời gian quan sát rồi mới thực hiện.
+
+## Key Takeaways
+
+1. Chia thay đổi lớn thành các bước tương thích ngược: Expand, Migrate, Contract.
+2. Luôn đặt \`lock_timeout\` ngắn kèm retry, và \`statement_timeout\` cho DDL, để một transaction dài không kéo sập cả hệ thống.
+3. Thêm index bằng \`CONCURRENTLY\`, thêm ràng buộc bằng \`NOT VALID\` rồi \`VALIDATE\`.
+4. Đổi tên cột hay đổi kiểu cần rewrite thì dùng cột mới, trigger đồng bộ và backfill theo batch, đừng đổi trực tiếp.
+5. Test trên bản clone, chạy ngoài giờ cao điểm, có người trực và có rollback plan. Chỉ bước Contract là không quay lại được.
+    `
   }
 ];
 
