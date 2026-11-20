@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" font-family="monospace">
+<rect width="640" height="360" fill="#0b0f14"/>
+<g fill="#111a14" stroke="#22c55e" stroke-width="1.5">
+<rect x="30" y="40" width="130" height="50" rx="6"/><rect x="255" y="40" width="130" height="50" rx="6"/><rect x="480" y="40" width="130" height="50" rx="6"/>
+<rect x="30" y="140" width="130" height="50" rx="6"/><rect x="255" y="140" width="130" height="50" rx="6"/><rect x="480" y="140" width="130" height="50" rx="6"/>
+<rect x="30" y="240" width="130" height="60" rx="6"/><rect x="255" y="240" width="130" height="60" rx="6"/><rect x="480" y="240" width="130" height="60" rx="6"/>
+</g>
+<g stroke="#22c55e" stroke-width="1.5" fill="none"><path d="M160 65h95M385 65h95M545 90v50M385 165h95M255 165h-95M95 90v50M95 190v50M320 190v50M545 190v50"/></g>
+<g fill="#86efac" font-size="13" text-anchor="middle">
+<text x="95" y="70">TypeScript</text><text x="320" y="70">cdk synth</text><text x="545" y="70">CloudFormation</text>
+<text x="95" y="170">Unit test</text><text x="320" y="170">cdk-nag</text><text x="545" y="170">cdk deploy</text>
+<text x="95" y="268">S3 + IAM</text><text x="95" y="286" fill="#4ade80">grantRead()</text>
+<text x="320" y="268">Budgets</text><text x="320" y="286" fill="#4ade80">tag Project</text>
+<text x="545" y="268">GitHub Actions</text><text x="545" y="286" fill="#4ade80">OIDC, no keys</text>
+<text x="320" y="340" fill="#22c55e" font-size="15">AWS CDK Lab — IaC in TypeScript</text>
+</g>
+</svg>
