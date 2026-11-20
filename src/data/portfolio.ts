@@ -896,6 +896,35 @@ cp dist/index.html dist/404.html`,
   },
 ];
 
+export interface Certification {
+  name: string;
+  issuer: string;
+  year: string;
+  /** Public credential page (Credly). */
+  link: string;
+  /** Badge image under public/images; optional. */
+  image?: string;
+  /** Short list of what the certification covers, shown on the Skills page. */
+  covers?: string[];
+}
+
+export const CERTIFICATIONS: Certification[] = [
+  {
+    name: 'AWS Certified Solutions Architect – Associate',
+    issuer: 'Amazon Web Services',
+    year: '2025',
+    link: 'https://www.credly.com/earner/earned/badge/7d26b06f-c5f3-4a97-9846-1ba1d2170f4c',
+    image: `${import.meta.env.BASE_URL}images/aws-certified-solutions-architect-associate.png`,
+    covers: ['Resilient, secure and cost-optimized architectures', 'EC2, S3, CloudFront, ECS, Lambda, RDS', 'IAM, VPC and networking'],
+  },
+  {
+    name: 'CCNA and MCSA',
+    issuer: '',
+    year: '2008 - 2009',
+    link: '',
+  },
+];
+
 export const CONTACT = {
   address: 'Ho Chi Minh City, Vietnam',
   // Only masked values are shipped to the browser. The full details live in the vCard QR code

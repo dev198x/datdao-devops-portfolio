@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { TerminalHeader } from '../components/TerminalHeader';
 import { Typewriter } from '../components/Typewriter';
+import { CERTIFICATIONS } from '../data/portfolio';
 import { Award, Briefcase, Code, ExternalLink, GraduationCap, MapPin, Zap, Bot } from 'lucide-react';
 
 interface TimelineGroup {
@@ -100,21 +101,6 @@ const TIMELINE: TimelineItem[] = [
     title: 'Bachelor of Computer Science',
     company: 'An Giang University',
     icon: GraduationCap,
-  },
-];
-
-const CERTIFICATIONS = [
-  {
-    name: 'AWS Certified Solutions Architect – Associate',
-    issuer: 'Amazon Web Services',
-    year: '2025',
-    link: 'https://www.credly.com/earner/earned/badge/7d26b06f-c5f3-4a97-9846-1ba1d2170f4c',
-  },
-  {
-    name: 'CCNA and MCSA',
-    issuer: '',
-    year: '2008 - 2009',
-    link: '',
   },
 ];
 
@@ -557,7 +543,18 @@ export const About = () => {
                 key={cert.name}
                 className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 hover:border-primary-500/50 transition-colors"
               >
-                <Award size={24} className="text-primary-500 mb-3" />
+                {cert.image ? (
+                  <img
+                    src={cert.image}
+                    alt={`${cert.name} badge`}
+                    width={96}
+                    height={96}
+                    loading="lazy"
+                    className="h-24 w-24 mb-3"
+                  />
+                ) : (
+                  <Award size={24} className="text-primary-500 mb-3" />
+                )}
                 <h3 className="font-semibold text-neutral-200 mb-1">{cert.name}</h3>
                 <div className="text-sm text-neutral-400">
                   {[cert.issuer, cert.year].filter(Boolean).join(' | ')}

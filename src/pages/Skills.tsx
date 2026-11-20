@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TerminalHeader } from '../components/TerminalHeader';
 import { Typewriter } from '../components/Typewriter';
-import { Cloud, Container, Code, Database, Bot, Terminal as TerminalIcon } from 'lucide-react';
-import { SKILLS, SKILL_LEVELS, type SkillLevel } from '../data/portfolio';
+import { Cloud, Container, Code, Database, Bot, Terminal as TerminalIcon, Award, ExternalLink } from 'lucide-react';
+import { SKILLS, SKILL_LEVELS, CERTIFICATIONS, type SkillLevel } from '../data/portfolio';
 
 const levelOf = (id: SkillLevel) => SKILL_LEVELS.find(l => l.id === id)!;
 
@@ -236,6 +236,76 @@ export const Skills = () => {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Certifications */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+              Certifications
+            </h2>
+            <p className="text-neutral-400 max-w-2xl mx-auto">
+              Verified credentials backing the skills above
+            </p>
+          </motion.div>
+
+          <div className="grid gap-6 max-w-4xl mx-auto">
+            {CERTIFICATIONS.filter(cert => cert.image).map((cert) => (
+              <motion.div
+                key={cert.name}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+                className="flex flex-col sm:flex-row items-center gap-8 bg-bg-elevated border border-neutral-700 rounded-xl p-8 shadow-card hover:border-primary-500/50 transition-colors"
+              >
+                <img
+                  src={cert.image}
+                  alt={`${cert.name} badge`}
+                  width={160}
+                  height={160}
+                  loading="lazy"
+                  className="h-40 w-40 shrink-0"
+                />
+                <div className="text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 font-mono text-sm text-accent-500 mb-2">
+                    <Award size={16} />
+                    <span>{[cert.issuer, cert.year].filter(Boolean).join(' | ')}</span>
+                  </div>
+                  <h3 className="font-mono text-xl font-bold text-neutral-200 mb-3">{cert.name}</h3>
+                  {cert.covers && (
+                    <ul className="space-y-1 text-sm text-neutral-400 mb-4">
+                      {cert.covers.map((item) => (
+                        <li key={item}>
+                          <span className="text-primary-500 mr-2">&gt;</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {cert.link && (
+                    <a
+                      href={cert.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-2 text-sm font-mono text-primary-500 hover:text-primary-700 transition-colors"
+                    >
+                      <ExternalLink size={14} />
+                      <span>Verify on Credly</span>
+                    </a>
+                  )}
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
