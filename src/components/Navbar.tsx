@@ -53,20 +53,20 @@ export const Navbar = () => {
             <Clock className="flex md:hidden lg:flex mr-auto ml-4" />
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-4 xl:space-x-8">
+            <div className="hidden md:flex items-center space-x-0 xl:space-x-8">
               {navItems.map((item) => {
                 const IconComponent = item.icon;
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className="relative px-3 py-2 text-sm font-medium transition-all duration-200 group flex items-center gap-2"
+                    className="relative px-2 xl:px-3 py-2 text-sm font-medium transition-all duration-200 group flex items-center gap-1.5 xl:gap-2"
                   >
                     {IconComponent && (
                       <IconComponent 
                         size={16}
-                        // Icons only from xl up: below that the eight links plus the clock need the width.
-                        className={`hidden xl:block ${
+                        // Icons from lg up; the spacing above is tightened below xl so eight links, icons and the clock fit.
+                        className={`hidden lg:block ${
                           isActive(item.path)
                             ? 'text-primary-500'
                             : 'text-neutral-200 group-hover:text-primary-500'
