@@ -62,7 +62,7 @@ const pages = [
     ogType: 'website',
   })),
   {
-    route: '/others',
+    route: '/builder',
     title: `Builder: từ ý tưởng đến sản phẩm chạy thật | ${siteName}`,
     description: escapeHtml(
       'Builder làm việc cùng AI agents: từ ý tưởng đến sản phẩm production, cyber security, monitoring production bằng Grafana LGTM stack, giải pháp web, app và hệ thống nội bộ cho doanh nghiệp vừa và nhỏ, kèm các sản phẩm chạy thật.'

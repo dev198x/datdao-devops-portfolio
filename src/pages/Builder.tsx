@@ -22,7 +22,7 @@ const sectionMotion = {
   viewport: { once: true },
 };
 
-export const Others = () => {
+export const Builder = () => {
   const evidence = BUILDER_EVIDENCE.flatMap((item) => {
     const project = getProjectBySlug(item.slug);
     return project ? [{ ...item, project }] : [];

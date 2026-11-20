@@ -1,4 +1,4 @@
-// Content for the /others page ("Builder"). Written in Vietnamese on purpose.
+// Content for the /builder page ("Builder"). Written in Vietnamese on purpose.
 // Evidence entries point at PROJECTS by slug, so titles and live links stay in one place (portfolio.ts).
 
 export const BUILDER_INTRO = {

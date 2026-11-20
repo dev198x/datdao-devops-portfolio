@@ -87,7 +87,7 @@ Then open [http://localhost:5173](http://localhost:5173) — you should see the 
 - **Fully Responsive** — Optimized for desktop, tablet, and mobile
 - **Interactive Skill Explorer** — Visual proficiency indicators for DevOps toolchain
 - **Project Filtering** — Filter projects by technology stack
-- **Builder page (`/others`)** — Vietnamese page on building products end to end with AI agents, with live products as evidence and Grafana LGTM monitoring illustrations (content in `src/data/builder.ts`)
+- **Builder page (`/builder`)** — Vietnamese page on building products end to end with AI agents, with live products as evidence and Grafana LGTM monitoring illustrations (content in `src/data/builder.ts`)
 - **Certifications** — AWS badge on the Skills page (`CERTIFICATIONS` in `src/data/portfolio.ts`)
 - **Live clock** — the navbar shows the visitor's local time (`src/components/Clock.tsx`)
 - **Contact privacy** — email and phone are masked on the page; the full details are in a vCard QR code (`public/images/contact-qr.svg`)
@@ -259,7 +259,7 @@ devops-portfolio/
 │   ├── data/
 │   │   ├── portfolio.ts                  # ← your name, links, contact info
 │   │   ├── blog.ts                       # ← your blog posts (blogPosts array)
-│   │   └── builder.ts                    # ← content of the /others (builder) page, in Vietnamese
+│   │   └── builder.ts                    # ← content of the /builder (builder) page, in Vietnamese
 │   ├── pages/                            # Route-level pages (BlogPost.tsx = /blog/:slug)
 │   ├── App.tsx
 │   └── main.tsx

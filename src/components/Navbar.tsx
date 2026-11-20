@@ -26,7 +26,7 @@ export const Navbar = () => {
     { path: '/skills', label: 'Skills', icon: Cpu },
     { path: '/projects', label: 'Projects', icon: FolderGit2 },
     { path: '/blog', label: 'Blog', icon: BookOpen },
-    { path: '/others', label: 'Others', icon: Hammer },
+    { path: '/builder', label: 'Builder', icon: Hammer },
     { path: '/commands', label: 'Commands', icon: TerminalSquare },
     { path: '/contact', label: 'Contact', icon: Mail },
   ];
