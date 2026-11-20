@@ -1,6 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
-import { linuxCommandCategories, linuxCommands } from '../../data/linuxCommands';
+import { linuxCommandCategories, linuxCommands, type CommandRisk } from '../../data/linuxCommands';
+
+const RISK_STYLE: Record<CommandRisk, { label: string; className: string }> = {
+  changes: { label: 'changes state', className: 'text-yellow-400 border-yellow-500/40' },
+  destructive: { label: 'destructive', className: 'text-red-400 border-red-500/40' },
+};
 
 export const CommandCheatsheet: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -11,7 +16,11 @@ export const CommandCheatsheet: React.FC = () => {
     return linuxCommands.filter((c) => {
       const matchesCategory = category === 'All' || c.category === category;
       const matchesSearch =
-        !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+        !q ||
+        [c.name, c.description, ...(c.tags ?? []), ...c.examples.flatMap((e) => [e.cmd, e.note])]
+          .join(' ')
+          .toLowerCase()
+          .includes(q);
       return matchesCategory && matchesSearch;
     });
   }, [search, category]);
@@ -24,7 +33,7 @@ export const CommandCheatsheet: React.FC = () => {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search commands (e.g. grep, permissions, delete)..."
+            placeholder="Search by command or task (e.g. port in use, disk full, rollback, ai)..."
             className="w-full bg-bg-surface border border-neutral-700 rounded-lg pl-10 pr-3 py-2 text-sm font-mono text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-primary-500"
           />
         </div>
@@ -40,6 +49,13 @@ export const CommandCheatsheet: React.FC = () => {
           ))}
         </select>
       </div>
+
+      <p className="text-xs text-neutral-500 font-mono">
+        Examples with no badge are read-only (safe to hand to an AI agent).{' '}
+        <span className="text-yellow-400">changes state</span> and{' '}
+        <span className="text-red-400">destructive</span> ones deserve a human look first.
+        Replace &lt;placeholders&gt; and never paste real secrets.
+      </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {filtered.map((c) => (
@@ -68,6 +84,13 @@ export const CommandCheatsheet: React.FC = () => {
                     <div className="text-xs font-mono rounded px-2 py-1 whitespace-pre-wrap">
                       <span className="text-green-400">$ {ex.cmd}</span>
                       <span className="text-neutral-500"> — {ex.note}</span>
+                      {ex.risk && (
+                        <span
+                          className={`ml-2 text-[10px] uppercase border rounded px-1 py-0.5 align-middle ${RISK_STYLE[ex.risk].className}`}
+                        >
+                          {RISK_STYLE[ex.risk].label}
+                        </span>
+                      )}
                     </div>
                   </React.Fragment>
                 );
