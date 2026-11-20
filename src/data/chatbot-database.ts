@@ -49,9 +49,10 @@ export interface DatabaseSection {
   relations: string;
   relationNotes: string[];
   tables: DbTable[];
-  flow: FlowStep[];
-  scenarios: FlowScenario[];
-  scenariosNote: string;
+  /** Optional end-to-end data flow (chatbot-specific columns); omit for projects without it. */
+  flow?: FlowStep[];
+  scenarios?: FlowScenario[];
+  scenariosNote?: string;
   ddl: CodeExample[];
   queries: CodeExample[];
   limitations: string[];

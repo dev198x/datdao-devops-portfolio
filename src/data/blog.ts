@@ -669,9 +669,11 @@ Dữ liệu mẫu:
 INSERT INTO resources (name) VALUES ('Meeting Room A');
 
 INSERT INTO bookings (resource_id, user_id, start_time, end_time) VALUES
-  (1, 101, '2026-12-01 09:00:00+07', '2026-12-01 10:00:00+07'),
-  (1, 102, '2026-12-01 13:00:00+07', '2026-12-01 14:30:00+07');
+  (1, 101, '2026-12-01 09:00:00+00', '2026-12-01 10:00:00+00'),
+  (1, 102, '2026-12-01 13:00:00+00', '2026-12-01 14:30:00+00');
 \`\`\`
+
+Mọi mốc thời gian trong bài đều là UTC (\`+00\`). Database luôn lưu UTC, nên khi truy vấn hãy truyền giá trị đã quy về UTC và ghi rõ offset. Một literal không có offset sẽ bị hiểu theo \`TimeZone\` của session, rất dễ lệch giờ. Việc đổi sang giờ địa phương chỉ làm ở tầng hiển thị.
 
 ## 3. Kiểm tra trùng lịch bằng SQL
 
@@ -683,8 +685,8 @@ SELECT EXISTS (
   FROM bookings
   WHERE resource_id = 1
     AND status <> 'CANCELLED'              -- bỏ qua lịch đã hủy
-    AND start_time < '2026-12-01 10:30:00+07'   -- newEnd
-    AND end_time   > '2026-12-01 09:30:00+07'   -- newStart
+    AND start_time < '2026-12-01 10:30:00+00'   -- newEnd
+    AND end_time   > '2026-12-01 09:30:00+00'   -- newStart
 ) AS is_overlapping;
 \`\`\`
 
@@ -699,8 +701,8 @@ SELECT id, start_time, end_time
 FROM bookings
 WHERE resource_id = 1
   AND status <> 'CANCELLED'
-  AND start_time < '2026-12-01 10:30:00+07'
-  AND end_time   > '2026-12-01 09:30:00+07'
+  AND start_time < '2026-12-01 10:30:00+00'
+  AND end_time   > '2026-12-01 09:30:00+00'
 ORDER BY start_time;
 \`\`\`
 
@@ -727,8 +729,8 @@ SELECT EXISTS (
   WHERE resource_id = 1
     AND id <> 42                            -- loại trừ chính lịch đang sửa
     AND status <> 'CANCELLED'
-    AND start_time < '2026-12-01 11:00:00+07'
-    AND end_time   > '2026-12-01 10:00:00+07'
+    AND start_time < '2026-12-01 11:00:00+00'
+    AND end_time   > '2026-12-01 10:00:00+00'
 ) AS is_overlapping;
 \`\`\`
 
@@ -749,8 +751,8 @@ SELECT EXISTS (
   FROM bookings
   WHERE resource_id = 1
     AND status <> 'CANCELLED'
-    AND start_time < '2026-12-01 10:30:00+07'::timestamptz + INTERVAL '15 minutes'
-    AND end_time   > '2026-12-01 09:30:00+07'::timestamptz - INTERVAL '15 minutes'
+    AND start_time < '2026-12-01 10:30:00+00'::timestamptz + INTERVAL '15 minutes'
+    AND end_time   > '2026-12-01 09:30:00+00'::timestamptz - INTERVAL '15 minutes'
 ) AS is_overlapping;
 \`\`\`
 
@@ -807,7 +809,7 @@ SELECT id FROM resources WHERE id = 1 FOR UPDATE;   -- người đến sau chờ
 -- kiểm tra trùng (câu SELECT EXISTS ở phần 3)
 -- nếu is_overlapping = false thì:
 INSERT INTO bookings (resource_id, user_id, start_time, end_time)
-VALUES (1, 101, '2026-12-01 09:30:00+07', '2026-12-01 10:30:00+07');
+VALUES (1, 101, '2026-12-01 09:30:00+00', '2026-12-01 10:30:00+00');
 COMMIT;
 \`\`\`
 

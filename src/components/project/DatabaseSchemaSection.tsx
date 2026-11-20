@@ -78,6 +78,10 @@ const TableCard: React.FC<{ table: DbTable }> = ({ table }) => (
 
 const DatabaseSchemaSection: React.FC<{ data: DatabaseSection }> = ({ data }) => {
   const groups = Array.from(new Set(data.tables.map((table) => table.group)));
+  const { flow, scenarios, scenariosNote } = data;
+  // Section numbers are assigned in render order so optional sections do not leave gaps.
+  let sectionNo = 0;
+  const nextNo = () => ++sectionNo;
 
   return (
     <div className="space-y-10">
@@ -97,7 +101,7 @@ const DatabaseSchemaSection: React.FC<{ data: DatabaseSection }> = ({ data }) =>
       </div>
 
       <div>
-        <SubTitle>1. Quan hệ giữa các bảng</SubTitle>
+        <SubTitle>{nextNo()}. Quan hệ giữa các bảng</SubTitle>
         <CodeBlock code={data.relations} title="Sơ đồ quan hệ" />
         <ul className="space-y-1.5">
           {data.relationNotes.map((note) => (
@@ -110,7 +114,7 @@ const DatabaseSchemaSection: React.FC<{ data: DatabaseSection }> = ({ data }) =>
       </div>
 
       <div className="space-y-6">
-        <SubTitle>2. Các bảng và cột chính</SubTitle>
+        <SubTitle>{nextNo()}. Các bảng và cột chính</SubTitle>
         {groups.map((group) => (
           <div key={group} className="space-y-4">
             <h4 className="font-mono text-sm text-neutral-500">// {group}</h4>
@@ -123,14 +127,15 @@ const DatabaseSchemaSection: React.FC<{ data: DatabaseSection }> = ({ data }) =>
         ))}
       </div>
 
+      {flow && scenarios && scenariosNote && (
       <div>
-        <SubTitle>3. Dữ liệu đi từ đầu đến cuối trong một lượt chat</SubTitle>
+        <SubTitle>{nextNo()}. Dữ liệu đi từ đầu đến cuối trong một lượt chat</SubTitle>
         <p className="text-neutral-400 text-sm leading-relaxed mb-4">
           Một lượt <span className="font-mono text-primary-500">POST /chat</span> đi qua các bước dưới đây. Mỗi bước cho biết dữ liệu được đọc từ đâu và ghi vào đâu:
           <span className="font-mono"> ghi →</span> là ghi, <span className="font-mono">← đọc</span> là đọc.
         </p>
         <ol className="space-y-3">
-          {data.flow.map((step) => (
+          {flow.map((step) => (
             <li key={step.step} className="bg-bg-surface border border-neutral-700 rounded-xl p-4 space-y-2">
               <div className="font-semibold text-neutral-200">{step.step}</div>
               <p className="text-neutral-400 text-sm leading-relaxed">{step.action}</p>
@@ -156,7 +161,7 @@ const DatabaseSchemaSection: React.FC<{ data: DatabaseSection }> = ({ data }) =>
               </tr>
             </thead>
             <tbody>
-              {data.scenarios.map((row) => (
+              {scenarios.map((row) => (
                 <tr key={row.scenario} className="border-b border-neutral-700/50 last:border-0 align-top">
                   <td className="p-3 text-neutral-200 font-medium">{row.scenario}</td>
                   <td className="p-3 text-neutral-400">{row.conversations}</td>
@@ -168,25 +173,26 @@ const DatabaseSchemaSection: React.FC<{ data: DatabaseSection }> = ({ data }) =>
             </tbody>
           </table>
         </div>
-        <p className="text-neutral-500 text-xs mt-2">{data.scenariosNote}</p>
+        <p className="text-neutral-500 text-xs mt-2">{scenariosNote}</p>
       </div>
+      )}
 
       <div className="space-y-3">
-        <SubTitle>4. DDL chính</SubTitle>
+        <SubTitle>{nextNo()}. DDL chính</SubTitle>
         {data.ddl.map((example) => (
           <CodeBlock key={example.caption} code={example.code} language={example.language} title={example.caption} />
         ))}
       </div>
 
       <div className="space-y-3">
-        <SubTitle>5. Truy vấn thường dùng</SubTitle>
+        <SubTitle>{nextNo()}. Truy vấn thường dùng</SubTitle>
         {data.queries.map((example) => (
           <CodeBlock key={example.caption} code={example.code} language={example.language} title={example.caption} />
         ))}
       </div>
 
       <div>
-        <SubTitle>6. Giới hạn hiện tại</SubTitle>
+        <SubTitle>{nextNo()}. Giới hạn hiện tại</SubTitle>
         <ul className="space-y-2">
           {data.limitations.map((item) => (
             <li key={item} className="flex items-start space-x-3 text-neutral-300 text-sm leading-relaxed">

@@ -1,4 +1,5 @@
 import { CHATBOT_DATABASE, type DatabaseSection } from './chatbot-database';
+import { BOOKING_DATABASE } from './booking-database';
 
 export const HERO_CONTENT = "Software engineer with 10+ years in backend development, system architecture, and cloud engineering. I build AI-powered engineering solutions, including a production-used observability platform that uses the Claude API with logs and distributed traces to cut incident investigation time by 50–75%, and I run systems on AWS with Terraform, Docker, and GitHub Actions.";
 
@@ -416,6 +417,7 @@ export const PROJECTS: Project[] = [
         'Deploy lên AWS EKS bằng Helm (môi trường development, mức làm quen với Kubernetes) với CI/CD GitHub Actions',
       ],
       architecture: ['Developer push code', 'GitHub Actions (build, push image)', 'Helm release', 'AWS EKS cluster', 'Booking microservices'],
+      database: BOOKING_DATABASE,
       challenges: [
         {
           title: '1. Chống tranh chấp và đặt trùng (Concurrency & Overbooking)',
@@ -519,8 +521,8 @@ isOverlapping(t('09:30'), t('10:30'), t('09:00'), t('10:00')); // true, bị tr�
   FROM bookings
   WHERE resource_id = 1
     AND status <> 'CANCELLED'                      -- bỏ qua lịch đã huỷ
-    AND start_time < '2026-12-01 10:30:00+07'      -- newEnd
-    AND end_time   > '2026-12-01 09:30:00+07'      -- newStart
+    AND start_time < '2026-12-01 03:30:00+00'      -- newEnd
+    AND end_time   > '2026-12-01 02:30:00+00'      -- newStart
 ) AS is_overlapping;`,
                 },
                 {
