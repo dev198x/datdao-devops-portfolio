@@ -17,9 +17,11 @@ export const Footer = () => {
       icon: Linkedin,
     },
     {
+      // Internal link: the full email is not exposed in the page, it is available via the QR code.
       name: 'Email',
-      url: `mailto:${CONTACT.email}`,
+      url: '/contact',
       icon: Mail,
+      internal: true,
     },
   ];
 
@@ -35,8 +37,7 @@ export const Footer = () => {
                 <motion.a
                   key={link.name}
                   href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  {...(link.internal ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
                   className="p-3 rounded-lg bg-bg-surface hover:bg-primary-500 text-neutral-400 hover:text-bg-surface transition-all duration-200 group"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}

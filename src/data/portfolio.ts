@@ -898,8 +898,11 @@ cp dist/index.html dist/404.html`,
 
 export const CONTACT = {
   address: 'Ho Chi Minh City, Vietnam',
-  phoneNo: '093-49-24-247',
-  email: 'datdaoaws1@gmail.com',
+  // Only masked values are shipped to the browser. The full details live in the vCard QR code
+  // (public/images/contact-qr.svg), which a visitor opts into by scanning it.
+  phoneNo: '093-49-**-247',
+  email: 'datd****s1@gmail.com',
+  qrImage: `${import.meta.env.BASE_URL}images/contact-qr.svg`,
   social: {
     github: 'https://github.com/dev198x',
     linkedin: 'https://www.linkedin.com/in/dat-dao-db-ssa/',

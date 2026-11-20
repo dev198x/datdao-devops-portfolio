@@ -323,6 +323,26 @@ export const Contact = () => {
                 </div>
               </div>
 
+              {/* QR code: full contact details (vCard) */}
+              <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
+                <h3 className="font-mono text-lg font-semibold text-primary-500 mb-2">
+                  Scan to Save Contact
+                </h3>
+                <p className="text-sm text-neutral-400 mb-6">
+                  Email and phone are partly hidden on this page. Scan the QR code with your phone
+                  to get my full name, email and phone number as a contact card.
+                </p>
+                <div className="flex justify-center">
+                  <img
+                    src={CONTACT.qrImage}
+                    alt="QR code with my full contact card: name, email and phone number"
+                    width={200}
+                    height={200}
+                    className="rounded-lg border border-neutral-700 bg-white p-2"
+                  />
+                </div>
+              </div>
+
               {/* Availability Status */}
               <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
                 <h3 className="font-mono text-lg font-semibold text-primary-500 mb-6">
@@ -335,7 +355,7 @@ export const Contact = () => {
                   </div>
                   <div className="text-sm text-neutral-400">
                     <div className="mb-2">Response time: Within 24 hours</div>
-                    <div>Time zone: IST (UTC+5:30)</div>
+                    <div>Time zone: ICT (UTC+7)</div>
                   </div>
                 </div>
               </div>
