@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ExternalLink, Bot, Rocket, Building2, Server, ShieldCheck, Activity } from 'lucide-react';
-import { TerminalHeader } from '../components/TerminalHeader';
+import { PageHeader } from '../components/PageHeader';
 import { PROJECTS, getProjectBySlug } from '../data/portfolio';
 import {
   BUILDER_INTRO,
@@ -30,7 +30,7 @@ export const Builder = () => {
 
   return (
     <div className="min-h-screen bg-bg-page">
-      <TerminalHeader
+      <PageHeader
         command="cat builder.md"
         description="Builder: từ ý tưởng đến sản phẩm chạy thật, làm việc cùng AI agents"
       />
@@ -39,7 +39,7 @@ export const Builder = () => {
       <section className="py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...sectionMotion} className="space-y-6">
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200">
               {BUILDER_INTRO.headline}
             </h2>
             {BUILDER_INTRO.paragraphs.map((text) => (
@@ -55,7 +55,7 @@ export const Builder = () => {
       <section className="py-24 bg-bg-surface/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...sectionMotion} className="text-center mb-16">
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">Mình làm được gì</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">Mình làm được gì</h2>
           </motion.div>
           <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {BUILDER_STRENGTHS.map((item, index) => {
@@ -64,10 +64,10 @@ export const Builder = () => {
                 <motion.div
                   key={item.title}
                   {...sectionMotion}
-                  className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 hover:border-primary-500/50 transition-colors md:[&:last-child:nth-child(odd)]:col-span-2"
+                  className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 hover:border-neutral-600 transition-colors md:[&:last-child:nth-child(odd)]:col-span-2"
                 >
                   <Icon size={28} className="text-primary-500 mb-4" />
-                  <h3 className="font-mono text-lg font-semibold text-neutral-200 mb-2">{item.title}</h3>
+                  <h3 className="text-lg font-semibold text-neutral-200 mb-2">{item.title}</h3>
                   <p className="text-neutral-400 leading-relaxed">{item.body}</p>
                 </motion.div>
               );
@@ -80,7 +80,7 @@ export const Builder = () => {
       <section className="py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...sectionMotion} className="text-center mb-16">
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">
               {BUILDER_MONITORING.title}
             </h2>
             <p className="text-neutral-400 max-w-3xl mx-auto leading-relaxed">{BUILDER_MONITORING.intro}</p>
@@ -111,7 +111,7 @@ export const Builder = () => {
       <section className="py-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...sectionMotion} className="text-center mb-16">
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">Cách mình làm việc</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">Cách mình làm việc</h2>
             <p className="text-neutral-400">Từ ý tưởng đến vận hành, với AI agents hỗ trợ ở từng bước</p>
           </motion.div>
           <ol className="space-y-4">
@@ -121,9 +121,9 @@ export const Builder = () => {
                 {...sectionMotion}
                 className="flex gap-6 bg-bg-elevated border border-neutral-700 rounded-xl p-6"
               >
-                <span className="font-mono text-2xl font-bold text-accent-500 shrink-0">{item.step}</span>
+                <span className="text-2xl font-bold text-primary-500 shrink-0">{item.step}</span>
                 <div>
-                  <h3 className="font-mono text-lg font-semibold text-neutral-200 mb-1">{item.title}</h3>
+                  <h3 className="text-lg font-semibold text-neutral-200 mb-1">{item.title}</h3>
                   <p className="text-neutral-400 leading-relaxed">{item.body}</p>
                 </div>
               </motion.li>
@@ -136,7 +136,7 @@ export const Builder = () => {
       <section className="py-24 bg-bg-surface/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...sectionMotion} className="text-center mb-16">
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">
               Giải pháp cho doanh nghiệp vừa và nhỏ
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
@@ -150,8 +150,8 @@ export const Builder = () => {
                 {...sectionMotion}
                 className="bg-bg-elevated border border-neutral-700 rounded-xl p-6"
               >
-                <h3 className="font-mono text-base font-semibold text-primary-500 mb-2">
-                  <span className="text-accent-500 mr-2">&gt;</span>
+                <h3 className="text-base font-semibold text-neutral-200 mb-2">
+                  <span className="text-neutral-500 mr-2">&gt;</span>
                   {item.title}
                 </h3>
                 <p className="text-sm text-neutral-400 leading-relaxed">{item.body}</p>
@@ -165,7 +165,7 @@ export const Builder = () => {
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...sectionMotion} className="text-center mb-16">
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">Bằng chứng thực tế</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">Bằng chứng thực tế</h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
               Các sản phẩm mình đã build, bạn có thể mở và dùng thử
             </p>
@@ -175,7 +175,7 @@ export const Builder = () => {
               <motion.div
                 key={project.slug}
                 {...sectionMotion}
-                className="flex flex-col bg-bg-elevated border border-neutral-700 rounded-xl overflow-hidden hover:border-primary-500/50 transition-colors"
+                className="flex flex-col bg-bg-elevated border border-neutral-700 rounded-xl overflow-hidden hover:border-neutral-600 transition-colors"
               >
                 <img
                   src={project.image}
@@ -184,10 +184,10 @@ export const Builder = () => {
                   className="h-40 w-full object-cover border-b border-neutral-700"
                 />
                 <div className="flex flex-col flex-1 p-6">
-                  <div className="font-mono text-xs text-accent-500 mb-2">{status}</div>
-                  <h3 className="font-mono text-lg font-semibold text-neutral-200 mb-3">{project.title}</h3>
+                  <div className="text-xs text-primary-500 mb-2">{status}</div>
+                  <h3 className="text-lg font-semibold text-neutral-200 mb-3">{project.title}</h3>
                   <p className="text-sm text-neutral-400 leading-relaxed mb-5 flex-1">{proves}</p>
-                  <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-sm">
+                  <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
                     {project.websiteLink && (
                       <a
                         href={project.websiteLink}
@@ -201,7 +201,7 @@ export const Builder = () => {
                     )}
                     <Link
                       to={`/projects/${project.slug}`}
-                      className="inline-flex items-center gap-2 text-accent-500 hover:text-accent-700 transition-colors"
+                      className="inline-flex items-center gap-2 text-primary-500 hover:text-accent-700 transition-colors"
                     >
                       <ArrowRight size={14} />
                       <span>Xem chi tiết</span>
@@ -226,13 +226,13 @@ export const Builder = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             {...sectionMotion}
-            className="bg-bg-surface border border-neutral-700 rounded-xl p-8 font-mono"
+            className="bg-bg-surface border border-neutral-700 rounded-xl p-8"
           >
-            <div className="text-accent-500 mb-4">$ echo "Bạn có một ý tưởng?"</div>
+            <div className="text-primary-500 mb-4">$ echo "Bạn có một ý tưởng?"</div>
             <p className="text-neutral-200 mb-6">Kể mình nghe bài toán của bạn, mình sẽ cùng biến nó thành sản phẩm chạy thật.</p>
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 px-8 py-4 border-2 border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-bg-surface transition-all duration-200 font-semibold tracking-wide rounded-lg"
+              className="inline-flex items-center gap-2 px-6 py-3 border border-primary-500 text-primary-500 hover:bg-primary-50 transition-all duration-200 font-semibold tracking-wide rounded-lg"
             >
               Liên hệ với mình
               <ArrowRight size={18} />

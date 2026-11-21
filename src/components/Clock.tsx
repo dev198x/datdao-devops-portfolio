@@ -45,9 +45,9 @@ export const Clock = ({ className = '' }: { className?: string }) => {
       className={`font-mono text-xs sm:text-sm tabular-nums text-neutral-400 ${className}`}
       title="Your local time"
     >
-      <span className="text-accent-500">[</span>
-      <span className="text-primary-500">{now ? formatter.format(now) : PLACEHOLDER}</span>
-      <span className="text-accent-500">]</span>
+      <span className="text-neutral-500">[</span>
+      <span className="text-neutral-300">{now ? formatter.format(now) : PLACEHOLDER}</span>
+      <span className="text-neutral-500">]</span>
     </time>
   );
 };

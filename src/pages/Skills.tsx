@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TerminalHeader } from '../components/TerminalHeader';
-import { Typewriter } from '../components/Typewriter';
+import { PageHeader } from '../components/PageHeader';
 import { Cloud, Container, Code, Database, Bot, Terminal as TerminalIcon, Award, ExternalLink } from 'lucide-react';
 import { SKILLS, SKILL_LEVELS, CERTIFICATIONS, type SkillLevel } from '../data/portfolio';
 
@@ -157,7 +156,7 @@ export const Skills = () => {
   return (
     <div className="min-h-screen bg-bg-page">
       {/* Terminal Header */}
-      <TerminalHeader
+      <PageHeader
         command="ls -la skills/"
         description="Exploring technical expertise across cloud, development, and DevOps domains"
       />
@@ -172,7 +171,7 @@ export const Skills = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">
               Technical Expertise
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
@@ -185,8 +184,8 @@ export const Skills = () => {
             {SKILL_LEVELS.map((level) => (
               <div key={level.id} className="bg-bg-elevated border border-neutral-700 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-sm text-primary-500">{level.label}</span>
-                  <span className="font-mono text-primary-500 tracking-widest" aria-hidden="true">{renderDots(level.dots)}</span>
+                  <span className="text-sm text-primary-500">{level.label}</span>
+                  <span className="text-primary-500 tracking-widest" aria-hidden="true">{renderDots(level.dots)}</span>
                 </div>
                 <p className="text-xs text-neutral-400 leading-relaxed">{level.description}</p>
               </div>
@@ -206,9 +205,9 @@ export const Skills = () => {
                   viewport={{ once: true }}
                 >
                   <div className="flex items-center space-x-3 mb-4">
-                    <span className="font-mono text-primary-500 tracking-widest" aria-hidden="true">{renderDots(level.dots)}</span>
-                    <h3 className="font-mono text-xl font-semibold text-primary-500">{level.group}</h3>
-                    <span className="text-xs font-mono text-neutral-500">{tierSkills.length}</span>
+                    <span className="text-primary-500 tracking-widest" aria-hidden="true">{renderDots(level.dots)}</span>
+                    <h3 className="text-xl font-semibold text-neutral-200">{level.group}</h3>
+                    <span className="text-xs text-neutral-500">{tierSkills.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {tierSkills.map((skill) => {
@@ -217,16 +216,16 @@ export const Skills = () => {
                         <div
                           key={skill.name}
                           title={`${skill.name} — ${level.label}`}
-                          className="flex items-center space-x-3 bg-bg-elevated border border-neutral-700 rounded-lg px-4 py-3 hover:border-primary-500/50 transition-colors group"
+                          className="flex items-center space-x-3 bg-bg-elevated border border-neutral-700 rounded-lg px-4 py-3 hover:border-neutral-600 transition-colors group"
                         >
                           <img
                             src={skill.icon}
                             alt=""
                             className="w-6 h-6 opacity-80 group-hover:opacity-100 transition-opacity"
                           />
-                          <span className="font-mono text-sm text-neutral-200">{skill.name}</span>
+                          <span className="text-sm text-neutral-200">{skill.name}</span>
                           {category && (
-                            <span className={`text-xs font-mono ${category.color}`}>{category.short}</span>
+                            <span className={`text-xs ${category.color}`}>{category.short}</span>
                           )}
                           <span className="sr-only">{level.label}</span>
                         </div>
@@ -250,7 +249,7 @@ export const Skills = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">
               Certifications
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
@@ -266,7 +265,7 @@ export const Skills = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
                 viewport={{ once: true }}
-                className="flex flex-col sm:flex-row items-center gap-8 bg-bg-elevated border border-neutral-700 rounded-xl p-8 shadow-card hover:border-primary-500/50 transition-colors"
+                className="flex flex-col sm:flex-row items-center gap-8 bg-bg-elevated border border-neutral-700 rounded-xl p-8  hover:border-neutral-600 transition-colors"
               >
                 <img
                   src={cert.image}
@@ -277,11 +276,11 @@ export const Skills = () => {
                   className="h-40 w-40 shrink-0"
                 />
                 <div className="text-center sm:text-left">
-                  <div className="flex items-center justify-center sm:justify-start gap-2 font-mono text-sm text-accent-500 mb-2">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-primary-500 mb-2">
                     <Award size={16} />
                     <span>{[cert.issuer, cert.year].filter(Boolean).join(' | ')}</span>
                   </div>
-                  <h3 className="font-mono text-xl font-bold text-neutral-200 mb-3">{cert.name}</h3>
+                  <h3 className="text-xl font-bold text-neutral-200 mb-3">{cert.name}</h3>
                   {cert.covers && (
                     <ul className="space-y-1 text-sm text-neutral-400 mb-4">
                       {cert.covers.map((item) => (
@@ -297,7 +296,7 @@ export const Skills = () => {
                       href={cert.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-2 text-sm font-mono text-primary-500 hover:text-primary-700 transition-colors"
+                      className="inline-flex items-center space-x-2 text-sm text-primary-500 hover:text-primary-700 transition-colors"
                     >
                       <ExternalLink size={14} />
                       <span>Verify on Credly</span>
@@ -335,14 +334,9 @@ export const Skills = () => {
             viewport={{ once: true }}
             className="max-w-4xl mx-auto"
           >
-            <div className="bg-bg-elevated border border-neutral-700 rounded-xl overflow-hidden shadow-card">
+            <div className="bg-bg-elevated border border-neutral-700 rounded-xl overflow-hidden ">
               {/* Terminal Header */}
               <div className="bg-bg-surface border-b border-neutral-700 p-4 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-primary-500" />
-                </div>
                 <span className="font-mono text-sm text-neutral-400">skills-terminal</span>
               </div>
 
@@ -350,13 +344,9 @@ export const Skills = () => {
               <div className="p-6 font-mono text-sm bg-bg-page h-96 overflow-y-auto">
                 {terminalOutput.length === 0 && (
                   <div className="text-neutral-400">
-                    <Typewriter
-                      text="Welcome to Skills Explorer. Type 'help' to see available commands."
-                      delay={30}
-                      className="block"
-                    />
+                    <span className="block">Welcome to Skills Explorer. Type 'help' to see available commands.</span>
                     <div className="mt-4">
-                      <span className="text-accent-500">$</span>
+                      <span className="text-primary-500">$</span>
                       <span className="text-neutral-400 ml-2">ready for input...</span>
                     </div>
                   </div>
@@ -366,8 +356,8 @@ export const Skills = () => {
                   <div
                     key={index}
                     className={`${
-                      line.startsWith('$') ? 'text-accent-500' : 
-                      line.includes('Command not found') ? 'text-red-500' :
+                      line.startsWith('$') ? 'text-primary-500' : 
+                      line.includes('Command not found') ? 'text-rose-600' :
                       'text-neutral-200'
                     }`}
                   >
@@ -377,7 +367,7 @@ export const Skills = () => {
 
                 {isProcessing && (
                   <div className="flex items-center space-x-2">
-                    <span className="text-accent-500">$</span>
+                    <span className="text-primary-500">$</span>
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" />
                       <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
@@ -388,7 +378,7 @@ export const Skills = () => {
 
                 {/* Input Line */}
                 <div className="flex items-center">
-                  <span className="text-accent-500 mr-2">$</span>
+                  <span className="text-primary-500 mr-2">$</span>
                   <input
                     type="text"
                     value={currentInput}
@@ -416,7 +406,7 @@ export const Skills = () => {
                 <button
                   key={item.cmd}
                   onClick={() => setCurrentInput(item.cmd)}
-                  className="p-3 bg-bg-elevated border border-neutral-700 rounded-lg text-left hover:border-primary-500/50 transition-colors group"
+                  className="p-3 bg-bg-elevated border border-neutral-700 rounded-lg text-left hover:border-neutral-600 transition-colors group"
                 >
                   <div className="font-mono text-sm text-primary-500 group-hover:text-primary-400">
                     $ {item.cmd}

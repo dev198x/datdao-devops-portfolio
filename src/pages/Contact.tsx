@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TerminalHeader } from '../components/TerminalHeader';
-import { Typewriter } from '../components/Typewriter';
+import { PageHeader } from '../components/PageHeader';
 import { Mail, MapPin, Phone, Send, Github, Linkedin, ExternalLink, CheckCircle } from 'lucide-react';
 import { CONTACT } from '../data/portfolio';
 
@@ -143,8 +142,7 @@ export const Contact = () => {
 
   return (
     <div className="min-h-screen bg-bg-page">
-      {/* Terminal Header */}
-      <TerminalHeader
+      <PageHeader
         command="ping contact.server"
         description="Establishing connection to communication endpoint"
       />
@@ -160,12 +158,12 @@ export const Contact = () => {
               viewport={{ once: true }}
               className="lg:col-span-7"
             >
-              <div className="bg-bg-surface border border-neutral-700 rounded-xl p-8 shadow-card">
+              <div className="bg-bg-surface border border-neutral-700 rounded-xl p-8 ">
                 <div className="mb-8">
-                  <h2 className="font-mono text-2xl font-bold text-primary-500 mb-4">
+                  <h2 className="text-2xl font-bold text-neutral-200 mb-4">
                     Send Message
                   </h2>
-                  <div className="font-mono text-sm text-accent-500">
+                  <div className="text-sm text-primary-500">
                     <span>$</span>
                     <span className="text-primary-500 ml-2">cat message_template.txt</span>
                   </div>
@@ -178,21 +176,17 @@ export const Contact = () => {
                     className="text-center py-12"
                   >
                     <CheckCircle size={64} className="text-primary-500 mx-auto mb-4" />
-                    <h3 className="font-mono text-xl font-semibold text-primary-500 mb-2">
+                    <h3 className="text-xl font-semibold text-neutral-200 mb-2">
                       Message Sent Successfully!
                     </h3>
-                    <Typewriter
-                      text="> Message delivered. Expect response within 24 hours."
-                      delay={50}
-                      className="text-neutral-400 text-sm"
-                    />
+                    <p className="text-neutral-400 text-sm">&gt; Message delivered. Expect response within 24 hours.</p>
                   </motion.div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Name Field */}
                     <div>
-                      <label className="block font-mono text-sm text-accent-500 mb-2">
-                        <span className="text-primary-500 mr-2">&gt;</span>
+                      <label className="block text-sm text-primary-500 mb-2">
+                        <span className="text-neutral-500 mr-2">&gt;</span>
                         name
                       </label>
                       <input
@@ -200,7 +194,7 @@ export const Contact = () => {
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className={`w-full bg-bg-elevated border ${errors.name ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors`}
+                        className={`w-full bg-bg-elevated border ${errors.name ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors`}
                         placeholder="Your full name"
                       />
                       {errors.name && (
@@ -210,8 +204,8 @@ export const Contact = () => {
 
                     {/* Email Field */}
                     <div>
-                      <label className="block font-mono text-sm text-accent-500 mb-2">
-                        <span className="text-primary-500 mr-2">&gt;</span>
+                      <label className="block text-sm text-primary-500 mb-2">
+                        <span className="text-neutral-500 mr-2">&gt;</span>
                         email
                       </label>
                       <input
@@ -219,7 +213,7 @@ export const Contact = () => {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className={`w-full bg-bg-elevated border ${errors.email ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors`}
+                        className={`w-full bg-bg-elevated border ${errors.email ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors`}
                         placeholder="your.email@example.com"
                       />
                       {errors.email && (
@@ -229,8 +223,8 @@ export const Contact = () => {
 
                     {/* Subject Field */}
                     <div>
-                      <label className="block font-mono text-sm text-accent-500 mb-2">
-                        <span className="text-primary-500 mr-2">&gt;</span>
+                      <label className="block text-sm text-primary-500 mb-2">
+                        <span className="text-neutral-500 mr-2">&gt;</span>
                         subject
                       </label>
                       <input
@@ -238,7 +232,7 @@ export const Contact = () => {
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
-                        className={`w-full bg-bg-elevated border ${errors.subject ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors`}
+                        className={`w-full bg-bg-elevated border ${errors.subject ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors`}
                         placeholder="What's this about?"
                       />
                       {errors.subject && (
@@ -248,8 +242,8 @@ export const Contact = () => {
 
                     {/* Message Field */}
                     <div>
-                      <label className="block font-mono text-sm text-accent-500 mb-2">
-                        <span className="text-primary-500 mr-2">&gt;</span>
+                      <label className="block text-sm text-primary-500 mb-2">
+                        <span className="text-neutral-500 mr-2">&gt;</span>
                         message
                       </label>
                       <textarea
@@ -257,7 +251,7 @@ export const Contact = () => {
                         value={formData.message}
                         onChange={handleChange}
                         rows={6}
-                        className={`w-full bg-bg-elevated border ${errors.message ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors resize-none`}
+                        className={`w-full bg-bg-elevated border ${errors.message ? 'border-red-500' : 'border-neutral-700'} rounded-md px-4 py-3 text-neutral-200 placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors resize-none`}
                         placeholder="Tell me about your project or inquiry..."
                       />
                       {errors.message && (
@@ -269,10 +263,10 @@ export const Contact = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className={`w-full py-4 px-6 rounded-lg font-mono font-bold text-lg transition-all duration-200 ${
+                      className={`w-full py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
                         isSubmitting
                           ? 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
-                          : 'bg-primary-500 text-bg-surface hover:bg-primary-700 shadow-glow hover:shadow-card-hover'
+                          : 'bg-primary-500 text-bg-surface hover:bg-primary-700  '
                       }`}
                     >
                       {isSubmitting ? (
@@ -302,7 +296,7 @@ export const Contact = () => {
             >
               {/* Contact Methods */}
               <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
-                <h3 className="font-mono text-lg font-semibold text-primary-500 mb-6">
+                <h3 className="text-lg font-semibold text-neutral-200 mb-6">
                   Contact Methods
                 </h3>
                 <div className="space-y-4">
@@ -325,7 +319,7 @@ export const Contact = () => {
 
               {/* QR code: full contact details (vCard) */}
               <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
-                <h3 className="font-mono text-lg font-semibold text-primary-500 mb-2">
+                <h3 className="text-lg font-semibold text-neutral-200 mb-2">
                   Scan to Save Contact
                 </h3>
                 <p className="text-sm text-neutral-400 mb-6">
@@ -345,13 +339,13 @@ export const Contact = () => {
 
               {/* Availability Status */}
               <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
-                <h3 className="font-mono text-lg font-semibold text-primary-500 mb-6">
+                <h3 className="text-lg font-semibold text-neutral-200 mb-6">
                   Availability Status
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-3 h-3 bg-primary-500 rounded-full animate-pulse" />
-                    <span className="font-mono text-sm text-neutral-200">Available for new projects</span>
+                    <span className="text-sm text-neutral-200">Available for new projects</span>
                   </div>
                   <div className="text-sm text-neutral-400">
                     <div className="mb-2">Response time: Within 24 hours</div>
@@ -362,7 +356,7 @@ export const Contact = () => {
 
               {/* Social Links */}
               <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
-                <h3 className="font-mono text-lg font-semibold text-primary-500 mb-6">
+                <h3 className="text-lg font-semibold text-neutral-200 mb-6">
                   Connect With Me
                 </h3>
                 <div className="grid grid-cols-3 gap-4">
@@ -374,10 +368,10 @@ export const Contact = () => {
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`flex flex-col items-center p-4 bg-bg-surface rounded-lg text-neutral-400 ${link.color} transition-all duration-200 hover:scale-105 hover:shadow-card`}
+                        className={`flex flex-col items-center p-4 bg-bg-surface rounded-lg text-neutral-400 ${link.color} transition-all duration-200 hover:`}
                       >
                         <IconComponent size={24} className="mb-2" />
-                        <span className="text-xs font-mono">{link.name}</span>
+                        <span className="text-xs">{link.name}</span>
                       </a>
                     );
                   })}
@@ -396,9 +390,9 @@ export const Contact = () => {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="bg-bg-surface border border-neutral-700 rounded-xl p-8 font-mono"
+            className="bg-bg-surface border border-neutral-700 rounded-xl p-8"
           >
-            <div className="text-accent-500 mb-4">
+            <div className="text-primary-500 mb-4">
               $ echo "Thank you for visiting!"
             </div>
             <div className="space-y-2 text-neutral-200">

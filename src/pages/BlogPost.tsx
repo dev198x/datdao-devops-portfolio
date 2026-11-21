@@ -37,11 +37,11 @@ const renderContent = (content: string): React.ReactNode[] => {
       elements.push(<CodeBlock key={elements.length} code={codeLines.join('\n')} language={language} />);
       continue;
     } else if (line.startsWith('# ')) {
-      elements.push(<h1 key={elements.length} className="text-3xl font-bold text-green-400 mb-4">{line.substring(2)}</h1>);
+      elements.push(<h1 key={elements.length} className="text-3xl font-bold text-neutral-200 mb-4">{line.substring(2)}</h1>);
     } else if (line.startsWith('## ')) {
-      elements.push(<h2 key={elements.length} className="text-2xl font-bold text-green-400 mb-3 mt-6">{line.substring(3)}</h2>);
+      elements.push(<h2 key={elements.length} className="text-2xl font-bold text-neutral-200 mb-3 mt-6">{line.substring(3)}</h2>);
     } else if (line.startsWith('### ')) {
-      elements.push(<h3 key={elements.length} className="text-xl font-bold text-green-400 mb-2 mt-4">{line.substring(4)}</h3>);
+      elements.push(<h3 key={elements.length} className="text-xl font-bold text-neutral-200 mb-2 mt-4">{line.substring(4)}</h3>);
     } else if (line.trim()) {
       elements.push(<p key={elements.length} className="text-gray-300 leading-relaxed mb-4">{renderInline(line)}</p>);
     } else {
@@ -55,7 +55,7 @@ const renderContent = (content: string): React.ReactNode[] => {
 const BackLink: React.FC = () => (
   <Link
     to="/blog"
-    className="inline-flex items-center gap-2 font-mono text-primary-500 hover:text-primary-400 transition-colors"
+    className="inline-flex items-center gap-2 text-primary-500 hover:text-primary-400 transition-colors"
   >
     <ArrowLeft size={16} />
     <span>cd ../blog</span>
@@ -125,7 +125,7 @@ const BlogPostPage: React.FC = () => {
     return (
       <AnimatedBackground>
         <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-          <div className="font-mono text-5xl text-neutral-600 mb-4">404</div>
+          <div className="text-5xl text-neutral-600 mb-4">404</div>
           <p className="text-neutral-400 mb-8">Blog post not found.</p>
           <BackLink />
         </div>
@@ -152,13 +152,13 @@ const BlogPostPage: React.FC = () => {
             <div className="flex items-center gap-3 mb-4">
               <TechBadge name={post.category} category={post.category} size="sm" />
               <span className={`px-2 py-1 text-xs rounded ${
-                post.difficulty === 'Beginner' ? 'bg-green-500/20 text-green-400' :
-                post.difficulty === 'Intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
-                'bg-red-500/20 text-red-400'
+                post.difficulty === 'Beginner' ? 'bg-emerald-50 text-emerald-700' :
+                post.difficulty === 'Intermediate' ? 'bg-amber-50 text-amber-700' :
+                'bg-rose-50 text-rose-700'
               }`}>
                 {post.difficulty}
               </span>
-              {post.featured && <Star className="w-4 h-4 text-yellow-400 fill-current" />}
+              {post.featured && <Star className="w-4 h-4 text-amber-600 fill-current" />}
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-neutral-200 mb-2">{post.title}</h1>
             <div className="flex items-center gap-4 text-sm text-gray-400">

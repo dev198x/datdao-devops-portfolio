@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
-import { TerminalHeader } from '../components/TerminalHeader';
-import { Typewriter } from '../components/Typewriter';
+import { PageHeader } from '../components/PageHeader';
 import { CERTIFICATIONS } from '../data/portfolio';
 import { Award, Briefcase, Code, ExternalLink, GraduationCap, MapPin, Zap, Bot } from 'lucide-react';
 
@@ -220,8 +219,7 @@ export const About = () => {
 
   return (
     <div className="min-h-screen bg-bg-page">
-      {/* Terminal Header */}
-      <TerminalHeader
+      <PageHeader
         command="cat about.txt"
         description="Displaying professional background and technical philosophy"
       />
@@ -238,18 +236,14 @@ export const About = () => {
               viewport={{ once: true }}
               className="lg:col-span-7 space-y-8"
             >
-              <div className="bg-bg-surface border border-neutral-700 rounded-xl p-8 shadow-card">
-                <div className="font-mono text-lg mb-6">
-                  <span className="text-accent-500">$</span>
+              <div className="bg-bg-surface border border-neutral-700 rounded-xl p-8 ">
+                <div className="text-lg mb-6">
+                  <span className="text-primary-500">$</span>
                   <span className="text-primary-500"> cat</span>
                   <span className="text-neutral-400"> bio.txt</span>
                 </div>
                 <div className="space-y-4 text-neutral-200 leading-relaxed">
-                  <Typewriter
-                    text="Hello, I'm Dat Dao, a Software Engineer with 10+ years of experience in backend development, system architecture, and cloud engineering."
-                    delay={30}
-                    className="text-primary-500 font-semibold block mb-4"
-                  />
+                  <p className="text-primary-500 font-semibold block mb-4">Hello, I'm Dat Dao, a Software Engineer with 10+ years of experience in backend development, system architecture, and cloud engineering.</p>
                   <p>
                     I have approximately <span className="text-primary-500">2 years of hands-on DevOps experience</span>, with strong practical skills
                     in AWS, Terraform, Bash scripting, Node.js, TypeScript, Docker, and GitHub Actions.
@@ -264,11 +258,11 @@ export const About = () => {
                     <span className="text-primary-500">Retrieval-Augmented Generation (RAG)</span> and PostgreSQL Vector Database.
                   </p>
                   <div className="pt-2">
-                    <div className="font-mono text-sm text-accent-500 mb-3">$ ls capabilities/</div>
+                    <div className="text-sm text-primary-500 mb-3">$ ls capabilities/</div>
                     <ul className="space-y-3">
                       {CAPABILITIES.map((item) => (
                         <li key={item.title} className="flex items-start space-x-3">
-                          <span className="font-mono text-primary-500 mt-0.5">&gt;</span>
+                          <span className="text-neutral-500 mt-0.5">&gt;</span>
                           <span>
                             <span className="text-primary-500 font-medium">{item.title}</span>
                             <span className="text-neutral-400"> — {item.description}</span>
@@ -293,31 +287,31 @@ export const About = () => {
               className="lg:col-span-5 space-y-6"
             >
               <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
-                <h3 className="font-mono text-primary-500 font-semibold mb-4 text-lg">
+                <h3 className="text-neutral-200 font-semibold mb-4 text-lg">
                   Quick Stats
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">Experience</span>
-                    <span className="text-primary-500 font-mono text-right">10+ years</span>
+                    <span className="text-primary-500 text-right">10+ years</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">DevOps</span>
-                    <span className="text-primary-500 font-mono text-right">~2 years</span>
+                    <span className="text-primary-500 text-right">~2 years</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">Certification</span>
-                    <span className="text-primary-500 font-mono text-right">AWS SA Associate (2025)</span>
+                    <span className="text-primary-500 text-right">AWS SA Associate (2025)</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-400">Incident Analysis</span>
-                    <span className="text-primary-500 font-mono text-right">50–75% faster</span>
+                    <span className="text-primary-500 text-right">50–75% faster</span>
                   </div>
                 </div>
               </div>
 
               <div className="bg-bg-elevated border border-neutral-700 rounded-xl p-6">
-                <h3 className="font-mono text-primary-500 font-semibold mb-4 text-lg">
+                <h3 className="text-neutral-200 font-semibold mb-4 text-lg">
                   Specializations
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -333,7 +327,7 @@ export const About = () => {
 ].map((skill) => (
                     <span
                       key={skill}
-                      className="px-3 py-1 bg-neutral-800 text-neutral-200 text-sm rounded-md border border-neutral-700 hover:border-primary-500/50 transition-colors"
+                      className="px-3 py-1 bg-neutral-800 text-neutral-200 text-sm rounded-md border border-neutral-700 hover:border-neutral-600 transition-colors"
                     >
                       {skill}
                     </span>
@@ -355,7 +349,7 @@ export const About = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">
               Career Timeline
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
@@ -365,7 +359,7 @@ export const About = () => {
 
           <div className="relative">
             {/* Timeline line */}
-            <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary-500 via-primary-700 to-transparent" />
+            <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-neutral-700" />
 
             <div className="space-y-12">
               {TIMELINE.map((item, index) => {
@@ -384,14 +378,14 @@ export const About = () => {
                     }`}
                   >
                     {/* Timeline dot */}
-                    <div className="absolute left-4 md:left-1/2 transform md:-translate-x-1/2 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center border-4 border-bg-page shadow-glow z-10">
+                    <div className="absolute left-4 md:left-1/2 transform md:-translate-x-1/2 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center border-4 border-bg-page  z-10">
                       <IconComponent size={16} className="text-bg-surface" />
                     </div>
 
                     {/* Content */}
                     <div className={`ml-16 md:ml-0 md:w-1/2 ${isEven ? 'md:pr-12' : 'md:pl-12'}`}>
-                      <div className="bg-bg-elevated border border-neutral-700 rounded-lg p-6 hover:border-primary-500/50 transition-colors shadow-card">
-                        <div className="font-mono text-accent-500 text-sm mb-2">{item.year}</div>
+                      <div className="bg-bg-elevated border border-neutral-700 rounded-lg p-6 hover:border-neutral-600 transition-colors ">
+                        <div className="text-primary-500 text-sm mb-2">{item.year}</div>
                         <h3 className="font-semibold text-xl text-neutral-200 mb-1">{item.title}</h3>
                         {item.company && (
   <div className="text-primary-500 font-medium mb-3">
@@ -403,11 +397,11 @@ export const About = () => {
                         )}
                         {item.groups?.map((group) => (
                           <div key={group.label} className="mt-4">
-                            <div className="font-mono text-xs text-accent-500 mb-2">{group.label}</div>
+                            <div className="text-xs text-primary-500 mb-2">{group.label}</div>
                             <ul className="space-y-1.5">
                               {group.items.map((point) => (
                                 <li key={point} className="flex items-start space-x-2 text-neutral-400 text-sm leading-relaxed">
-                                  <span className="font-mono text-primary-500">&gt;</span>
+                                  <span className="text-neutral-500">&gt;</span>
                                   <span>{point}</span>
                                 </li>
                               ))}
@@ -434,7 +428,7 @@ export const About = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">Core Technical Skills</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">Core Technical Skills</h2>
           </motion.div>
           <div className="grid md:grid-cols-2 gap-6">
             {CORE_SKILLS.map((group, index) => (
@@ -444,9 +438,9 @@ export const About = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05, duration: 0.5 }}
                 viewport={{ once: true }}
-                className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 hover:border-primary-500/50 transition-colors"
+                className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 hover:border-neutral-600 transition-colors"
               >
-                <h3 className="font-mono text-primary-500 font-semibold mb-2">{group.label}</h3>
+                <h3 className="text-neutral-200 font-semibold mb-2">{group.label}</h3>
                 <p className="text-neutral-400 text-sm leading-relaxed">{group.items}</p>
               </motion.div>
             ))}
@@ -464,7 +458,7 @@ export const About = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">Selected AI Projects</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">Selected AI Projects</h2>
           </motion.div>
           <div className="space-y-8">
             {AI_PROJECTS.map((project, index) => (
@@ -474,7 +468,7 @@ export const About = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
                 viewport={{ once: true }}
-                className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 sm:p-8 hover:border-primary-500/50 transition-colors"
+                className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 sm:p-8 hover:border-neutral-600 transition-colors"
               >
                 <div className="flex items-start space-x-3 mb-4">
                   <Bot size={22} className="text-primary-500 mt-1 shrink-0" />
@@ -482,24 +476,24 @@ export const About = () => {
                 </div>
                 <dl className="space-y-1 text-sm mb-4">
                   {project.status && (
-                    <div className="flex gap-2"><dt className="font-mono text-accent-500">Status:</dt><dd className="text-neutral-300">{project.status}</dd></div>
+                    <div className="flex gap-2"><dt className="text-primary-500">Status:</dt><dd className="text-neutral-300">{project.status}</dd></div>
                   )}
                   {project.role && (
-                    <div className="flex gap-2"><dt className="font-mono text-accent-500">Role:</dt><dd className="text-neutral-300">{project.role}</dd></div>
+                    <div className="flex gap-2"><dt className="text-primary-500">Role:</dt><dd className="text-neutral-300">{project.role}</dd></div>
                   )}
-                  <div className="flex gap-2"><dt className="font-mono text-accent-500 shrink-0">Stack:</dt><dd className="text-neutral-300">{project.stack}</dd></div>
+                  <div className="flex gap-2"><dt className="text-primary-500 shrink-0">Stack:</dt><dd className="text-neutral-300">{project.stack}</dd></div>
                 </dl>
                 <ul className="space-y-1.5 mb-4">
                   {project.highlights.map((point) => (
                     <li key={point} className="flex items-start space-x-2 text-neutral-400 text-sm leading-relaxed">
-                      <span className="font-mono text-primary-500">&gt;</span>
+                      <span className="text-neutral-500">&gt;</span>
                       <span>{point}</span>
                     </li>
                   ))}
                 </ul>
                 {project.architecture && (
-                  <div className="bg-bg-surface border border-neutral-700 rounded-lg p-4 font-mono text-xs text-neutral-300 leading-relaxed mb-4">
-                    <span className="text-accent-500">Architecture: </span>
+                  <div className="bg-bg-surface border border-neutral-700 rounded-lg p-4 text-xs text-neutral-300 leading-relaxed mb-4">
+                    <span className="text-primary-500">Architecture: </span>
                     {project.architecture}
                   </div>
                 )}
@@ -511,7 +505,7 @@ export const About = () => {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-2 text-sm font-mono text-primary-500 hover:text-primary-400 transition-colors"
+                        className="inline-flex items-center space-x-2 text-sm text-primary-500 hover:text-primary-400 transition-colors"
                       >
                         <ExternalLink size={14} />
                         <span>Live Demo: {link.label}</span>
@@ -535,13 +529,13 @@ export const About = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">Certifications</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">Certifications</h2>
           </motion.div>
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {CERTIFICATIONS.map((cert) => (
               <div
                 key={cert.name}
-                className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 hover:border-primary-500/50 transition-colors"
+                className="bg-bg-elevated border border-neutral-700 rounded-xl p-6 hover:border-neutral-600 transition-colors"
               >
                 {cert.image ? (
                   <img
@@ -564,7 +558,7 @@ export const About = () => {
                     href={cert.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 mt-3 text-sm font-mono text-primary-500 hover:text-primary-400 transition-colors"
+                    className="inline-flex items-center space-x-2 mt-3 text-sm text-primary-500 hover:text-primary-400 transition-colors"
                   >
                     <ExternalLink size={14} />
                     <span>View credential</span>
@@ -586,7 +580,7 @@ export const About = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-4">
               Tech Philosophy
             </h2>
             <p className="text-neutral-400 max-w-2xl mx-auto">
@@ -604,7 +598,7 @@ export const About = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.6 }}
                   viewport={{ once: true }}
-                  className="bg-bg-elevated border border-neutral-700 rounded-xl p-8 text-center hover:border-primary-500/50 transition-all duration-300 group"
+                  className="bg-bg-elevated border border-neutral-700 rounded-xl p-8 text-center hover:border-neutral-600 transition-all duration-300 group"
                 >
                   <div className="w-16 h-16 bg-primary-500/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-primary-500/20 transition-colors">
                     <IconComponent size={32} className="text-primary-500" />

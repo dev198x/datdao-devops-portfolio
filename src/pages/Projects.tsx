@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { TerminalHeader } from '../components/TerminalHeader';
+import { PageHeader } from '../components/PageHeader';
 import { ExternalLink, Github, Filter, ArrowRight, Star } from 'lucide-react';
 import { PROJECTS_BY_CATEGORY, CONTACT } from '../data/portfolio';
 
@@ -21,8 +21,7 @@ export const Projects = () => {
 
   return (
     <div className="min-h-screen bg-bg-page">
-      {/* Terminal Header */}
-      <TerminalHeader
+      <PageHeader
         command="docker ps -a"
         description="Listing deployed projects and applications"
       />
@@ -40,10 +39,10 @@ export const Projects = () => {
               <button
                 key={filter.id}
                 onClick={() => setActiveFilter(filter.id)}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-mono font-medium transition-all duration-200 ${
+                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                   activeFilter === filter.id
-                    ? 'bg-primary-500 text-bg-surface shadow-glow'
-                    : 'bg-bg-elevated text-neutral-200 border border-neutral-700 hover:border-primary-500/50 hover:text-primary-500'
+                    ? 'bg-primary-500 text-bg-surface '
+                    : 'bg-bg-elevated text-neutral-200 border border-neutral-700 hover:border-neutral-600 hover:text-primary-500'
                 }`}
               >
                 <Filter size={16} />
@@ -73,20 +72,19 @@ export const Projects = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.6 }}
-                className="bg-bg-surface border border-neutral-700 rounded-xl overflow-hidden group hover:border-primary-500/50 transition-all duration-300 shadow-card hover:shadow-card-hover"
+                className="bg-bg-surface border border-neutral-700 rounded-xl overflow-hidden group hover:border-neutral-600 transition-all duration-300  "
               >
                 {/* Project Image */}
                 <Link to={`/projects/${project.slug}`} className="relative block aspect-video overflow-hidden">
                   <img
                     src={project.image}
                     alt={project.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-bg-surface via-transparent to-transparent opacity-60" />
                   
                   {project.featured && (
                     <div className="absolute top-4 left-4">
-                      <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-mono font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                         <Star size={12} className="fill-current" />
                         <span>Featured</span>
                       </span>
@@ -95,10 +93,10 @@ export const Projects = () => {
 
                   {/* Project Type Badge */}
                   <div className="absolute top-4 right-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-mono font-medium ${
+                    <span className={`px-3 py-1 rounded-md text-xs font-medium ${
                       project.category === 'devops'
-                        ? 'bg-green-500/20 text-green-500 border border-green-500/30'
-                        : 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200'
                     }`}>
                       {project.category === 'devops' ? 'DevOps' : 'Full-Stack'}
                     </span>
@@ -108,7 +106,7 @@ export const Projects = () => {
                 {/* Project Content */}
                 <div className="p-6 space-y-4">
                   {/* Title */}
-                  <h3 className="font-mono text-xl font-bold text-primary-500 group-hover:text-primary-400 transition-colors">
+                  <h3 className="text-xl font-bold text-neutral-200 group-hover:text-primary-400 transition-colors">
                     <Link to={`/projects/${project.slug}`}>{project.title}</Link>
                   </h3>
 
@@ -140,7 +138,7 @@ export const Projects = () => {
                       to={`/projects/${project.slug}`}
                       className="flex items-center space-x-2 text-primary-500 hover:text-primary-400 transition-colors group/btn"
                     >
-                      <span className="text-sm font-mono">View details</span>
+                      <span className="text-sm">View details</span>
                       <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                     </Link>
 
@@ -152,7 +150,7 @@ export const Projects = () => {
                         className="flex items-center space-x-2 text-neutral-400 hover:text-primary-500 transition-colors group/btn"
                       >
                         <Github size={16} className="group-hover/btn:scale-110 transition-transform" />
-                        <span className="text-sm font-mono">Code</span>
+                        <span className="text-sm">Code</span>
                       </a>
                     )}
                     
@@ -164,7 +162,7 @@ export const Projects = () => {
                         className="flex items-center space-x-2 text-neutral-400 hover:text-primary-500 transition-colors group/btn"
                       >
                         <ExternalLink size={16} className="group-hover/btn:scale-110 transition-transform" />
-                        <span className="text-sm font-mono">Live</span>
+                        <span className="text-sm">Live</span>
                       </a>
                     )}
                   </div>
@@ -180,7 +178,7 @@ export const Projects = () => {
               animate={{ opacity: 1 }}
               className="text-center py-24"
             >
-              <div className="font-mono text-4xl text-neutral-600 mb-4">404</div>
+              <div className="text-4xl text-neutral-600 mb-4">404</div>
               <div className="text-neutral-400">No projects found in this category.</div>
             </motion.div>
           )}
@@ -195,10 +193,10 @@ export const Projects = () => {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="bg-bg-surface border border-neutral-700 rounded-xl p-8 font-mono"
+            className="bg-bg-surface border border-neutral-700 rounded-xl p-8"
           >
             <div className="space-y-4">
-              <div className="text-accent-500">
+              <div className="text-primary-500">
                 $ cat project_summary.txt
               </div>
               
@@ -225,7 +223,7 @@ export const Projects = () => {
 
               <div className="pt-4 border-t border-neutral-700 text-sm text-neutral-400">
                 <div className="flex items-center space-x-2">
-                  <span className="text-accent-500">$</span>
+                  <span className="text-primary-500">$</span>
                   <span>echo "Each project demonstrates real-world implementation of cloud-native architecture and modern development practices"</span>
                 </div>
               </div>
@@ -242,9 +240,9 @@ export const Projects = () => {
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="bg-gradient-to-br from-bg-elevated to-bg-surface border border-primary-500/20 p-12 rounded-2xl shadow-glow"
+            className="bg-bg-surface border border-neutral-700 p-12 rounded-lg "
           >
-            <h2 className="font-mono text-3xl md:text-4xl font-bold text-primary-500 mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-200 mb-6">
               Interested in Collaboration?
             </h2>
             <p className="text-xl text-neutral-200 mb-8 leading-relaxed">
@@ -256,14 +254,14 @@ export const Projects = () => {
                 href={CONTACT.social.github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center px-8 py-4 bg-primary-500 text-bg-surface font-semibold rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-glow hover:shadow-card-hover"
+                className="inline-flex items-center justify-center px-6 py-3 bg-primary-500 text-bg-surface font-semibold rounded-lg hover:bg-primary-700 transition-all duration-200  "
               >
                 <Github className="mr-2 h-5 w-5" />
                 View All Projects
               </a>
               <a
                 href="/contact"
-                className="inline-flex items-center justify-center px-8 py-4 border-2 border-neutral-600 text-neutral-200 hover:border-primary-500 hover:text-primary-500 font-semibold rounded-lg transition-all duration-200"
+                className="inline-flex items-center justify-center px-6 py-3 border border-neutral-700 text-neutral-200 hover:border-primary-500 hover:text-primary-500 font-semibold rounded-lg transition-all duration-200"
               >
                 <ExternalLink className="mr-2 h-5 w-5" />
                 Start a Project

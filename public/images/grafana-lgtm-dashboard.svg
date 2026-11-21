@@ -1,68 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="ui-monospace, Menlo, Consolas, monospace" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
 <title id="t">Minh hoạ dashboard Grafana</title>
 <desc id="d">Bản minh hoạ (dữ liệu mẫu) một dashboard Grafana gồm chỉ số tổng quan, biểu đồ metric từ Prometheus, trace từ Tempo, log từ Loki và danh sách cảnh báo.</desc>
-<rect width="960" height="540" fill="#0b0f14"/>
+<rect width="960" height="540" fill="#F8FAFC"/>
 
 <!-- Window bar -->
-<rect x="14" y="12" width="932" height="40" rx="8" fill="#111827"/>
-<circle cx="36" cy="32" r="6" fill="#ef4444"/><circle cx="58" cy="32" r="6" fill="#eab308"/><circle cx="80" cy="32" r="6" fill="#22c55e"/>
-<text x="110" y="37" fill="#fbbf24" font-size="15" font-weight="700">Grafana</text>
-<text x="180" y="37" fill="#9ca3af" font-size="14">/ Service Overview</text>
-<rect x="770" y="21" width="166" height="22" rx="11" fill="#2a1f05" stroke="#f59e0b"/>
-<text x="853" y="36" fill="#fbbf24" font-size="12" text-anchor="middle" font-weight="700">MINH HOẠ · DỮ LIỆU MẪU</text>
+<rect x="14" y="12" width="932" height="40" rx="8" fill="#F1F5F9"/>
+<text x="28" y="37" fill="#B45309" font-size="15" font-weight="700">Grafana</text>
+<text x="98" y="37" fill="#64748B" font-size="14">/ Service Overview</text>
+<rect x="770" y="21" width="166" height="22" rx="11" fill="#FFFBEB" stroke="#D97706"/>
+<text x="853" y="36" fill="#B45309" font-size="12" text-anchor="middle" font-weight="700">MINH HOẠ · DỮ LIỆU MẪU</text>
 
 <!-- Stat tiles -->
 <g stroke-width="1.5">
-<rect x="14" y="66" width="221" height="74" rx="8" fill="#0f1b14" stroke="#22c55e"/>
-<rect x="249" y="66" width="221" height="74" rx="8" fill="#1d1111" stroke="#ef4444"/>
-<rect x="484" y="66" width="221" height="74" rx="8" fill="#1f1308" stroke="#fb923c"/>
-<rect x="719" y="66" width="227" height="74" rx="8" fill="#0f1b14" stroke="#22c55e"/>
+<rect x="14" y="66" width="221" height="74" rx="8" fill="#F0FDF4" stroke="#16A34A"/>
+<rect x="249" y="66" width="221" height="74" rx="8" fill="#FEF2F2" stroke="#DC2626"/>
+<rect x="484" y="66" width="221" height="74" rx="8" fill="#FFF7ED" stroke="#EA580C"/>
+<rect x="719" y="66" width="227" height="74" rx="8" fill="#F0FDF4" stroke="#16A34A"/>
 </g>
-<g font-size="12" fill="#9ca3af"><text x="30" y="90">Request rate</text><text x="265" y="90">Error rate</text><text x="500" y="90">Latency p95</text><text x="735" y="90">Pods ready</text></g>
-<g font-size="28" font-weight="700"><text x="30" y="125" fill="#4ade80">1.2k/s</text><text x="265" y="125" fill="#f87171">0.4%</text><text x="500" y="125" fill="#fdba74">180ms</text><text x="735" y="125" fill="#4ade80">6 / 6</text></g>
+<g font-size="12" fill="#64748B"><text x="30" y="90">Request rate</text><text x="265" y="90">Error rate</text><text x="500" y="90">Latency p95</text><text x="735" y="90">Pods ready</text></g>
+<g font-size="28" font-weight="700"><text x="30" y="125" fill="#16A34A">1.2k/s</text><text x="265" y="125" fill="#DC2626">0.4%</text><text x="500" y="125" fill="#C2410C">180ms</text><text x="735" y="125" fill="#16A34A">6 / 6</text></g>
 
 <!-- Metrics panel (Prometheus) -->
-<rect x="14" y="154" width="458" height="180" rx="8" fill="#0f141b" stroke="#1f2937"/>
-<text x="30" y="178" fill="#7dd3fc" font-size="13" font-weight="700">Metrics · Prometheus</text>
-<g stroke="#1f2937" stroke-width="1"><path d="M30 205H456M30 240H456M30 275H456M30 310H456"/></g>
-<polyline fill="none" stroke="#38bdf8" stroke-width="2.5" points="30,285 80,278 130,282 180,270 230,274 280,262 330,200 360,214 410,268 456,272"/>
-<polyline fill="none" stroke="#22c55e" stroke-width="2" points="30,300 90,296 150,298 210,292 270,294 330,286 390,292 456,290"/>
-<circle cx="330" cy="200" r="5" fill="#ef4444"/>
-<text x="338" y="196" fill="#fca5a5" font-size="11">đột biến</text>
+<rect x="14" y="154" width="458" height="180" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+<text x="30" y="178" fill="#0369A1" font-size="13" font-weight="700">Metrics · Prometheus</text>
+<g stroke="#E2E8F0" stroke-width="1"><path d="M30 205H456M30 240H456M30 275H456M30 310H456"/></g>
+<polyline fill="none" stroke="#0284C7" stroke-width="2.5" points="30,285 80,278 130,282 180,270 230,274 280,262 330,200 360,214 410,268 456,272"/>
+<polyline fill="none" stroke="#16A34A" stroke-width="2" points="30,300 90,296 150,298 210,292 270,294 330,286 390,292 456,290"/>
+<circle cx="330" cy="200" r="5" fill="#DC2626"/>
+<text x="338" y="196" fill="#B91C1C" font-size="11">đột biến</text>
 
 <!-- Traces panel (Tempo) -->
-<rect x="488" y="154" width="458" height="180" rx="8" fill="#0f141b" stroke="#1f2937"/>
-<text x="504" y="178" fill="#fdba74" font-size="13" font-weight="700">Traces · Tempo</text>
-<g font-size="11" fill="#9ca3af"><text x="504" y="206">web</text><text x="504" y="230">api</text><text x="504" y="254">auth-service</text><text x="504" y="278">postgres</text><text x="504" y="302">redis</text></g>
+<rect x="488" y="154" width="458" height="180" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+<text x="504" y="178" fill="#C2410C" font-size="13" font-weight="700">Traces · Tempo</text>
+<g font-size="11" fill="#64748B"><text x="504" y="206">web</text><text x="504" y="230">api</text><text x="504" y="254">auth-service</text><text x="504" y="278">postgres</text><text x="504" y="302">redis</text></g>
 <g>
-<rect x="585" y="196" width="340" height="14" rx="3" fill="#22c55e"/>
-<rect x="605" y="220" width="300" height="14" rx="3" fill="#38bdf8"/>
-<rect x="625" y="244" width="90" height="14" rx="3" fill="#a78bfa"/>
-<rect x="725" y="268" width="150" height="14" rx="3" fill="#ef4444"/>
-<rect x="885" y="292" width="25" height="14" rx="3" fill="#fb923c"/>
+<rect x="585" y="196" width="340" height="14" rx="3" fill="#16A34A"/>
+<rect x="605" y="220" width="300" height="14" rx="3" fill="#0284C7"/>
+<rect x="625" y="244" width="90" height="14" rx="3" fill="#7C3AED"/>
+<rect x="725" y="268" width="150" height="14" rx="3" fill="#DC2626"/>
+<rect x="885" y="292" width="25" height="14" rx="3" fill="#EA580C"/>
 </g>
-<text x="800" y="320" fill="#fca5a5" font-size="11" text-anchor="middle">span chậm nhất: truy vấn database</text>
+<text x="800" y="320" fill="#B91C1C" font-size="11" text-anchor="middle">span chậm nhất: truy vấn database</text>
 
 <!-- Logs panel (Loki) -->
-<rect x="14" y="348" width="458" height="178" rx="8" fill="#0f141b" stroke="#1f2937"/>
-<text x="30" y="372" fill="#fde047" font-size="13" font-weight="700">Logs · Loki</text>
-<g font-size="12">
-<text x="30" y="398" fill="#9ca3af">10:42:01 <tspan fill="#4ade80">INFO </tspan><tspan fill="#d1d5db">GET /api/orders 200 120ms</tspan></text>
-<text x="30" y="420" fill="#9ca3af">10:42:03 <tspan fill="#4ade80">INFO </tspan><tspan fill="#d1d5db">POST /api/booking 201 95ms</tspan></text>
-<text x="30" y="442" fill="#9ca3af">10:42:07 <tspan fill="#facc15">WARN </tspan><tspan fill="#d1d5db">slow query 1.8s</tspan></text>
-<text x="30" y="464" fill="#9ca3af">10:42:07 <tspan fill="#f87171">ERROR</tspan><tspan fill="#d1d5db"> timeout trace_id=…a91f</tspan></text>
-<text x="30" y="486" fill="#9ca3af">10:42:09 <tspan fill="#4ade80">INFO </tspan><tspan fill="#d1d5db">retry ok</tspan></text>
-<text x="30" y="508" fill="#6b7280">token=*** (đã che dữ liệu nhạy cảm)</text>
+<rect x="14" y="348" width="458" height="178" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+<text x="30" y="372" fill="#A16207" font-size="13" font-weight="700">Logs · Loki</text>
+<g font-size="12" font-family="ui-monospace, Menlo, Consolas, monospace">
+<text x="30" y="398" fill="#64748B">10:42:01 <tspan fill="#16A34A">INFO </tspan><tspan fill="#334155">GET /api/orders 200 120ms</tspan></text>
+<text x="30" y="420" fill="#64748B">10:42:03 <tspan fill="#16A34A">INFO </tspan><tspan fill="#334155">POST /api/booking 201 95ms</tspan></text>
+<text x="30" y="442" fill="#64748B">10:42:07 <tspan fill="#CA8A04">WARN </tspan><tspan fill="#334155">slow query 1.8s</tspan></text>
+<text x="30" y="464" fill="#64748B">10:42:07 <tspan fill="#DC2626">ERROR</tspan><tspan fill="#334155"> timeout trace_id=…a91f</tspan></text>
+<text x="30" y="486" fill="#64748B">10:42:09 <tspan fill="#16A34A">INFO </tspan><tspan fill="#334155">retry ok</tspan></text>
+<text x="30" y="508" fill="#94A3B8">token=*** (đã che dữ liệu nhạy cảm)</text>
 </g>
 
 <!-- Alerts panel -->
-<rect x="488" y="348" width="458" height="178" rx="8" fill="#0f141b" stroke="#1f2937"/>
-<text x="504" y="372" fill="#fbbf24" font-size="13" font-weight="700">Alerting</text>
+<rect x="488" y="348" width="458" height="178" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+<text x="504" y="372" fill="#B45309" font-size="13" font-weight="700">Alerting</text>
 <g font-size="12">
-<circle cx="510" cy="396" r="6" fill="#ef4444"/><text x="526" y="400" fill="#fca5a5">FIRING</text><text x="590" y="400" fill="#d1d5db">Error rate &gt; 1% (5 phút)</text>
-<circle cx="510" cy="424" r="6" fill="#facc15"/><text x="526" y="428" fill="#fde047">PENDING</text><text x="598" y="428" fill="#d1d5db">Latency p95 &gt; 500ms</text>
-<circle cx="510" cy="452" r="6" fill="#22c55e"/><text x="526" y="456" fill="#86efac">OK</text><text x="560" y="456" fill="#d1d5db">Pod restart</text>
-<circle cx="510" cy="480" r="6" fill="#22c55e"/><text x="526" y="484" fill="#86efac">OK</text><text x="560" y="484" fill="#d1d5db">Disk usage &lt; 80%</text>
+<circle cx="510" cy="396" r="6" fill="#DC2626"/><text x="526" y="400" fill="#B91C1C">FIRING</text><text x="590" y="400" fill="#334155">Error rate &gt; 1% (5 phút)</text>
+<circle cx="510" cy="424" r="6" fill="#CA8A04"/><text x="526" y="428" fill="#A16207">PENDING</text><text x="598" y="428" fill="#334155">Latency p95 &gt; 500ms</text>
+<circle cx="510" cy="452" r="6" fill="#16A34A"/><text x="526" y="456" fill="#15803D">OK</text><text x="560" y="456" fill="#334155">Pod restart</text>
+<circle cx="510" cy="480" r="6" fill="#16A34A"/><text x="526" y="484" fill="#15803D">OK</text><text x="560" y="484" fill="#334155">Disk usage &lt; 80%</text>
 </g>
-<text x="930" y="512" fill="#9ca3af" font-size="11" text-anchor="end">→ gửi Slack / On-call</text>
+<text x="930" y="512" fill="#64748B" font-size="11" text-anchor="end">→ gửi Slack / On-call</text>
 </svg>
