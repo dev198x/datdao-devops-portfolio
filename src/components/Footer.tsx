@@ -26,7 +26,7 @@ export const Footer = () => {
   ];
 
   return (
-    <footer className="bg-bg-elevated border-t border-neutral-700 mt-24">
+    <footer className="bg-bg-surface border-t border-neutral-700 mt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col items-center space-y-8">
           {/* Social Links */}
@@ -38,14 +38,12 @@ export const Footer = () => {
                   key={link.name}
                   href={link.url}
                   {...(link.internal ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
-                  className="p-3 rounded-lg bg-bg-surface hover:bg-primary-500 text-neutral-400 hover:text-bg-surface transition-all duration-200 group"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                  className="p-3 rounded-md border border-neutral-700 bg-white text-neutral-400 hover:text-neutral-200 hover:bg-neutral-50 transition-colors"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <IconComponent size={20} className="group-hover:scale-110 transition-transform" />
+                  <IconComponent size={20} />
                 </motion.a>
               );
             })}
@@ -54,14 +52,14 @@ export const Footer = () => {
           {/* Terminal-style copyright */}
           <div className="font-mono text-sm text-neutral-400 text-center">
             <div className="flex items-center space-x-2">
-              <span className="text-accent-500">$</span>
-              <span className="text-primary-500">cat</span>
+              <span className="text-neutral-500">$</span>
+              <span className="text-neutral-200 font-medium">cat</span>
               <span>copyright.txt</span>
             </div>
             <div className="mt-2 space-y-1 text-xs">
               <p>© {currentYear} Dat Dao</p>
               <p>Built with React, TypeScript, and Cyber Terminal Aesthetic</p>
-              <p className="text-primary-500">Status: Available for opportunities</p>
+              <p className="text-primary-500 font-medium">Status: Available for opportunities</p>
             </div>
           </div>
 
@@ -69,10 +67,10 @@ export const Footer = () => {
           <div className="flex items-center space-x-4 text-xs font-mono text-neutral-500">
             <span>Powered by:</span>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 bg-neutral-800 rounded text-primary-500">React</span>
-              <span className="px-2 py-1 bg-neutral-800 rounded text-primary-500">TypeScript</span>
-              <span className="px-2 py-1 bg-neutral-800 rounded text-primary-500">Tailwind</span>
-              <span className="px-2 py-1 bg-neutral-800 rounded text-primary-500">Vite</span>
+              <span className="px-2 py-1 bg-white border border-neutral-700 rounded text-neutral-300">React</span>
+              <span className="px-2 py-1 bg-white border border-neutral-700 rounded text-neutral-300">TypeScript</span>
+              <span className="px-2 py-1 bg-white border border-neutral-700 rounded text-neutral-300">Tailwind</span>
+              <span className="px-2 py-1 bg-white border border-neutral-700 rounded text-neutral-300">Vite</span>
             </div>
           </div>
         </div>

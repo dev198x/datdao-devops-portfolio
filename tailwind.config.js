@@ -21,65 +21,64 @@ module.exports = {
         sans: ['Inter', '-apple-system', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // GitHub Light-inspired palette. Note: the "neutral" scale below does NOT follow
-        // the usual 50=lightest/950=darkest Tailwind convention — each step is pinned to
-        // preserve the semantic role components already reference (e.g. text-neutral-200
-        // is the primary body-text color, border-neutral-700 is the default card border),
-        // so no component class names had to change when flipping from dark to light.
+        // Flat, professional palette: slate neutrals + a single navy-blue accent.
+        // Note: the "neutral" scale does NOT follow the usual 50=lightest/950=darkest
+        // Tailwind convention. Each step is pinned to a semantic role components already
+        // reference (text-neutral-200 = primary body text, border-neutral-700 = default
+        // border, text-neutral-400 = secondary text), so class names did not need to change.
         primary: {
-          50: '#DAFBE1',
-          100: '#ACEEBB',
-          500: '#1F883D',
-          700: '#1A7F37',
-          900: '#116329',
-          DEFAULT: '#1F883D',
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          400: '#1E40AF',
+          500: '#1D4ED8',
+          700: '#1E40AF',
+          900: '#1E3A8A',
+          DEFAULT: '#1D4ED8',
         },
         accent: {
-          500: '#0969DA',
-          700: '#0550AE',
-          DEFAULT: '#0969DA',
+          500: '#1D4ED8',
+          700: '#1E40AF',
+          DEFAULT: '#1D4ED8',
         },
         neutral: {
-          50: '#F6F8FA',
-          100: '#EAEEF2',
-          200: '#1F2328',
-          300: '#32383F',
-          400: '#57606A',
-          500: '#6E7781',
-          600: '#8B949E',
-          700: '#D0D7DE',
-          800: '#EAEEF2',
-          900: '#F6F8FA',
+          50: '#F8FAFC',
+          100: '#F1F5F9',
+          200: '#0F172A',
+          300: '#334155',
+          400: '#475569',
+          500: '#64748B',
+          600: '#CBD5E1',
+          700: '#E2E8F0',
+          800: '#F1F5F9',
+          900: '#F8FAFC',
           950: '#FFFFFF',
         },
         bg: {
           page: '#FFFFFF',
-          surface: '#F6F8FA',
+          surface: '#F8FAFC',
           elevated: '#FFFFFF',
         },
-        // Blog and Case Studies components hardcode Tailwind's built-in gray/green scales
-        // directly (bg-gray-900, text-green-400, etc.) instead of the custom tokens above.
-        // Overriding those built-ins here recolors those pages without touching every class
-        // in EnhancedBlog.tsx / EnhancedCaseStudies.tsx. Same "semantic role over numeric
-        // lightness order" approach as the neutral scale above.
+        // Blog components hardcode Tailwind's built-in gray/green scales directly
+        // (bg-gray-900, text-green-400, ...). Overriding them here recolors those pages
+        // without touching every class. Same "semantic role over lightness order" approach.
         gray: {
-          50: '#F6F8FA',
-          100: '#EAEEF2',
-          200: '#D0D7DE',
-          300: '#1F2328',
-          400: '#57606A',
-          500: '#6E7781',
-          600: '#8B949E',
-          700: '#D0D7DE',
-          800: '#EAEEF2',
+          50: '#F8FAFC',
+          100: '#F1F5F9',
+          200: '#E2E8F0',
+          300: '#0F172A',
+          400: '#475569',
+          500: '#64748B',
+          600: '#94A3B8',
+          700: '#E2E8F0',
+          800: '#F1F5F9',
           900: '#FFFFFF',
         },
         green: {
-          200: '#1A7F37',
-          300: '#3FB950',
-          400: '#2DA44E',
-          500: '#1F883D',
-          600: '#1A7F37',
+          200: '#1E40AF',
+          300: '#3B82F6',
+          400: '#1D4ED8',
+          500: '#1D4ED8',
+          600: '#1E40AF',
         },
       },
       spacing: {
@@ -96,17 +95,20 @@ module.exports = {
       },
       borderRadius: {
         sm: '4px',
-        md: '8px',
-        lg: '12px',
-        xl: '16px',
-        DEFAULT: '8px',
+        md: '6px',
+        lg: '8px',
+        xl: '8px',
+        '2xl': '10px',
+        DEFAULT: '6px',
       },
+      // Flat design: no elevation. Tokens are kept (so existing classes still resolve) but
+      // render as nothing; separation comes from 1px borders and spacing.
       boxShadow: {
-        sm: '0 1px 0 rgba(31, 35, 40, 0.04)',
-        card: '0 1px 3px rgba(31, 35, 40, 0.12), 0 1px 2px rgba(31, 35, 40, 0.08)',
-        'card-hover': '0 4px 12px rgba(31, 35, 40, 0.15)',
-        modal: '0 12px 28px rgba(31, 35, 40, 0.2)',
-        glow: '0 0 0 3px rgba(9, 105, 218, 0.15)',
+        sm: 'none',
+        card: 'none',
+        'card-hover': 'none',
+        modal: '0 8px 24px rgba(15, 23, 42, 0.12)',
+        glow: 'none',
       },
       keyframes: {
         'typewriter': {

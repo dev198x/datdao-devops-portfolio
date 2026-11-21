@@ -36,16 +36,14 @@ export const Navbar = () => {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-page/80 backdrop-blur-md border-b border-neutral-700">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur border-b border-neutral-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2 group">
-              <div className="text-primary-500 font-mono font-bold text-xl tracking-wide">
-                <span className="text-accent-500">&gt;</span>
-                <span className="group-hover:text-primary-500 transition-colors duration-200">
-                  _
-                </span>
+              <div className="flex h-9 w-11 items-center justify-center rounded-md border border-neutral-700 bg-bg-surface font-mono font-bold text-lg leading-none text-primary-500 group-hover:border-neutral-600 transition-colors">
+                <span>&gt;</span>
+                <span>_</span>
               </div>
             </Link>
 
@@ -60,7 +58,7 @@ export const Navbar = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className="relative px-2 xl:px-3 py-2 text-sm font-medium transition-all duration-200 group flex items-center gap-1.5 xl:gap-2"
+                    className="relative px-2 xl:px-3 py-2 text-sm font-medium transition-colors duration-200 group flex items-center gap-1.5 xl:gap-2"
                   >
                     {IconComponent && (
                       <IconComponent 
@@ -68,16 +66,16 @@ export const Navbar = () => {
                         // Icons from lg up; the spacing above is tightened below xl so eight links, icons and the clock fit.
                         className={`hidden lg:block ${
                           isActive(item.path)
-                            ? 'text-primary-500'
-                            : 'text-neutral-200 group-hover:text-primary-500'
+                            ? 'text-neutral-200'
+                            : 'text-neutral-500 group-hover:text-neutral-200'
                         }`}
                       />
                     )}
                     <span
-                      className={`font-mono ${
+                      className={`${
                         isActive(item.path)
-                          ? 'text-primary-500'
-                          : 'text-neutral-200 group-hover:text-primary-500'
+                          ? 'text-neutral-200'
+                          : 'text-neutral-400 group-hover:text-neutral-200'
                       }`}
                     >
                       {item.label}
@@ -85,7 +83,7 @@ export const Navbar = () => {
                     {isActive(item.path) && (
                       <motion.div
                         layoutId="navbar-indicator"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 shadow-glow"
+                        className="absolute -bottom-[17px] left-2 right-2 h-0.5 bg-primary-500"
                         initial={false}
                         transition={{ duration: 0.2 }}
                       />
@@ -99,7 +97,7 @@ export const Navbar = () => {
             <div className="md:hidden">
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-md text-neutral-200 hover:text-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                className="p-2 rounded-md text-neutral-300 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
                 aria-label="Toggle menu"
               >
                 {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -127,8 +125,8 @@ export const Navbar = () => {
                     onClick={() => setIsOpen(false)}
                     className={`flex items-center justify-between px-3 py-3 rounded-md text-base font-medium transition-all duration-200 ${
                       isActive(item.path)
-                        ? 'text-primary-500 bg-bg-surface border-l-2 border-primary-500'
-                        : 'text-neutral-200 hover:text-primary-500 hover:bg-bg-surface'
+                        ? 'text-primary-500 bg-primary-50'
+                        : 'text-neutral-300 hover:bg-bg-surface'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -140,7 +138,7 @@ export const Navbar = () => {
                           }`}
                         />
                       )}
-                      <span className="font-mono">$ {item.label.toLowerCase()}</span>
+                      <span>$ {item.label.toLowerCase()}</span>
                     </div>
                     <ChevronRight
                       size={16}

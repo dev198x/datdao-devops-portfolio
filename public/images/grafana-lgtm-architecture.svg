@@ -1,70 +1,70 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="ui-monospace, Menlo, Consolas, monospace" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
 <title id="t">Luồng dữ liệu của Grafana LGTM stack</title>
 <desc id="d">Ứng dụng gửi log, trace và metric qua OpenTelemetry Collector tới Loki, Tempo và Prometheus, rồi hiển thị trên Grafana và gửi cảnh báo.</desc>
 <defs>
-<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#22c55e"/></marker>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#94A3B8"/></marker>
 </defs>
-<rect width="960" height="540" fill="#0b0f14"/>
-<text x="480" y="44" fill="#22c55e" font-size="22" font-weight="700" text-anchor="middle">Grafana LGTM stack: luồng dữ liệu giám sát</text>
+<rect width="960" height="540" fill="#F8FAFC"/>
+<text x="480" y="44" fill="#0F172A" font-size="22" font-weight="700" text-anchor="middle">Grafana LGTM stack: luồng dữ liệu giám sát</text>
 
-<g fill="#6ee7b7" font-size="12" text-anchor="middle" letter-spacing="1">
+<g fill="#64748B" font-size="12" text-anchor="middle" letter-spacing="1">
 <text x="135" y="98">ỨNG DỤNG</text><text x="375" y="98">THU THẬP</text><text x="615" y="98">LƯU TRỮ</text><text x="840" y="98">QUAN SÁT</text>
 </g>
 
 <!-- Services -->
-<g fill="#111a14" stroke="#22c55e" stroke-width="1.5">
+<g fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5">
 <rect x="40" y="120" width="190" height="62" rx="8"/>
 <rect x="40" y="215" width="190" height="62" rx="8"/>
 <rect x="40" y="310" width="190" height="62" rx="8"/>
 </g>
-<g fill="#86efac" font-size="14" text-anchor="middle">
-<text x="135" y="146">Web / Next.js</text><text x="135" y="166" font-size="11" fill="#4ade80">frontend</text>
-<text x="135" y="241">API / NestJS</text><text x="135" y="261" font-size="11" fill="#4ade80">backend services</text>
-<text x="135" y="336">Database / Queue</text><text x="135" y="356" font-size="11" fill="#4ade80">PostgreSQL · Redis</text>
+<g fill="#475569" font-size="14" text-anchor="middle">
+<text x="135" y="146">Web / Next.js</text><text x="135" y="166" font-size="11" fill="#64748B">frontend</text>
+<text x="135" y="241">API / NestJS</text><text x="135" y="261" font-size="11" fill="#64748B">backend services</text>
+<text x="135" y="336">Database / Queue</text><text x="135" y="356" font-size="11" fill="#64748B">PostgreSQL · Redis</text>
 </g>
 
 <!-- Collector -->
-<rect x="290" y="120" width="170" height="252" rx="10" fill="#0f1b2b" stroke="#38bdf8" stroke-width="2"/>
+<rect x="290" y="120" width="170" height="252" rx="10" fill="#EFF6FF" stroke="#0284C7" stroke-width="2"/>
 <g text-anchor="middle">
-<text x="375" y="190" fill="#7dd3fc" font-size="16" font-weight="700">OpenTelemetry</text>
-<text x="375" y="212" fill="#7dd3fc" font-size="16" font-weight="700">Collector</text>
-<text x="375" y="250" fill="#bae6fd" font-size="12">gom lô (batch)</text>
-<text x="375" y="272" fill="#bae6fd" font-size="12">xoá dữ liệu nhạy cảm</text>
-<text x="375" y="294" fill="#bae6fd" font-size="12">gắn nhãn service</text>
+<text x="375" y="190" fill="#0369A1" font-size="16" font-weight="700">OpenTelemetry</text>
+<text x="375" y="212" fill="#0369A1" font-size="16" font-weight="700">Collector</text>
+<text x="375" y="250" fill="#475569" font-size="12">gom lô (batch)</text>
+<text x="375" y="272" fill="#475569" font-size="12">xoá dữ liệu nhạy cảm</text>
+<text x="375" y="294" fill="#475569" font-size="12">gắn nhãn service</text>
 </g>
 
 <!-- Backends -->
 <g stroke-width="2">
-<rect x="530" y="120" width="170" height="70" rx="8" fill="#1d1a0b" stroke="#facc15"/>
-<rect x="530" y="215" width="170" height="70" rx="8" fill="#1f1308" stroke="#fb923c"/>
-<rect x="530" y="310" width="170" height="70" rx="8" fill="#0b1a24" stroke="#38bdf8"/>
+<rect x="530" y="120" width="170" height="70" rx="8" fill="#FEFCE8" stroke="#CA8A04"/>
+<rect x="530" y="215" width="170" height="70" rx="8" fill="#FFF7ED" stroke="#EA580C"/>
+<rect x="530" y="310" width="170" height="70" rx="8" fill="#F0F9FF" stroke="#0284C7"/>
 </g>
 <g text-anchor="middle">
-<text x="615" y="150" fill="#fde047" font-size="18" font-weight="700">Loki</text><text x="615" y="172" fill="#fef08a" font-size="12">Logs</text>
-<text x="615" y="245" fill="#fdba74" font-size="18" font-weight="700">Tempo</text><text x="615" y="267" fill="#fed7aa" font-size="12">Traces</text>
-<text x="615" y="340" fill="#7dd3fc" font-size="18" font-weight="700">Prometheus</text><text x="615" y="362" fill="#bae6fd" font-size="12">Metrics</text>
+<text x="615" y="150" fill="#A16207" font-size="18" font-weight="700">Loki</text><text x="615" y="172" fill="#64748B" font-size="12">Logs</text>
+<text x="615" y="245" fill="#C2410C" font-size="18" font-weight="700">Tempo</text><text x="615" y="267" fill="#64748B" font-size="12">Traces</text>
+<text x="615" y="340" fill="#0369A1" font-size="18" font-weight="700">Prometheus</text><text x="615" y="362" fill="#475569" font-size="12">Metrics</text>
 </g>
 
 <!-- Grafana -->
-<rect x="760" y="170" width="160" height="160" rx="10" fill="#1f1308" stroke="#f59e0b" stroke-width="2.5"/>
+<rect x="760" y="170" width="160" height="160" rx="10" fill="#FFF7ED" stroke="#D97706" stroke-width="2.5"/>
 <g text-anchor="middle">
-<text x="840" y="220" fill="#fbbf24" font-size="20" font-weight="700">Grafana</text>
-<text x="840" y="254" fill="#fde68a" font-size="12">Dashboards</text>
-<text x="840" y="276" fill="#fde68a" font-size="12">Explore</text>
-<text x="840" y="298" fill="#fde68a" font-size="12">Alerting</text>
+<text x="840" y="220" fill="#B45309" font-size="20" font-weight="700">Grafana</text>
+<text x="840" y="254" fill="#64748B" font-size="12">Dashboards</text>
+<text x="840" y="276" fill="#64748B" font-size="12">Explore</text>
+<text x="840" y="298" fill="#64748B" font-size="12">Alerting</text>
 </g>
 
 <!-- Alert target -->
-<rect x="760" y="400" width="160" height="62" rx="8" fill="#111a14" stroke="#22c55e" stroke-width="1.5"/>
-<g text-anchor="middle"><text x="840" y="427" fill="#86efac" font-size="14">Slack / On-call</text><text x="840" y="447" fill="#4ade80" font-size="11">cảnh báo sớm</text></g>
+<rect x="760" y="400" width="160" height="62" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+<g text-anchor="middle"><text x="840" y="427" fill="#475569" font-size="14">Slack / On-call</text><text x="840" y="447" fill="#64748B" font-size="11">cảnh báo sớm</text></g>
 
 <!-- Arrows -->
-<g stroke="#22c55e" stroke-width="1.8" fill="none" marker-end="url(#a)">
+<g stroke="#94A3B8" stroke-width="1.8" fill="none" marker-end="url(#a)">
 <path d="M230 151H290"/><path d="M230 246H290"/><path d="M230 341H290"/>
 <path d="M460 155H530"/><path d="M460 250H530"/><path d="M460 345H530"/>
 <path d="M700 155H730V215H760"/><path d="M700 250H760"/><path d="M700 345H730V285H760"/>
 <path d="M840 330V400"/>
 </g>
 
-<text x="480" y="500" fill="#86efac" font-size="14" text-anchor="middle">Log, trace và metric trong một giao diện: lần theo request từ cảnh báo đến nguyên nhân gốc</text>
+<text x="480" y="500" fill="#475569" font-size="14" text-anchor="middle">Log, trace và metric trong một giao diện: lần theo request từ cảnh báo đến nguyên nhân gốc</text>
 </svg>

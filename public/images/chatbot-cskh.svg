@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" font-family="monospace">
-<rect width="640" height="360" fill="#0b0f14"/>
-<g fill="#111a14" stroke="#22c55e" stroke-width="1.5">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="640" height="360" fill="#F8FAFC"/>
+<g fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5">
 <rect x="30" y="40" width="120" height="50" rx="6"/><rect x="190" y="40" width="170" height="50" rx="6"/>
 <rect x="400" y="40" width="100" height="50" rx="6"/><rect x="190" y="130" width="170" height="50" rx="6"/>
 <rect x="30" y="130" width="120" height="50" rx="6"/><rect x="400" y="130" width="100" height="50" rx="6"/>
 <rect x="30" y="240" width="140" height="70" rx="6"/><rect x="210" y="240" width="140" height="70" rx="6"/><rect x="390" y="240" width="110" height="70" rx="6"/>
 </g>
-<g stroke="#22c55e" stroke-width="1.5" fill="none"><path d="M150 65h40M360 65h40M275 90v40M150 155h40M360 155h40M275 180v60M100 180v60M445 180v60"/></g>
-<g fill="#86efac" font-size="13" text-anchor="middle">
+<g stroke="#94A3B8" stroke-width="1.5" fill="none"><path d="M150 65h40M360 65h40M275 90v40M150 155h40M360 155h40M275 180v60M100 180v60M445 180v60"/></g>
+<g fill="#334155" font-size="13" text-anchor="middle">
 <text x="90" y="70">Customer</text><text x="275" y="70">Chatbot API</text><text x="450" y="70">LLM</text>
 <text x="275" y="160">RAG Retriever</text><text x="90" y="160">Auth (login)</text><text x="450" y="160">Order Tool</text>
-<text x="100" y="270">Policy Docs</text><text x="100" y="290" fill="#4ade80">Ship/Warranty/Return</text>
-<text x="280" y="270">OTel Collector</text><text x="280" y="290" fill="#4ade80">scrub + batch</text>
-<text x="445" y="270">LGTM</text><text x="445" y="290" fill="#4ade80">Loki·Tempo·Grafana</text>
-<text x="320" y="340" fill="#22c55e" font-size="15">Customer Support Chatbot — RAG + LLM</text></g>
+<text x="100" y="270">Policy Docs</text><text x="100" y="290" fill="#64748B">Ship/Warranty/Return</text>
+<text x="280" y="270">OTel Collector</text><text x="280" y="290" fill="#64748B">scrub + batch</text>
+<text x="445" y="270">LGTM</text><text x="445" y="290" fill="#64748B">Loki·Tempo·Grafana</text>
+<text x="320" y="340" fill="#0F172A" font-size="15" font-weight="700">Customer Support Chatbot — RAG + LLM</text></g>
 </svg>

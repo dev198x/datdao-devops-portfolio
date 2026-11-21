@@ -1,13 +1,13 @@
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, ExternalLink, Github, Layers, User, Tag, Star } from 'lucide-react';
-import { TerminalHeader } from '../components/TerminalHeader';
+import { PageHeader } from '../components/PageHeader';
 import CodeBlock from '../components/blog/CodeBlock';
 import DatabaseSchemaSection from '../components/project/DatabaseSchemaSection';
 import { PROJECTS_BY_CATEGORY, getProjectBySlug } from '../data/portfolio';
 
 const SectionTitle = ({ cmd }: { cmd: string }) => (
-  <h2 className="font-mono text-lg text-accent-500 mb-4">
+  <h2 className="text-lg text-primary-500 mb-4">
     <span className="mr-2">$</span>
     {cmd}
   </h2>
@@ -20,13 +20,13 @@ export const ProjectDetail = () => {
   if (!project) {
     return (
       <div className="min-h-screen bg-bg-page">
-        <TerminalHeader command={`cat projects/${projectId ?? ''}`} description="No such file or directory" />
+        <PageHeader command={`cat projects/${projectId ?? ''}`} description="No such file or directory" />
         <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-          <div className="font-mono text-5xl text-neutral-600 mb-4">404</div>
+          <div className="text-5xl text-neutral-600 mb-4">404</div>
           <p className="text-neutral-400 mb-8">Project not found.</p>
           <Link
             to="/projects"
-            className="inline-flex items-center space-x-2 font-mono text-primary-500 hover:text-primary-400"
+            className="inline-flex items-center space-x-2 text-primary-500 hover:text-primary-400"
           >
             <ArrowLeft size={16} />
             <span>cd ../projects</span>
@@ -46,12 +46,12 @@ export const ProjectDetail = () => {
 
   return (
     <div className="min-h-screen bg-bg-page">
-      <TerminalHeader command={`cat projects/${project.slug}/README.md`} description={detail.summary} />
+      <PageHeader command={`cat projects/${project.slug}/README.md`} description={detail.summary} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <Link
           to="/projects"
-          className="inline-flex items-center space-x-2 font-mono text-sm text-neutral-400 hover:text-primary-500 transition-colors mb-8"
+          className="inline-flex items-center space-x-2 text-sm text-neutral-400 hover:text-primary-500 transition-colors mb-8"
         >
           <ArrowLeft size={16} />
           <span>cd ../projects</span>
@@ -66,27 +66,26 @@ export const ProjectDetail = () => {
         >
           <div className="relative aspect-[21/9] overflow-hidden">
             <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-bg-surface via-bg-surface/30 to-transparent" />
           </div>
           <div className="p-6 sm:p-8 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-mono font-medium ${
+                className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${
                   project.category === 'devops'
-                    ? 'bg-green-500/20 text-green-500 border border-green-500/30'
-                    : 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
                 }`}
               >
                 {categoryLabel}
               </span>
               {project.featured && (
-                <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-mono font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                   <Star size={12} className="fill-current" />
                   <span>Featured</span>
                 </span>
               )}
             </div>
-            <h1 className="font-mono text-2xl sm:text-4xl font-bold text-primary-500">{project.title}</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-neutral-200">{project.title}</h1>
             {(project.githubLink || project.websiteLink) && (
               <div className="flex flex-wrap gap-4 pt-2">
                 {project.githubLink && (
@@ -94,7 +93,7 @@ export const ProjectDetail = () => {
                     href={project.githubLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 px-4 py-2 border border-neutral-600 rounded-lg text-neutral-200 hover:border-primary-500 hover:text-primary-500 transition-colors font-mono text-sm"
+                    className="inline-flex items-center space-x-2 px-4 py-2 border border-neutral-600 rounded-lg text-neutral-200 hover:border-primary-500 hover:text-primary-500 transition-colors text-sm"
                   >
                     <Github size={16} />
                     <span>Source Code</span>
@@ -105,7 +104,7 @@ export const ProjectDetail = () => {
                     href={project.websiteLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 px-4 py-2 bg-primary-500 text-bg-surface rounded-lg hover:bg-primary-700 transition-colors font-mono text-sm"
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-primary-500 text-bg-surface rounded-lg hover:bg-primary-700 transition-colors text-sm"
                   >
                     <ExternalLink size={16} />
                     <span>Live Demo</span>
@@ -140,7 +139,7 @@ export const ProjectDetail = () => {
                 <div className="space-y-8">
                   {detail.challenges.map((challenge) => (
                     <div key={challenge.title} className="space-y-4">
-                      <h3 className="font-mono text-primary-500 text-lg font-semibold">{challenge.title}</h3>
+                      <h3 className="text-neutral-200 text-lg font-semibold">{challenge.title}</h3>
                       {challenge.summary && <p className="text-neutral-300 leading-relaxed">{challenge.summary}</p>}
                       <div className="space-y-4">
                         {challenge.items.map((item) => (
@@ -163,7 +162,7 @@ export const ProjectDetail = () => {
                               <ul className="space-y-1.5">
                                 {item.points.map((point) => (
                                   <li key={point} className="flex items-start space-x-2 text-neutral-400 text-sm leading-relaxed">
-                                    <span className="font-mono text-primary-500">&gt;</span>
+                                    <span className="text-neutral-500">&gt;</span>
                                     <span>{point}</span>
                                   </li>
                                 ))}
@@ -190,7 +189,7 @@ export const ProjectDetail = () => {
               <ul className="space-y-2">
                 {detail.highlights.map((item) => (
                   <li key={item} className="flex items-start space-x-3 text-neutral-200">
-                    <span className="font-mono text-primary-500 mt-0.5">&gt;</span>
+                    <span className="text-neutral-500 mt-0.5">&gt;</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -199,7 +198,7 @@ export const ProjectDetail = () => {
 
             <section>
               <SectionTitle cmd="show architecture --flow" />
-              <ol className="bg-bg-surface border border-neutral-700 rounded-xl p-6 font-mono text-sm space-y-2">
+              <ol className="bg-bg-surface border border-neutral-700 rounded-xl p-6 text-sm space-y-2">
                 {detail.architecture.map((step, i) => (
                   <li key={step} className="space-y-2">
                     <div className="text-neutral-200">
@@ -216,7 +215,7 @@ export const ProjectDetail = () => {
           {/* Sidebar */}
           <aside className="space-y-6 lg:sticky lg:top-24 self-start">
             <div className="bg-bg-surface border border-neutral-700 rounded-xl p-6 space-y-4">
-              <h3 className="font-mono text-primary-500 flex items-center space-x-2">
+              <h3 className="text-neutral-200 flex items-center space-x-2">
                 <Layers size={16} />
                 <span>tech_stack</span>
               </h3>
@@ -232,7 +231,7 @@ export const ProjectDetail = () => {
               </div>
             </div>
 
-            <div className="bg-bg-surface border border-neutral-700 rounded-xl p-6 space-y-3 font-mono text-sm">
+            <div className="bg-bg-surface border border-neutral-700 rounded-xl p-6 space-y-3 text-sm">
               <div className="flex items-center justify-between text-neutral-300">
                 <span className="flex items-center space-x-2"><Tag size={14} /><span>Category</span></span>
                 <span className="text-primary-500">{categoryLabel}</span>
@@ -249,21 +248,21 @@ export const ProjectDetail = () => {
         <nav className="grid sm:grid-cols-2 gap-4 mt-16 pt-8 border-t border-neutral-700">
           <Link
             to={`/projects/${prev.slug}`}
-            className="group flex items-center space-x-3 p-4 bg-bg-surface border border-neutral-700 rounded-xl hover:border-primary-500/50 transition-colors"
+            className="group flex items-center space-x-3 p-4 bg-bg-surface border border-neutral-700 rounded-xl hover:border-neutral-600 transition-colors"
           >
             <ArrowLeft size={18} className="text-neutral-400 group-hover:text-primary-500" />
             <div className="min-w-0">
-              <div className="text-xs font-mono text-neutral-500">Previous</div>
-              <div className="font-mono text-sm text-neutral-200 truncate">{prev.title}</div>
+              <div className="text-xs text-neutral-500">Previous</div>
+              <div className="text-sm text-neutral-200 truncate">{prev.title}</div>
             </div>
           </Link>
           <Link
             to={`/projects/${next.slug}`}
-            className="group flex items-center justify-end space-x-3 p-4 bg-bg-surface border border-neutral-700 rounded-xl hover:border-primary-500/50 transition-colors text-right"
+            className="group flex items-center justify-end space-x-3 p-4 bg-bg-surface border border-neutral-700 rounded-xl hover:border-neutral-600 transition-colors text-right"
           >
             <div className="min-w-0">
-              <div className="text-xs font-mono text-neutral-500">Next</div>
-              <div className="font-mono text-sm text-neutral-200 truncate">{next.title}</div>
+              <div className="text-xs text-neutral-500">Next</div>
+              <div className="text-sm text-neutral-200 truncate">{next.title}</div>
             </div>
             <ArrowRight size={18} className="text-neutral-400 group-hover:text-primary-500" />
           </Link>

@@ -88,7 +88,7 @@ const EnhancedBlog: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-2xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-green-400 to-green-300 bg-clip-text text-transparent font-mono">
+          <h1 className="text-2xl md:text-4xl font-bold mb-4 text-neutral-200 ">
             docker run -it --rm node bash -c 'echo "tech blog"'
           </h1>
           <p className="text-green-200 text-lg max-w-2xl mx-auto">
@@ -137,7 +137,7 @@ const EnhancedBlog: React.FC = () => {
             transition={{ delay: 0.3 }}
             className="mb-12"
           >
-            <h2 className="text-2xl font-bold mb-6 text-green-400 flex items-center gap-2">
+            <h2 className="text-2xl font-bold mb-6 text-neutral-200 flex items-center gap-2">
               <Star className="w-6 h-6" />
               Featured Articles
             </h2>
@@ -146,17 +146,16 @@ const EnhancedBlog: React.FC = () => {
               {featuredPosts.map((post) => (
                 <motion.article
                   key={post.id}
-                  whileHover={{ scale: 1.02 }}
                   onClick={() => handlePostClick(post)}
                   className="bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden cursor-pointer group"
                 >
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <TechBadge name={post.category} category={post.category} size="sm" />
-                      <span className="text-xs text-yellow-400 font-medium">⭐ Featured</span>
+                      <span className="text-xs text-amber-600 font-medium">⭐ Featured</span>
                     </div>
                   
-                    <h3 className="text-xl font-bold text-neutral-200 mb-3 group-hover:text-green-400 transition-colors">
+                    <h3 className="text-xl font-bold text-neutral-200 mb-3 group-hover:text-neutral-200 transition-colors">
                       {post.title}
                     </h3>
                   
@@ -234,7 +233,6 @@ const EnhancedBlog: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
                 onClick={() => handlePostClick(post)}
                 className="bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden cursor-pointer group hover:border-green-400 transition-all duration-300"
               >
@@ -243,19 +241,19 @@ const EnhancedBlog: React.FC = () => {
                     <TechBadge name={post.category} category={post.category} size="sm" />
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 text-xs rounded ${
-                        post.difficulty === 'Beginner' ? 'bg-green-500/20 text-green-400' :
-                        post.difficulty === 'Intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-red-500/20 text-red-400'
+                        post.difficulty === 'Beginner' ? 'bg-emerald-50 text-emerald-700' :
+                        post.difficulty === 'Intermediate' ? 'bg-amber-50 text-amber-700' :
+                        'bg-rose-50 text-rose-700'
                       }`}>
                         {post.difficulty}
                       </span>
                       {post.featured && (
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <Star className="w-4 h-4 text-amber-600 fill-current" />
                       )}
                     </div>
                   </div>
                   
-                  <h3 className="text-lg font-bold text-neutral-200 mb-3 group-hover:text-green-400 transition-colors line-clamp-2">
+                  <h3 className="text-lg font-bold text-neutral-200 mb-3 group-hover:text-neutral-200 transition-colors line-clamp-2">
                     {post.title}
                   </h3>
                   
@@ -305,9 +303,9 @@ const EnhancedBlog: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mt-16 bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-400/30 rounded-lg p-8 text-center"
+          className="mt-16 bg-bg-surface border border-neutral-700 rounded-lg p-8 text-center"
         >
-          <h2 className="text-2xl font-bold text-green-400 mb-4">
+          <h2 className="text-2xl font-bold text-neutral-200 mb-4">
             STAY_UPDATED.EXE
           </h2>
           <p className="text-green-200 mb-6 max-w-2xl mx-auto">
