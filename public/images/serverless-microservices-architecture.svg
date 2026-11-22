@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1058 795" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Serverless microservices: Client to CloudFront and WAF to API Gateway HTTP API, then auth, order and payment Lambda services each with a DynamoDB table, order publishing events through EventBridge and SQS to payment">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+<path d="M1 1L9 5L1 9" fill="none" stroke="#8A8A85" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<rect width="1058" height="795" fill="#FFFFFF"/>
+
+<g fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1.2">
+<rect x="371" y="33" width="317" height="68" rx="10"/>
+<rect x="371" y="144" width="317" height="88" rx="10"/>
+<rect x="33" y="274" width="993" height="88" rx="10"/>
+</g>
+<g font-size="20" font-weight="600" fill="#444441" text-anchor="middle">
+<text x="529" y="74">Client (web / mobile)</text>
+<text x="529" y="184">CloudFront + WAF</text>
+<text x="529" y="316">API Gateway HTTP API</text>
+</g>
+<g font-size="16" fill="#5F5E5A" text-anchor="middle">
+<text x="529" y="210">Edge, rate limit</text>
+<text x="529" y="342">JWT authorizer, path routing</text>
+</g>
+
+<g fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.2">
+<rect x="33" y="416" width="198" height="88" rx="10"/>
+<rect x="298" y="416" width="198" height="88" rx="10"/>
+<rect x="563" y="416" width="198" height="88" rx="10"/>
+<rect x="828" y="416" width="198" height="88" rx="10"/>
+</g>
+<g font-size="20" font-weight="600" fill="#3C3489" text-anchor="middle">
+<text x="132" y="457">auth-service</text>
+<text x="397" y="457">order-service</text>
+<text x="662" y="457">EventBridge</text>
+<text x="927" y="457">payment-service</text>
+</g>
+<g font-size="16" fill="#534AB7" text-anchor="middle">
+<text x="132" y="483">/auth/*</text>
+<text x="397" y="483">/orders/*</text>
+<text x="662" y="483">SQS + DLQ</text>
+<text x="927" y="483">/payments/*</text>
+</g>
+
+<g fill="#E1F5EE" stroke="#5DCAA5" stroke-width="1.2">
+<rect x="33" y="563" width="198" height="88" rx="10"/>
+<rect x="298" y="563" width="198" height="88" rx="10"/>
+<rect x="828" y="563" width="198" height="88" rx="10"/>
+</g>
+<g font-size="20" font-weight="600" fill="#085041" text-anchor="middle">
+<text x="132" y="604">auth-table</text>
+<text x="397" y="604">orders-table</text>
+<text x="927" y="604">payments-table</text>
+</g>
+<g font-size="16" fill="#0F6E56" text-anchor="middle">
+<text x="132" y="630">single-table</text>
+<text x="397" y="630">single-table</text>
+<text x="927" y="630">single-table</text>
+</g>
+
+<rect x="33" y="692" width="993" height="72" rx="14" fill="none" stroke="#C9C7BD" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="529" y="734" font-size="17" fill="#3D3D3A" text-anchor="middle">Cross-cutting: CloudWatch, X-Ray, Secrets Manager, SSM</text>
+
+<g stroke="#8A8A85" stroke-width="1.6" fill="none" marker-end="url(#arrow)">
+<path d="M529 101V142"/>
+<path d="M529 232V272"/>
+<path d="M132 362V414"/>
+<path d="M397 362V414"/>
+<path d="M927 362V414"/>
+<path d="M496 460H561"/>
+<path d="M761 460H826"/>
+<path d="M132 504V561"/>
+<path d="M397 504V561"/>
+<path d="M927 504V561"/>
+</g>
+</svg>
