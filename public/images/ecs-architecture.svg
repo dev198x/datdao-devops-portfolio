@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 787 594" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="ECS architecture: Users to ALB to api-service on Fargate On-Demand, and an SQS queue feeding worker-service on Fargate Spot and On-Demand">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+<path d="M1 1L9 5L1 9" fill="none" stroke="#8A8A85" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<rect width="787" height="594" fill="#FFFFFF"/>
+
+<rect x="34" y="215" width="720" height="245" rx="26" fill="none" stroke="#C9C7BD" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="58" y="246" font-size="16" fill="#3D3D3A">ECS cluster (private subnets)</text>
+
+<rect x="310" y="33" width="160" height="48" rx="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1.2"/>
+<text x="390" y="64" font-size="17" font-weight="600" fill="#444441" text-anchor="middle">Users</text>
+
+<rect x="310" y="120" width="160" height="64" rx="10" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.2"/>
+<text x="390" y="148" font-size="17" font-weight="600" fill="#3C3489" text-anchor="middle">ALB</text>
+<text x="390" y="169" font-size="14" fill="#534AB7" text-anchor="middle">Public subnets</text>
+
+<rect x="69" y="268" width="288" height="157" rx="16" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="1.2"/>
+<text x="213" y="307" font-size="17" font-weight="600" fill="#085041" text-anchor="middle">api-service</text>
+<text x="213" y="342" font-size="14" fill="#0F6E56" text-anchor="middle">FARGATE (On-Demand)</text>
+<text x="213" y="365" font-size="14" fill="#0F6E56" text-anchor="middle">desiredCount 2</text>
+
+<rect x="430" y="268" width="288" height="157" rx="16" fill="#FAECE7" stroke="#F0997B" stroke-width="1.2"/>
+<text x="574" y="307" font-size="17" font-weight="600" fill="#712B13" text-anchor="middle">worker-service</text>
+<text x="574" y="342" font-size="14" fill="#993C1D" text-anchor="middle">FARGATE_SPOT weight 4</text>
+<text x="574" y="365" font-size="14" fill="#993C1D" text-anchor="middle">FARGATE weight 1</text>
+
+<rect x="430" y="508" width="288" height="52" rx="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1.2"/>
+<text x="574" y="540" font-size="17" font-weight="600" fill="#444441" text-anchor="middle">SQS queue + DLQ</text>
+
+<g stroke="#8A8A85" stroke-width="1.6" fill="none" marker-end="url(#arrow)">
+<path d="M393 81V118"/>
+<path d="M333 184V266"/>
+<path d="M574 508V428"/>
+</g>
+
+<rect x="69" y="505" width="16" height="16" rx="3" fill="#E1F5EE" stroke="#5DCAA5"/>
+<text x="97" y="518" font-size="14" fill="#444441">On-Demand: stable, for APIs</text>
+<rect x="69" y="535" width="16" height="16" rx="3" fill="#FAECE7" stroke="#F0997B"/>
+<text x="97" y="548" font-size="14" fill="#444441">Spot: cheap, can be interrupted</text>
+</svg>

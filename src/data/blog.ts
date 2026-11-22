@@ -1910,6 +1910,10 @@ worker-service  ->  capacity provider: Spot (weight=4) + On-Demand (weight=1)
 
 ## Ví dụ CDK (Fargate)
 
+Kiến trúc của ví dụ: user vào ALB ở public subnet, ALB chuyển request tới api-service. Worker lấy job từ SQS queue (kèm DLQ để giữ job lỗi). Cả hai service chạy trong private subnet của cùng một cluster.
+
+![Kiến trúc ECS: ALB và api-service On-Demand, SQS và worker-service Spot](/images/ecs-architecture.svg)
+
 Cluster bật Fargate capacity providers, API dùng \`FARGATE\`, worker dùng \`FARGATE_SPOT\` là chính:
 
 \`\`\`javascript

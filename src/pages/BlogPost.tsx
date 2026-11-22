@@ -36,6 +36,17 @@ const renderContent = (content: string): React.ReactNode[] => {
       i++; // skip closing fence
       elements.push(<CodeBlock key={elements.length} code={codeLines.join('\n')} language={language} />);
       continue;
+    } else if (/^!\[[^\]]*\]\(\/[^)\s]+\)$/.test(line.trim())) {
+      // Image on its own line: ![alt](/images/file.svg). Only same-origin paths are allowed.
+      const match = line.trim().match(/^!\[([^\]]*)\]\((\/[^)\s]+)\)$/);
+      if (match) {
+        elements.push(
+          <figure key={elements.length} className="my-6">
+            <img src={match[2]} alt={match[1]} loading="lazy" className="w-full max-w-2xl mx-auto rounded-lg border border-gray-800" />
+            {match[1] && <figcaption className="text-sm text-gray-400 text-center mt-2">{match[1]}</figcaption>}
+          </figure>
+        );
+      }
     } else if (line.startsWith('# ')) {
       elements.push(<h1 key={elements.length} className="text-3xl font-bold text-neutral-200 mb-4">{line.substring(2)}</h1>);
     } else if (line.startsWith('## ')) {
