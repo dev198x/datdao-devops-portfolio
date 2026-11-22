@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 921" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Serverless architecture: Client to API Gateway HTTP API, then auth, order and payment Lambda services with DynamoDB tables. Order calls payment synchronously, payment calls order asynchronously, a failure queue catches failed async invokes, and the PSP sends webhooks back through API Gateway">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+<path d="M1 1L9 5L1 9" fill="none" stroke="#8A8A85" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<rect width="1080" height="921" fill="#FFFFFF"/>
+
+<g fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1.2">
+<rect x="33" y="287" width="174" height="88" rx="10"/>
+<rect x="271" y="33" width="158" height="580" rx="10"/>
+<rect x="525" y="731" width="206" height="88" rx="10"/>
+</g>
+<g font-size="20" font-weight="600" fill="#444441" text-anchor="middle">
+<text x="120" y="327">Client</text>
+<text x="350" y="294">API Gateway</text>
+<text x="628" y="771">PSP</text>
+</g>
+<g font-size="16" fill="#5F5E5A" text-anchor="middle">
+<text x="120" y="353">web / mobile</text>
+<text x="350" y="320">HTTP API</text>
+<text x="350" y="346">JWT + routing</text>
+<text x="628" y="797">Cổng thanh toán</text>
+</g>
+
+<g fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.2">
+<rect x="525" y="33" width="206" height="88" rx="10"/>
+<rect x="525" y="176" width="206" height="88" rx="10"/>
+<rect x="525" y="319" width="206" height="88" rx="10"/>
+<rect x="525" y="525" width="206" height="88" rx="10"/>
+</g>
+<g font-size="20" font-weight="600" fill="#3C3489" text-anchor="middle">
+<text x="628" y="73">auth-service</text>
+<text x="628" y="216">Failure queue</text>
+<text x="628" y="359">order-service</text>
+<text x="628" y="565">payment-service</text>
+</g>
+<g font-size="16" fill="#534AB7" text-anchor="middle">
+<text x="628" y="99">/auth/*</text>
+<text x="628" y="242">SQS</text>
+<text x="628" y="385">/orders/*</text>
+<text x="628" y="591">/payments/*</text>
+</g>
+
+<g fill="#E1F5EE" stroke="#5DCAA5" stroke-width="1.2">
+<rect x="857" y="33" width="190" height="88" rx="10"/>
+<rect x="857" y="319" width="190" height="88" rx="10"/>
+<rect x="857" y="525" width="190" height="88" rx="10"/>
+</g>
+<g font-size="20" font-weight="600" fill="#085041" text-anchor="middle">
+<text x="952" y="73">auth-table</text>
+<text x="952" y="359">orders-table</text>
+<text x="952" y="565">payments-table</text>
+</g>
+<g font-size="16" fill="#0F6E56" text-anchor="middle">
+<text x="952" y="99">DynamoDB</text>
+<text x="952" y="385">DynamoDB</text>
+<text x="952" y="591">DynamoDB</text>
+</g>
+
+<g stroke="#8A8A85" stroke-width="1.6" fill="none" marker-end="url(#arrow)">
+<path d="M207 331H269"/>
+<path d="M429 77H523"/>
+<path d="M429 363H523"/>
+<path d="M429 569H523"/>
+<path d="M571 407V523"/>
+<path d="M628 613V729"/>
+<path d="M525 749H350V615"/>
+<path d="M120 375V775H523"/>
+</g>
+<g stroke="#8A8A85" stroke-width="1.6" fill="none" marker-start="url(#arrow)" marker-end="url(#arrow)">
+<path d="M733 77H855"/>
+<path d="M733 363H855"/>
+<path d="M733 569H855"/>
+</g>
+<g stroke="#8A8A85" stroke-width="1.6" fill="none" stroke-dasharray="6 5" marker-end="url(#arrow)">
+<path d="M683 525V409"/>
+<path d="M628 319V266"/>
+</g>
+
+<g fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1.2">
+<circle cx="239" cy="300" r="15"/>
+<circle cx="478" cy="334" r="15"/>
+<circle cx="478" cy="540" r="15"/>
+<circle cx="542" cy="466" r="15"/>
+<circle cx="722" cy="466" r="15"/>
+<circle cx="657" cy="292" r="15"/>
+<circle cx="656" cy="671" r="15"/>
+<circle cx="436" cy="723" r="15"/>
+<circle cx="232" cy="749" r="15"/>
+<rect x="761" y="319" width="64" height="30" rx="15"/>
+<rect x="761" y="525" width="64" height="30" rx="15"/>
+</g>
+<g font-size="15" fill="#444441" text-anchor="middle">
+<text x="239" y="305">1</text>
+<text x="478" y="339">2</text>
+<text x="478" y="545">9</text>
+<text x="542" y="471">4</text>
+<text x="722" y="471">11</text>
+<text x="657" y="297">13</text>
+<text x="656" y="676">6</text>
+<text x="436" y="728">8</text>
+<text x="232" y="754">7</text>
+<text x="793" y="339">3,12</text>
+<text x="793" y="545">5,10</text>
+</g>
+
+<g stroke="#8A8A85" stroke-width="1.6" fill="none">
+<path d="M65 877H128" marker-end="url(#arrow)"/>
+<path d="M285 877H348" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<path d="M540 877H603" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+</g>
+<g font-size="16" fill="#444441">
+<text x="144" y="883">Đồng bộ</text>
+<text x="364" y="883">Bất đồng bộ</text>
+<text x="620" y="883">Đọc / ghi DynamoDB</text>
+</g>
+</svg>

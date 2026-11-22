@@ -2053,31 +2053,42 @@ Hai khoản này thường lớn hơn tiền task nhỏ. Hãy kiểm tra lại t
   {
     id: 17,
     slug: 'serverless-microservices-dynamodb',
-    title: "Serverless Microservices + DynamoDB: bản thiết kế, Saga và outbox",
+    title: "Serverless Microservices + DynamoDB",
     category: "Cloud Infrastructure",
     difficulty: "Advanced",
-    readTime: "9 min read",
+    readTime: "11 min read",
     date: "2026-11-22",
     featured: false,
-    excerpt: "Thiết kế ba microservice (auth, order, payment) bằng API Gateway HTTP API, Lambda và DynamoDB: mô hình dữ liệu theo access pattern, Saga với outbox và EventBridge, bảo mật, chi phí khoảng $35-55/tháng và các rủi ro cần biết.",
-    tags: ["AWS", "Serverless", "DynamoDB", "Lambda", "EventBridge", "Saga", "Microservices"],
+    excerpt: "Kiến trúc đơn giản của ba microservice (auth, order, payment) trên API Gateway HTTP API, Lambda và DynamoDB: luồng thanh toán có OTP/3DS, các quyết định thiết kế, giới hạn cần biết, chi phí khoảng $25-40/tháng so với RDS.",
+    tags: ["AWS", "Serverless", "DynamoDB", "Lambda", "API Gateway", "Idempotency", "Microservices"],
     content: `
-# Serverless Microservices + DynamoDB: bản thiết kế, Saga và outbox
+# Serverless Microservices + DynamoDB
 
-Bài này là một bản thiết kế (design), không phải stack đã được deploy và kiểm chứng. Mục tiêu là ba service độc lập (\`auth\`, \`order\`, \`payment\`) chạy serverless, mỗi service sở hữu một bảng DynamoDB riêng, và giao tiếp bất đồng bộ qua event.
+Bài này là một bản thiết kế (design), không phải stack đã được compile, deploy và kiểm chứng. Mục tiêu là ba service độc lập (\`auth\`, \`order\`, \`payment\`) chạy serverless, mỗi service sở hữu một bảng DynamoDB riêng. Kiến trúc giữ số thành phần ở mức nhỏ nhất có thể: các Lambda gọi nhau trực tiếp, không cần bus sự kiện hay hàng đợi phức tạp.
 
-![Kiến trúc Serverless Microservices: CloudFront + WAF, HTTP API, 3 Lambda, 3 bảng DynamoDB, EventBridge](/images/serverless-microservices-architecture.svg)
-
-## 1. Thành phần chính
+## 1. Kiến trúc tổng quan
 
 \`\`\`
-Lớp            Dịch vụ                           Vai trò
-Edge           CloudFront + WAF                  Rate limit, chặn bot. HTTP API không gắn WAF trực tiếp nên cần lớp này
-Entry          API Gateway HTTP API              Điểm vào duy nhất, route theo path, JWT authorizer
-Compute        3 Lambda (Node.js 20, arm64)      auth-service, order-service, payment-service. Mỗi service 1 Lambda + router (Express/NestJS adapter)
-Data           3 bảng DynamoDB (on-demand)       Mỗi service sở hữu 1 bảng, không truy cập chéo
-Async          Outbox -> EventBridge -> SQS+DLQ  Order phát event, payment xử lý idempotent
-Cross-cutting  CloudWatch, X-Ray, Secrets Manager, SSM   Log, trace, secret, config
+Client -> CloudFront+WAF (tùy chọn) -> API Gateway HTTP API (JWT)
+              |- auth-service    -> auth-table
+              |- order-service   -> orders-table  --(sync invoke)--> payment-service -> payments-table -> PSP
+              \`- payment-service                  <--(async invoke)-- webhook từ PSP
+\`\`\`
+
+Chỉ có: một HTTP API, 3 Lambda, 3 bảng DynamoDB và 1 queue chứa lỗi.
+
+![Kiến trúc Serverless Microservices: API Gateway, 3 Lambda, 3 bảng DynamoDB, Failure queue và PSP](/images/serverless-architecture.svg)
+
+Các thành phần:
+
+\`\`\`
+Lớp            Dịch vụ                          Vai trò
+Edge           CloudFront + WAF (tùy chọn)      Rate limit, chặn bot. HTTP API không gắn WAF trực tiếp nên cần lớp này
+Entry          API Gateway HTTP API             Điểm vào duy nhất, route theo path, JWT authorizer
+Compute        3 Lambda (Node.js 20, arm64)     auth-service, order-service, payment-service. Mỗi service 1 Lambda + router
+Data           3 bảng DynamoDB (on-demand)      Mỗi service sở hữu 1 bảng, không truy cập chéo
+Lỗi async      1 SQS queue                      Nhận message khi async invoke vẫn lỗi sau các lần retry
+Cross-cutting  CloudWatch, Secrets Manager      Log, alarm, khóa của PSP
 \`\`\`
 
 ## 2. Mô hình dữ liệu: single-table cho mỗi service
@@ -2092,7 +2103,7 @@ auth     Email không trùng                       TransactWriteItems: Put EMAIL
 auth     Refresh token                           PK=USER#id, SK=REFRESH#tokenId, tự xóa bằng ttl
 order    Lấy order theo id                       PK=ORDER#id, SK=META
 order    Order theo user, mới nhất trước         GSI1: GSI1PK=USER#id, GSI1SK=ORDER#<createdAt>
-order    Outbox event                            PK=ORDER#id, SK=OUTBOX#eventId
+order    Chống tạo order 2 lần                   PK=IDEMP#key, ghi cùng transaction với order
 payment  Chống trả tiền 2 lần                    PK=IDEMP#key, Put có attribute_not_exists(PK), ttl 24h
 payment  Payment theo order                      GSI1: GSI1PK=ORDER#orderId
 \`\`\`
@@ -2102,63 +2113,112 @@ Hai kỹ thuật đáng chú ý:
 - DynamoDB không có unique constraint ngoài primary key. Muốn email không trùng thì ghi thêm một item \`EMAIL#email\` bằng conditional put trong cùng transaction với user.
 - \`ttl\` giúp refresh token và khóa idempotency tự hết hạn, không cần job dọn dẹp.
 
-## 3. Luồng đặt hàng và thanh toán (Saga)
+## 3. Luồng thanh toán có OTP
+
+Thanh toán thẻ thường cần người dùng nhập OTP/3DS trên trang của PSP hoặc ngân hàng, nên luồng gồm cả phần đồng bộ lẫn bất đồng bộ.
 
 \`\`\`
-1. POST /orders (header Idempotency-Key)
-   order-service ghi order (PENDING) + item OUTBOX#OrderCreated trong MỘT TransactWriteItems
-2. DynamoDB Streams (chỉ lọc item OUTBOX#) -> outbox-relay Lambda -> PutEvents lên EventBridge
-3. Rule OrderCreated -> SQS (có DLQ) -> payment-service xử lý theo batch
-4. payment-service ghi khóa idempotency bằng conditional put, gọi PSP, cập nhật trạng thái
-5. PaymentCompleted / PaymentFailed quay lại order-service để cập nhật trạng thái
-   Nếu thất bại: chạy bước bù (hủy order, hoàn kho)
+#  Bước                                                                                  Kiểu
+1  POST /orders kèm Idempotency-Key: server tự tính giá, ghi order PENDING_PAYMENT       Đồng bộ
+2  order-service gọi payment-service (Lambda invoke), tạo payment ở PSP, trả redirectUrl Đồng bộ
+3  Người dùng nhập OTP/3DS trên trang PSP/ngân hàng                                      Ngoài hệ thống
+4  PSP gọi POST /payments/webhook, handler xác thực chữ ký                               Bất đồng bộ
+5  payment-service cập nhật payment, rồi gọi order-service (async invoke): order PAID    Bất đồng bộ
+6  Client poll GET /orders/{id} để biết kết quả                                          Poll
 \`\`\`
 
-Vì sao dùng outbox? Nếu order-service ghi DB rồi mới gọi \`PutEvents\`, một trong hai bước có thể lỗi và hệ thống lệch trạng thái. Ghi order và event vào cùng một transaction thì không bao giờ có order mà thiếu event. Relay đọc event từ Stream rồi mới phát ra ngoài.
+### Giải thích từng mũi tên
 
-Lưu ý:
+Số trong bảng khớp với số trên sơ đồ.
 
-- Bản thiết kế dựng chiều order -> payment. Chiều ngược lại cần thêm stream cho \`payments-table\` và một relay tương tự.
-- Delivery là at-least-once, nên consumer luôn phải idempotent. Có thể dùng Powertools Idempotency (backend DynamoDB) thay vì tự viết.
+\`\`\`
+#   Từ -> Đến                          Dữ liệu đi qua                                              Kiểu
+1   Client -> API Gateway              POST /orders + JWT + Idempotency-Key. Client cũng poll GET /orders/{id} qua đường này   Đồng bộ
+2   API Gateway -> order-service       Request đã qua JWT authorizer, route theo /orders/*          Đồng bộ
+3   order-service <-> orders-table     Ghi order PENDING_PAYMENT kèm khóa idempotency (một transaction). Đọc trạng thái khi client poll   Đọc/ghi
+4   order-service -> payment-service   Lambda invoke CREATE_PAYMENT (orderId, amount, currency). Phản hồi mang theo redirectUrl   Đồng bộ
+5   payment-service <-> payments-table Ghi payment REQUIRES_ACTION                                  Đọc/ghi
+6   payment-service -> PSP             Tạo payment intent bằng API key lấy từ Secrets Manager       Đồng bộ
+7   Client -> PSP                      Người dùng mở redirectUrl, nhập OTP/3DS trên trang PSP/ngân hàng. Dữ liệu thẻ không đi qua hệ thống của bạn   Ngoài hệ thống
+8   PSP -> API Gateway                 Webhook POST /payments/webhook kèm chữ ký HMAC (route public, không dùng JWT)   Bất đồng bộ
+9   API Gateway -> payment-service     Webhook được chuyển tiếp, handler xác thực chữ ký trên raw body   Đồng bộ
+10  payment-service <-> payments-table Cập nhật SUCCEEDED hoặc FAILED (có điều kiện, không ghi đè trạng thái cuối)   Đọc/ghi
+11  payment-service -> order-service   Async invoke PAYMENT_RESULT (orderId, status). Lambda tự retry   Bất đồng bộ
+12  order-service <-> orders-table     Cập nhật order thành PAID (có điều kiện PENDING_PAYMENT, nên chạy lại không gây hại)   Đọc/ghi
+13  order-service -> Failure queue     Chỉ xảy ra khi bước 11 vẫn lỗi sau các lần retry. Có alarm để xử lý tay   Bất đồng bộ
+\`\`\`
 
-## 4. Bảo mật
+\`auth-service\` chỉ có đường vào qua API Gateway và đọc/ghi \`auth-table\` (login, register, refresh token), nên không đánh số.
+
+### Đọc sơ đồ theo 3 giai đoạn
+
+1. Tạo order và lấy link thanh toán (1, 2, 3, 4, 5, 6): người dùng đang chờ, nên toàn bộ là đồng bộ. Kết quả cuối là \`redirectUrl\` trả ngược về client.
+2. Người dùng xác thực OTP (7): diễn ra ngoài hệ thống, thời gian không đoán trước được.
+3. PSP báo kết quả (8, 9, 10, 11, 12): không ai chờ, nên bất đồng bộ. Client biết kết quả bằng cách poll (đi lại 1, 2, 3).
+
+## 4. Các quyết định thiết kế và lý do
+
+\`\`\`
+Quyết định                                  Lý do
+Bước 2 gọi ĐỒNG BỘ                          Client cần URL OTP ngay, không chờ được qua hàng đợi
+Bước 5 dùng ASYNC INVOKE                    Lambda có sẵn retry và onFailure (đẩy vào queue lỗi), thay phần lớn vai trò của SQS + DLQ trong thiết kế này
+Route /payments/webhook PUBLIC              PSP không có JWT. Bảo vệ bằng HMAC trên raw body, so sánh constant-time
+Idempotency ở MỌI bước                      PSP retry webhook, Lambda async có thể giao trùng. Cập nhật có điều kiện (#s = :pending) nên chạy lại không gây hại
+Không ghi đè trạng thái cuối                Webhook "failed" đến sau "succeeded" không làm hỏng dữ liệu
+Tên Lambda cố định + IAM theo ARN           Tránh circular dependency của CloudFormation (order gọi payment và ngược lại)
+Hết hạn order kiểu lazy (15 phút, kiểm tra khi GET)   Không cần scheduler. Giai đoạn sau có thể thêm scheduler để dọn order bị bỏ ngang
+\`\`\`
+
+## 5. Giới hạn của thiết kế (cần biết trước)
+
+\`\`\`
+Hạn chế                                  Hậu quả                                                    Cách xử lý
+Order và payment gắn chặt qua gọi trực tiếp   Thêm chức năng mới (email, kho) phải sửa code payment-service   Chấp nhận ở quy mô hiện tại, tách ra khi hệ thống lớn hơn
+Order và việc gọi payment không nằm chung một transaction   Nếu order-service chết giữa bước tạo order và gọi payment, order kẹt PENDING_PAYMENT   Chấp nhận được: client gọi lại (cùng Idempotency-Key) và order tự hết hạn
+Lỗi async invoke chỉ vào queue lỗi       Order có thể không lên PAID dù đã trừ tiền                 Bắt buộc có alarm và quy trình xử lý tay, chạy đối soát với PSP
+Poll thay vì push                        Client gọi lặp lại khi chờ                                 Thêm WebSocket/SSE khi UX cần
+\`\`\`
+
+Về đối soát: dù kiến trúc đơn giản hay phức tạp, bạn vẫn nên có job đối soát payment với PSP. Với tiền thật, đây là lưới an toàn cuối cùng, đừng bỏ qua.
+
+## 6. Bảo mật
 
 \`\`\`
 Hạng mục  Thiết kế
-AuthN     JWT authorizer (Cognito hoặc OIDC/JWKS từ auth-service). Chỉ /auth/login, /auth/register là public (allow-list tường minh)
-AuthZ     Kiểm tra sub trong claims ở từng handler, không tin userId từ body
+AuthN     JWT authorizer (Cognito hoặc OIDC/JWKS từ auth-service). Chỉ /auth/login, /auth/register và /payments/webhook là public (allow-list tường minh)
+Webhook   Xác thực HMAC trên raw body, so sánh constant-time
+AuthZ     Kiểm tra sub trong claims ở từng handler, không tin userId từ body. Giá do server tính
 IAM       Mỗi Lambda chỉ grantReadWriteData đúng bảng của nó
 Mã hóa    Mặc định đã mã hóa at-rest. Dùng KMS CMK cho payments-table nếu cần compliance
 Secret    Khóa PSP trong Secrets Manager, cache trong execution context
-PCI-DSS   Không lưu dữ liệu thẻ. Dùng token hóa của PSP
+PCI-DSS   Không lưu dữ liệu thẻ. Dùng token hóa của PSP, người dùng nhập thẻ/OTP trên trang PSP
 Mạng      Lambda không cần vào VPC (DynamoDB truy cập qua endpoint công khai của AWS, có IAM). Giảm cold start và bỏ chi phí NAT
 \`\`\`
 
-## 5. Vận hành và quan sát
+## 7. Vận hành và quan sát
 
 - Log, trace, metric: Powertools for AWS Lambda (Logger, Tracer, Metrics), \`correlation-id\` xuyên service.
-- Alarm tối thiểu: DLQ có message, Lambda errors, API 5xx, DynamoDB \`ThrottledRequests\`.
+- Alarm tối thiểu: Failure queue có message, Lambda errors, API 5xx, DynamoDB \`ThrottledRequests\`.
 - Backup: PITR cho prod, deletion protection, \`RemovalPolicy.RETAIN\`.
 - CI/CD: \`cdk diff\` trên PR, deploy theo stage (dev, uat, prod), mỗi stage một tài khoản AWS nếu có thể.
 
-## 6. Chi phí: DynamoDB so với RDS
+## 8. Chi phí: DynamoDB so với RDS
 
 Ước tính thô cho khoảng 5 triệu request mỗi tháng (mỗi request khoảng 200ms, Lambda 512MB, arm64).
 
-### Phương án A: DynamoDB (bản thiết kế trong bài)
+### Phương án DynamoDB (thiết kế trong bài)
 
 \`\`\`
 Hạng mục                              Chi phí/tháng
 API Gateway HTTP API                  ~$5
 Lambda                                ~$8
 DynamoDB (3 bảng, GSI, on-demand)     ~$2-5
-EventBridge + SQS                     < $2
-CloudWatch, X-Ray, Secrets Manager    ~$10-20
-CloudFront + WAF (nếu dùng)           ~$10-20
-Tổng                                  ~$35-55
+CloudWatch, Secrets Manager           ~$10-20
+Tổng                                  ~$25-40
+CloudFront + WAF (nếu bật)            thêm ~$10-20
 \`\`\`
 
-### Phương án B: RDS PostgreSQL
+### Phương án RDS PostgreSQL
 
 Cùng ba service, nhưng dữ liệu nằm trong RDS thay vì DynamoDB. Lambda phải vào VPC và đi qua RDS Proxy để không làm cạn connection của database.
 
@@ -2173,60 +2233,55 @@ CloudFront + WAF (nếu dùng)                     ~$10-20
 Tổng                                            ~$170-220
 \`\`\`
 
-### So sánh hai phương án
+### So sánh
 
 \`\`\`
-Hạng mục                    A: DynamoDB        B: RDS PostgreSQL
-Database                    ~$2-5              ~$100-130
-Lớp kết nối                 Không cần          RDS Proxy ~$22
-Mạng (VPC endpoint...)      Không cần          Nằm trong khoản ~$20-30
-Edge (CloudFront + WAF)     ~$10-20            ~$10-20
-Tổng                        ~$35-55            ~$170-220
-Chênh lệch                  Rẻ hơn khoảng 3-5 lần
-Chi phí khi không có traffic  Gần $0 (on-demand)  Vẫn trả đủ RDS + Proxy
+Hạng mục                      DynamoDB                 RDS PostgreSQL
+Database                      ~$2-5                    ~$100-130
+Lớp kết nối                   Không cần                RDS Proxy ~$22
+Tổng                          ~$25-40                  ~$170-220
+Chi phí khi không có traffic  Gần $0 (phụ phí nhỏ)     Vẫn trả đủ RDS + Proxy
 \`\`\`
 
 Nhận xét:
 
-- Chi phí chính của phương án B là RDS, không phải Lambda. Lambda và API Gateway giống nhau ở cả hai phương án.
-- RDS tính tiền theo giờ chạy, bất kể có request hay không. DynamoDB on-demand tính theo request, nên môi trường dev/uat gần như không tốn tiền khi để không.
-- Hai bảng không so sánh hoàn toàn công bằng: phương án A có thêm EventBridge, SQS và X-Ray, phương án B có thêm RDS Proxy và VPC endpoint. Tuy vậy khoản chênh lớn nhất vẫn là database.
-- Ở lượng request rất lớn và ổn định, chi phí on-demand của DynamoDB tăng theo request. Khi đó nên tính lại với provisioned capacity hoặc reserved capacity trước khi kết luận.
-- Rẻ hơn không có nghĩa là phù hợp hơn. RDS cho SQL, join và query ad-hoc, còn DynamoDB bắt bạn chốt access pattern từ đầu (xem mục Đánh giá).
+- Chi phí chính của phương án RDS là RDS, không phải Lambda. Lambda và API Gateway giống nhau ở cả hai phương án.
+- RDS tính tiền theo giờ chạy, bất kể có request hay không. DynamoDB on-demand tính theo request, nên dev/uat gần như không tốn tiền khi để không.
+- Hai bảng không so sánh hoàn toàn công bằng vì mỗi phương án có thêm những dịch vụ khác nhau (RDS Proxy, VPC endpoint...). Khoản chênh lớn nhất vẫn là database.
+- Ở lượng request rất lớn và ổn định, chi phí on-demand của DynamoDB tăng theo request. Khi đó nên tính lại với provisioned hoặc reserved capacity.
+- Rẻ hơn không có nghĩa là phù hợp hơn. RDS cho SQL, join và query ad-hoc, còn DynamoDB bắt bạn chốt access pattern từ đầu.
 
 Giá thay đổi theo region, hãy kiểm tra lại bằng AWS Pricing Calculator.
 
-## 7. Đánh giá
-
-Ưu điểm: chi phí thấp, scale tự động, không cần connection pool, ít thành phần phải vận hành, phân quyền tách bạch theo service.
+## 9. Rủi ro chung của DynamoDB
 
 \`\`\`
 Rủi ro                                          Giảm thiểu
 Access pattern đổi sau khi lên production       Review pattern kỹ trước khi chốt, dùng GSI, backfill bằng script khi cần
 Không có join và query ad-hoc                   Export sang S3 + Athena hoặc stream sang OpenSearch cho báo cáo
-Transaction giới hạn 100 item, tốn gấp đôi write  Giữ transaction nhỏ (order + outbox)
+Transaction giới hạn 100 item, tốn gấp đôi write  Giữ transaction nhỏ (order + khóa idempotency)
 Hot partition                                   Chọn partition key phân bố tốt (orderId, userId)
-Event trùng hoặc mất thứ tự                     Idempotency ở mọi consumer, SQS FIFO nếu cần thứ tự
+Request hoặc webhook bị gửi trùng               Idempotency ở mọi bước, cập nhật có điều kiện
 Lock-in AWS                                     Chấp nhận có chủ đích, tách domain logic khỏi data access layer
 Cold start                                      esbuild bundle, arm64, provisioned concurrency cho auth-service nếu cần
 \`\`\`
 
-## 8. Lộ trình triển khai
+## 10. Lộ trình triển khai
 
 \`\`\`
 Tuần 1  Monorepo, 3 Lambda "hello", HTTP API, JWT authorizer, 3 bảng, CI cdk diff
 Tuần 2  auth-service (register/login/refresh), Powertools, alarm cơ bản
-Tuần 3  order-service + outbox + relay + EventBridge
-Tuần 4  payment-service + idempotency + DLQ + chiều ngược lại của Saga, test tải, bật WAF
+Tuần 3  order-service + payment-service gọi trực tiếp, Idempotency-Key, redirectUrl
+Tuần 4  Webhook PSP + HMAC, async invoke + Failure queue + alarm, job đối soát, test tải, bật WAF
 \`\`\`
 
 ## Key Takeaways
 
-1. Mỗi service sở hữu một bảng, không truy cập chéo, và giao tiếp qua event.
-2. Thiết kế DynamoDB theo access pattern. Unique constraint và idempotency đều làm bằng conditional write.
-3. Outbox trong cùng một transaction đảm bảo không có order thiếu event.
-4. Delivery là at-least-once, nên mọi consumer phải idempotent.
-5. Rủi ro lớn nhất là access pattern thay đổi sau khi lên production, hãy review kỹ trước khi chốt.
+1. Thiết kế chỉ cần HTTP API, 3 Lambda, 3 bảng DynamoDB và 1 queue lỗi, khoảng $25-40/tháng.
+2. Bước cần user chờ (tạo payment, lấy URL OTP) gọi đồng bộ. Bước không ai chờ (webhook, cập nhật order) dùng async invoke.
+3. Idempotency và cập nhật có điều kiện ở mọi bước, vì PSP retry webhook và Lambda async có thể giao trùng.
+4. Route webhook public bảo vệ bằng HMAC trên raw body. Dữ liệu thẻ và OTP không đi qua hệ thống của bạn.
+5. Luôn có alarm cho Failure queue và job đối soát với PSP, vì order có thể không lên PAID dù đã trừ tiền.
     `
   }
 ];
