@@ -2283,6 +2283,262 @@ Tuần 4  Webhook PSP + HMAC, async invoke + Failure queue + alarm, job đối s
 4. Route webhook public bảo vệ bằng HMAC trên raw body. Dữ liệu thẻ và OTP không đi qua hệ thống của bạn.
 5. Luôn có alarm cho Failure queue và job đối soát với PSP, vì order có thể không lên PAID dù đã trừ tiền.
     `
+  },
+  {
+    id: 18,
+    slug: 'lambda-cold-start-cdk',
+    title: "Giảm Lambda Cold Start với CDK",
+    category: "Cloud Infrastructure",
+    difficulty: "Advanced",
+    readTime: "9 min read",
+    date: "2026-11-22",
+    featured: false,
+    excerpt: "Các kỹ thuật giảm cold start cho Lambda Node.js kèm code CDK và số đo thật từ lab: client ngoài handler, lazy load, memory, ARM64, và những thứ không giảm Init như minify hay SDK external.",
+    tags: ["AWS", "Lambda", "CDK", "Cold Start", "Serverless", "Performance"],
+    content: `
+# Giảm Lambda Cold Start với CDK: kỹ thuật nào đáng làm
+
+Bài này tổng hợp các kỹ thuật giảm cold start cho Lambda Node.js, kèm code CDK (TypeScript) và **số đo thật** từ một lab nhỏ tự dựng. Mục tiêu là trả lời câu hỏi thực tế: làm gì trước, làm gì sau, và cái gì nghe hay nhưng không có tác dụng.
+
+Phạm vi số đo: region \`ap-southeast-1\`, runtime \`nodejs22.x\`, 10-20 lần cold start cho mỗi biến thể, ghi lại ngày 2026-11-22. Đây là một workload nhỏ (ghi một item vào DynamoDB, tùy chọn tạo PDF), nên hãy đo lại trên workload của bạn trước khi áp dụng.
+
+## 1. Cold start gồm những gì
+
+Khi Lambda tạo execution environment mới, lần gọi đầu đi qua hai giai đoạn trước khi có response:
+
+\`\`\`
+Tải code -> khởi động runtime -> chạy code ngoài handler (Init) -> chạy handler (Duration)
+\`\`\`
+
+Dòng \`REPORT\` trong CloudWatch có \`Init Duration\` chỉ khi là cold start. Độ trễ người dùng cảm nhận xấp xỉ \`Init Duration + Duration\` (chưa gồm overhead mạng). Với runtime do AWS quản lý, giai đoạn Init hiện được tính vào billed duration, nên giảm Init vừa giảm độ trễ vừa giảm tiền. Hãy kiểm tra lại trang giá Lambda hiện hành.
+
+Hai điểm quan trọng:
+
+1. Cold start chỉ xảy ra khi có environment mới. Với traffic đều, tỉ lệ cold start thấp, đôi khi tối ưu \`Duration\` đáng hơn tối ưu Init.
+2. Nên nhìn p95 và max, không chỉ trung bình.
+
+## 2. Lab: 5 biến thể từ cùng một function
+
+Mỗi biến thể thêm đúng một thay đổi so với biến thể trước:
+
+\`\`\`
+v1-baseline    x86,   128MB, bundle cả SDK, client tạo trong handler, import nặng ở top-level
+v2-bundled     x86,   128MB, minify, SDK external, client ngoài handler
+v3-arm-mem     arm64, 512MB
+v4-lazy        arm64, 512MB, lazy load thư viện nặng
+v5-provisioned arm64, 512MB, Provisioned Concurrency (chưa đo, xem mục 8)
+\`\`\`
+
+Cách ép cold start: script đổi biến môi trường \`BUMP\` của function trước mỗi lần gọi. Cấu hình đổi thì Lambda tạo environment mới, nên lần invoke kế tiếp chắc chắn là cold start. Số liệu lấy thẳng từ dòng \`REPORT\` (\`Init Duration\`, \`Duration\`, \`Billed Duration\`).
+
+Query CloudWatch Logs Insights để tổng hợp:
+
+\`\`\`
+filter @type = "REPORT"
+| parse @log /\\d+:(?<fn>.*)/
+| stats count() as invokes,
+        count(@initDuration) as coldStarts,
+        avg(@initDuration) as avgInit,
+        pct(@initDuration, 95) as p95Init,
+        avg(@duration) as avgDuration,
+        avg(@billedDuration) as avgBilled
+  by fn
+\`\`\`
+
+Kết quả (trung bình, 10 lần mỗi biến thể):
+
+\`\`\`
+Biến thể         Package  Init(ms)  Duration(ms)  Billed(ms)
+v1-baseline      469 KB   374       977           1352
+v2-bundled       194 KB   377       830           1208
+v3-arm-mem       194 KB   374       232            607
+v4-lazy          194 KB   274       208            482
+\`\`\`
+
+Hai kết luận đầu tiên có thể gây bất ngờ: Init gần như không đổi từ v1 đến v3, dù package nhỏ đi hơn một nửa. Phần giảm lớn đến từ Duration và từ lazy load.
+
+## 3. Kỹ thuật 1: khởi tạo client ngoài handler
+
+Đây là kỹ thuật rẻ nhất và có lợi cả khi warm start. Client và kết nối được tạo một lần cho mỗi environment, rồi dùng lại.
+
+Trước (tạo mỗi lần invoke):
+
+\`\`\`typescript
+export const handler = async (event: { pdf?: boolean }) => {
+  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({})); // mỗi request
+  await ddb.send(new PutCommand({ TableName: process.env.TABLE!, Item: { id: Date.now().toString() } }));
+  return { ok: true };
+};
+\`\`\`
+
+Sau:
+
+\`\`\`typescript
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({})); // một lần, ngoài handler
+
+export const handler = async (event: { pdf?: boolean }) => {
+  await ddb.send(new PutCommand({ TableName: process.env.TABLE!, Item: { id: Date.now().toString() } }));
+  return { ok: true };
+};
+\`\`\`
+
+Để tách riêng yếu tố này, lab có biến thể chỉ đổi đúng việc này (20 lần đo, x86 128MB):
+
+\`\`\`
+Biến thể           Init(ms)  Duration(ms)  Billed(ms)
+v1-baseline        354       968           1322
+a3-client-outside  377       854           1232
+\`\`\`
+
+Duration giảm khoảng 114 ms (~12%), billed giảm khoảng 90 ms (~7%). Init tăng khoảng 24 ms. Giả thuyết (chưa kiểm chứng) là chi phí tạo client chuyển từ Duration sang Init. Tổng vẫn có lợi, và mọi warm start sau đó không phải tạo lại client.
+
+Đánh đổi: environment sống lâu có thể gặp credential hoặc connection hết hạn, nên cần xử lý retry cho kết nối dài (database, HTTP keep-alive).
+
+## 4. Kỹ thuật 2: lazy load thư viện nặng
+
+Nếu một thư viện chỉ dùng ở nhánh hiếm của request, đừng import ở top-level. Dùng \`import()\` động để chỉ tải khi cần.
+
+\`\`\`typescript
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+
+export const handler = async (event: { pdf?: boolean }) => {
+  await ddb.send(new PutCommand({ TableName: process.env.TABLE!, Item: { id: Date.now().toString() } }));
+
+  if (event.pdf) {
+    const { PDFDocument } = await import('pdf-lib'); // chỉ tải khi cần
+    const doc = await PDFDocument.create();
+    return { pages: doc.getPageCount() };
+  }
+  return { ok: true };
+};
+\`\`\`
+
+Kết quả v3 so với v4 (cùng arm64 512MB, chỉ khác lazy load): Init giảm từ khoảng 374 ms xuống 274 ms (~27%), billed giảm từ 607 xuống 482 ms.
+
+Đánh đổi: request đầu tiên thật sự cần \`pdf-lib\` sẽ chậm hơn, vì chi phí tải chuyển sang đó. Chỉ lazy load thứ không nằm trên đường đi thường xuyên của request. Nếu thư viện dùng ở mọi request thì lazy load chỉ dời chi phí, không giảm.
+
+## 5. Kỹ thuật 3 và 4: memory và ARM64 trong CDK
+
+CPU của Lambda tỉ lệ theo memory (khoảng 1769 MB tương đương 1 vCPU). Cấu hình trong CDK:
+
+\`\`\`typescript
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as cdk from 'aws-cdk-lib/core';
+
+const fn = new nodejs.NodejsFunction(this, 'Fn', {
+  entry: path.join(__dirname, '../lambda/good.ts'),
+  handler: 'handler',
+  runtime: lambda.Runtime.NODEJS_22_X,
+  architecture: lambda.Architecture.ARM_64, // giá/giây thấp hơn x86
+  memorySize: 512,                          // 128 -> 512: nhiều CPU hơn
+  timeout: cdk.Duration.seconds(15),
+});
+\`\`\`
+
+Số đo v2 so với v3 (đổi cùng lúc arm64 và 128 -> 512 MB): Init gần như không đổi (377 -> 374 ms) nhưng Duration giảm mạnh từ 830 xuống 232 ms, billed từ 1208 xuống 607 ms. Memory và CPU không rút ngắn Init trong lab này, nhưng rút ngắn mạnh phần handler của request cold start.
+
+Lưu ý trung thực: lab gộp ARM64 và memory vào một bước, nên chưa tách riêng được hiệu quả của ARM64. Lý do vẫn nên dùng ARM64 là giá/giây thấp hơn (khoảng 20% theo bảng giá), với điều kiện native module build được cho arm64.
+
+Memory cao hơn tăng giá/giây, nhưng chạy ngắn hơn có thể làm tổng tiền không tăng. Hãy tính chi phí mỗi lần gọi và chọn điểm rẻ nhất, không phải điểm nhanh nhất:
+
+\`\`\`
+chi phí / lần gọi = (billedDuration_ms / 1000) x (memory_MB / 1024) x giá_GB-giây
+\`\`\`
+
+Dùng \`aws-lambda-power-tuning\` để quét 128/256/512/1024/1769 MB thay vì đoán.
+
+## 6. Kỹ thuật 5: minify và SDK external (tùy chọn)
+
+Đây là kỹ thuật phổ biến nhất trong các bài viết về cold start, nhưng số đo của lab cho thấy nó **không giảm Init**. Cấu hình trong CDK:
+
+\`\`\`typescript
+bundling: {
+  minify: true,
+  sourceMap: true,                       // giữ stack trace đọc được
+  externalModules: ['@aws-sdk/*'],       // dùng SDK v3 có sẵn trong runtime
+},
+\`\`\`
+
+Kết quả (20 lần đo, x86 128MB, mỗi biến thể chỉ đổi một yếu tố so với baseline):
+
+\`\`\`
+Biến thể         Package  Init(ms)  Duration(ms)
+v1-baseline      469 KB   354       968
+a1-minify        357 KB   363       946
+a2-sdk-external  229 KB   361       990
+\`\`\`
+
+Package nhỏ đi rõ rệt (SDK external giảm nhiều nhất), nhưng Init chênh vài ms, nằm trong nhiễu (độ lệch chuẩn 25-40 ms). Vẫn nên bật nếu bạn muốn package nhỏ để deploy nhanh, miễn là chấp nhận phụ thuộc phiên bản SDK của runtime và bật source map để debug. Đừng kỳ vọng nó cải thiện cold start.
+
+Phần lớn Init (khoảng 350-380 ms ở mọi biến thể, trừ lazy load) có vẻ là chi phí khởi tạo runtime, không phụ thuộc kích thước code. Đây mới là giả thuyết; cần X-Ray để xác nhận.
+
+## 7. Provisioned Concurrency (đắt nhất, dùng cuối cùng)
+
+Provisioned Concurrency chạy sẵn một số environment đã Init, nên request nằm trong số đó không có cold start. Đổi lại bạn trả tiền liên tục kể cả khi không có traffic, và request vượt quá số đã cấp vẫn cold start.
+
+\`\`\`typescript
+const alias = new lambda.Alias(this, 'LiveAlias', {
+  aliasName: 'live',
+  version: fn.currentVersion,
+  provisionedConcurrentExecutions: 1,
+});
+\`\`\`
+
+Nếu SLA độ trễ bắt buộc nhưng traffic chỉ tập trung theo giờ, bật theo lịch để giảm tiền. Đoạn dưới là cách dùng Application Auto Scaling theo lịch; **chưa chạy trong lab này**, hãy chạy \`cdk diff\` và kiểm tra trước khi dùng:
+
+\`\`\`typescript
+import * as appscaling from 'aws-cdk-lib/aws-applicationautoscaling';
+
+const scaling = alias.addAutoScaling({ minCapacity: 0, maxCapacity: 5 });
+
+scaling.scaleOnSchedule('DayStart', {
+  schedule: appscaling.Schedule.cron({ hour: '1', minute: '0' }),   // 08:00 giờ VN (UTC+7)
+  minCapacity: 5,
+});
+scaling.scaleOnSchedule('DayEnd', {
+  schedule: appscaling.Schedule.cron({ hour: '11', minute: '0' }),  // 18:00 giờ VN
+  minCapacity: 0,
+});
+\`\`\`
+
+Hai lưu ý khi thử:
+
+1. Provisioned Concurrency trừ vào quota concurrent executions của tài khoản và Lambda luôn giữ lại tối thiểu 10. Tài khoản mới có quota mặc định thấp sẽ deploy lỗi \`decreases account's UnreservedConcurrentExecution below its minimum value of [10]\`. Vì lý do này lab của mình chưa đo được v5 và không đưa số liệu cho nó.
+2. SnapStart (chụp snapshot sau Init) là hướng khác để giảm cold start, nhưng theo tài liệu AWS hiện chỉ hỗ trợ Java, Python 3.12+ và .NET 8+. Các runtime Node.js như \`nodejs24.x\` không được hỗ trợ, nên không áp dụng được cho bài này.
+
+## 8. Thứ tự ưu tiên
+
+\`\`\`
+1. Client/kết nối ngoài handler   Duration -12%, billed -7%       Làm luôn
+2. Lazy load thư viện nặng        Init -27% (nhánh hiếm)          Làm nếu có thư viện chỉ dùng ở nhánh hiếm
+3. Tăng memory                    Duration 830 -> 232 ms          Làm và đo chi phí
+4. ARM64                          Giá/giây thấp hơn               Nên dùng, kiểm tra native module
+5. SDK external                   Package 469 -> 229 KB, Init 0   Tùy chọn
+6. Minify + source map            Package 469 -> 357 KB, Init 0   Tùy chọn
+7. Provisioned Concurrency        Init ~0 (chưa đo)               Cuối cùng, nên theo lịch
+\`\`\`
+
+Nguyên tắc rút ra: tối ưu theo số đo, theo thứ tự rẻ trước đắt sau. Kích thước bundle là thứ dễ đo nhất nhưng không phải thứ quyết định cold start. Hai thứ tác động rõ nhất trong lab là Duration của request đầu tiên (client, kết nối, CPU) và thư viện nặng nạp ở top-level.
+
+## 9. Giới hạn của số đo
+
+1. Chỉ 10-20 lần đo mỗi biến thể; với n = 20, p95 gần bằng giá trị lớn nhất. Muốn kết luận chênh lệch dưới khoảng 25 ms cần 50-100 lần.
+2. Một region (\`ap-southeast-1\`), một workload nhỏ. Function có VPC, nhiều dependency hơn hoặc runtime khác sẽ cho kết quả khác.
+3. Provisioned Concurrency chưa được đo. ARM64 chưa được tách riêng khỏi memory.
+4. Lab chỉ ghi vào DynamoDB; chưa đo ảnh hưởng của VPC và X-Ray, dù cả hai đều đáng thử.
+
+Lab chạy trên tài khoản sandbox và được \`cdk destroy\` sau khi đo. Đừng chạy \`cdk deploy\` hoặc \`cdk destroy\` trên production khi thử lại.
+
+## Key Takeaways
+
+1. Đo \`Init Duration\` và \`Duration\` từ dòng \`REPORT\`, đừng tối ưu theo trực giác.
+2. Client ngoài handler là thay đổi rẻ nhất, giảm Duration khoảng 12% ở cold start và có lợi cả warm start.
+3. Lazy load thư viện chỉ dùng ở nhánh hiếm giảm Init khoảng 27% trong lab, chi phí dồn sang request đầu cần nó.
+4. Tăng memory không giảm Init nhưng giảm mạnh Duration; chọn điểm rẻ nhất bằng power tuning.
+5. Minify và SDK external chỉ làm package nhỏ hơn, không giảm Init trong lab này.
+6. Provisioned Concurrency là lựa chọn cuối cùng và đắt nhất; SnapStart chưa hỗ trợ Node.js.
+    `
   }
 ];
 
