@@ -119,6 +119,69 @@ Hai request cùng mua món hàng cuối cùng trong kho tại cùng một thời
 
 \`SELECT ... FOR UPDATE\` đặt một exclusive lock lên các row mà nó trả về, trong phạm vi transaction hiện tại. Các transaction khác vẫn đọc bình thường những row đó, nhưng không thể update, delete hay lock chúng cho đến khi bạn kết thúc. Những row không ai chạm tới vẫn hoàn toàn khả dụng, nên khác với table lock, cái giá chỉ giới hạn ở những chỗ thực sự có tranh chấp.
 
+## BEGIN và FOR UPDATE: hai thứ khác nhau
+
+Hai thứ này hay bị nhầm là một. \`BEGIN\` ... \`COMMIT\` tạo ra một "khối giao dịch" để gom nhiều lệnh chạy cùng nhau. \`SELECT ... FOR UPDATE\` là lệnh khóa dòng nằm bên trong khối đó.
+
+\`\`\`
+Tiêu chí              BEGIN ... COMMIT                         SELECT ... FOR UPDATE
+Bản chất              Ranh giới giao dịch: tất cả cùng         Khóa độc quyền (row-level lock) lên
+                      thành công hoặc cùng hủy (Atomicity)     các dòng vừa đọc
+Phạm vi               Bao toàn bộ quá trình xử lý              Phải nằm trong BEGIN ... COMMIT, nếu chạy
+                                                               lẻ thì khóa nhả ngay khi lệnh xong
+Tác động lên          Không khóa dòng nào cho đến khi          Chặn ngay UPDATE, DELETE, FOR UPDATE của
+transaction khác      có UPDATE, DELETE hoặc FOR UPDATE        transaction khác trên cùng dòng
+Rủi ro                BEGIN + SELECT thường rồi mới UPDATE:    Giữ khóa quá lâu gây chờ (lock contention),
+                      hai người cùng rút tiền có thể làm       khóa nhiều dòng sai thứ tự gây deadlock
+                      âm tài khoản (race condition)
+\`\`\`
+
+Nhớ ngắn gọn: \`BEGIN\` bảo đảm "làm hết hoặc không làm gì". \`FOR UPDATE\` bảo đảm "trong lúc tôi tính toán, không ai sửa dòng này". Transaction một mình không chặn được người khác.
+
+### Khi nào chỉ cần BEGIN ... COMMIT
+
+Khi cần toàn vẹn nhiều bước, nhưng không có chuyện đọc một giá trị rồi dựa vào nó để quyết định ghi:
+
+\`\`\`sql
+-- Tạo dữ liệu liên quan: cùng thành công hoặc cùng hủy
+BEGIN;
+INSERT INTO orders (id, user_id) VALUES (1, 42);
+INSERT INTO order_items (order_id, sku, qty) VALUES (1, 'A01', 2);
+COMMIT;
+
+-- Cập nhật độc lập: UPDATE tự khóa dòng, không cần FOR UPDATE trước
+UPDATE accounts SET balance = balance + 100 WHERE id = 100;
+\`\`\`
+
+Một trường hợp nữa là đọc báo cáo nhất quán từ nhiều bảng cùng một thời điểm, dùng \`BEGIN ISOLATION LEVEL REPEATABLE READ\`.
+
+### Khi nào cần thêm FOR UPDATE
+
+Khi quy trình có dạng đọc lên ứng dụng, kiểm tra điều kiện, rồi ghi xuống (Read-Modify-Write) và nhiều người cùng tranh một dòng: trừ tiền, giữ chỗ, trừ tồn kho, mã giảm giá giới hạn lượt dùng.
+
+\`\`\`sql
+-- Sai: hai giao dịch cùng thấy 500000 rồi cùng trừ, tài khoản bị âm
+BEGIN;
+SELECT balance FROM accounts WHERE id = 1;
+-- app kiểm tra: balance >= 500000
+UPDATE accounts SET balance = balance - 500000 WHERE id = 1;
+COMMIT;
+
+-- Đúng: giao dịch thứ hai phải chờ ở dòng SELECT
+BEGIN;
+SELECT balance FROM accounts WHERE id = 1 FOR UPDATE;
+-- app kiểm tra: balance >= 500000
+UPDATE accounts SET balance = balance - 500000 WHERE id = 1;
+COMMIT;
+\`\`\`
+
+Nếu điều kiện gói được vào chính câu \`UPDATE\`, một lệnh là đủ và không cần \`FOR UPDATE\`:
+
+\`\`\`sql
+UPDATE accounts SET balance = balance - 500000
+WHERE id = 1 AND balance >= 500000;   -- 0 dòng bị ảnh hưởng = không đủ tiền
+\`\`\`
+
 ## Hai transaction tương tác thế nào
 
 Giả sử T1 và T2 cùng chạy \`SELECT ... FOR UPDATE\` trên cùng một row.
@@ -212,6 +275,7 @@ Pessimistic Locking là lựa chọn đúng khi xung đột có khả năng cao 
 3. Đánh index cho mệnh đề WHERE, khóa nhiều row theo thứ tự nhất quán và giữ transaction ngắn.
 4. Cấu hình lock, statement và idle-in-transaction timeout một cách chủ động, vì mặc định của PostgreSQL là không giới hạn.
 5. Coi lỗi deadlock là lỗi có thể retry.
+6. \`BEGIN\` chỉ gom lệnh, còn \`FOR UPDATE\` mới chặn người khác. Nếu gói được điều kiện vào \`UPDATE ... WHERE\` thì không cần \`FOR UPDATE\`.
     `
   },
   {
