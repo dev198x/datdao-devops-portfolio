@@ -119,6 +119,69 @@ Hai request cùng mua món hàng cuối cùng trong kho tại cùng một thời
 
 \`SELECT ... FOR UPDATE\` đặt một exclusive lock lên các row mà nó trả về, trong phạm vi transaction hiện tại. Các transaction khác vẫn đọc bình thường những row đó, nhưng không thể update, delete hay lock chúng cho đến khi bạn kết thúc. Những row không ai chạm tới vẫn hoàn toàn khả dụng, nên khác với table lock, cái giá chỉ giới hạn ở những chỗ thực sự có tranh chấp.
 
+## BEGIN và FOR UPDATE: hai thứ khác nhau
+
+Hai thứ này hay bị nhầm là một. \`BEGIN\` ... \`COMMIT\` tạo ra một "khối giao dịch" để gom nhiều lệnh chạy cùng nhau. \`SELECT ... FOR UPDATE\` là lệnh khóa dòng nằm bên trong khối đó.
+
+\`\`\`
+Tiêu chí              BEGIN ... COMMIT                         SELECT ... FOR UPDATE
+Bản chất              Ranh giới giao dịch: tất cả cùng         Khóa độc quyền (row-level lock) lên
+                      thành công hoặc cùng hủy (Atomicity)     các dòng vừa đọc
+Phạm vi               Bao toàn bộ quá trình xử lý              Phải nằm trong BEGIN ... COMMIT, nếu chạy
+                                                               lẻ thì khóa nhả ngay khi lệnh xong
+Tác động lên          Không khóa dòng nào cho đến khi          Chặn ngay UPDATE, DELETE, FOR UPDATE của
+transaction khác      có UPDATE, DELETE hoặc FOR UPDATE        transaction khác trên cùng dòng
+Rủi ro                BEGIN + SELECT thường rồi mới UPDATE:    Giữ khóa quá lâu gây chờ (lock contention),
+                      hai người cùng rút tiền có thể làm       khóa nhiều dòng sai thứ tự gây deadlock
+                      âm tài khoản (race condition)
+\`\`\`
+
+Nhớ ngắn gọn: \`BEGIN\` bảo đảm "làm hết hoặc không làm gì". \`FOR UPDATE\` bảo đảm "trong lúc tôi tính toán, không ai sửa dòng này". Transaction một mình không chặn được người khác.
+
+### Khi nào chỉ cần BEGIN ... COMMIT
+
+Khi cần toàn vẹn nhiều bước, nhưng không có chuyện đọc một giá trị rồi dựa vào nó để quyết định ghi:
+
+\`\`\`sql
+-- Tạo dữ liệu liên quan: cùng thành công hoặc cùng hủy
+BEGIN;
+INSERT INTO orders (id, user_id) VALUES (1, 42);
+INSERT INTO order_items (order_id, sku, qty) VALUES (1, 'A01', 2);
+COMMIT;
+
+-- Cập nhật độc lập: UPDATE tự khóa dòng, không cần FOR UPDATE trước
+UPDATE accounts SET balance = balance + 100 WHERE id = 100;
+\`\`\`
+
+Một trường hợp nữa là đọc báo cáo nhất quán từ nhiều bảng cùng một thời điểm, dùng \`BEGIN ISOLATION LEVEL REPEATABLE READ\`.
+
+### Khi nào cần thêm FOR UPDATE
+
+Khi quy trình có dạng đọc lên ứng dụng, kiểm tra điều kiện, rồi ghi xuống (Read-Modify-Write) và nhiều người cùng tranh một dòng: trừ tiền, giữ chỗ, trừ tồn kho, mã giảm giá giới hạn lượt dùng.
+
+\`\`\`sql
+-- Sai: hai giao dịch cùng thấy 500000 rồi cùng trừ, tài khoản bị âm
+BEGIN;
+SELECT balance FROM accounts WHERE id = 1;
+-- app kiểm tra: balance >= 500000
+UPDATE accounts SET balance = balance - 500000 WHERE id = 1;
+COMMIT;
+
+-- Đúng: giao dịch thứ hai phải chờ ở dòng SELECT
+BEGIN;
+SELECT balance FROM accounts WHERE id = 1 FOR UPDATE;
+-- app kiểm tra: balance >= 500000
+UPDATE accounts SET balance = balance - 500000 WHERE id = 1;
+COMMIT;
+\`\`\`
+
+Nếu điều kiện gói được vào chính câu \`UPDATE\`, một lệnh là đủ và không cần \`FOR UPDATE\`:
+
+\`\`\`sql
+UPDATE accounts SET balance = balance - 500000
+WHERE id = 1 AND balance >= 500000;   -- 0 dòng bị ảnh hưởng = không đủ tiền
+\`\`\`
+
 ## Hai transaction tương tác thế nào
 
 Giả sử T1 và T2 cùng chạy \`SELECT ... FOR UPDATE\` trên cùng một row.
@@ -212,34 +275,112 @@ Pessimistic Locking là lựa chọn đúng khi xung đột có khả năng cao 
 3. Đánh index cho mệnh đề WHERE, khóa nhiều row theo thứ tự nhất quán và giữ transaction ngắn.
 4. Cấu hình lock, statement và idle-in-transaction timeout một cách chủ động, vì mặc định của PostgreSQL là không giới hạn.
 5. Coi lỗi deadlock là lỗi có thể retry.
+6. \`BEGIN\` chỉ gom lệnh, còn \`FOR UPDATE\` mới chặn người khác. Nếu gói được điều kiện vào \`UPDATE ... WHERE\` thì không cần \`FOR UPDATE\`.
     `
   },
   {
     id: 9,
     slug: 'preventing-overbooking-reservation-holds-redis-ttl',
-    title: "Preventing Overbooking: Reservation Holds with Redis TTL",
+    title: "Chống Overbooking cho Booking: Reservation và Pending State, từ giải pháp chuẩn đến tăng tốc bằng Redis",
     category: "Full-Stack",
     difficulty: "Advanced",
-    readTime: "9 min read",
+    readTime: "11 min read",
     date: "2026-11-19",
     featured: false,
-    excerpt: "Phân tích kỹ thuật cơ chế giữ chỗ tạm thời cho ghế/vé: Redis SET NX EX để claim nguyên tử, database làm source of truth, và các trường hợp biên (late webhook, Redis restart, đặt nhiều ghế) làm hỏng những thiết kế ngây thơ.",
-    tags: ["Redis", "Concurrency", "System Design", "Booking", "Lua"],
+    excerpt: "Hai người bấm cùng một ghế cùng lúc thì ai được? Giải pháp chuẩn dùng Pending State trong database với ba bước ngắn, và giải pháp tăng tốc dùng Redis SET NX EX khi tải tranh chấp lớn. Kèm so sánh và các trường hợp biên.",
+    tags: ["Redis", "PostgreSQL", "Concurrency", "System Design", "Booking", "Lua"],
     content: `
-# Preventing Overbooking: Reservation Holds with Redis TTL
+# Chống Overbooking: Reservation và Pending State
 
-Hai người dùng bấm cùng một ghế trong cùng một mili-giây. Một người phải thua, và ghế không được phép bị khóa mãi nếu người thắng bỏ đi giữa trang thanh toán. Đây là bài toán Reservation Hold, xuất hiện trong bán vé, đặt phòng khách sạn và flash sale.
+Hai người dùng bấm cùng một ghế trong cùng một mili-giây. Một người phải thua, và ghế không được phép bị khóa mãi nếu người thắng bỏ đi giữa trang thanh toán. Đây là bài toán giữ chỗ tạm thời (Reservation Hold), xuất hiện trong bán vé, đặt phòng khách sạn và flash sale.
 
-## Thiết kế trong một đoạn
+Nguyên tắc chung cho cả hai giải pháp dưới đây: không bao giờ giữ DB transaction trong lúc chờ thanh toán qua mạng. Chỗ được giữ bằng một trạng thái tạm có hạn dùng, không phải bằng một khóa đang mở.
 
-Database chỉ lưu các trạng thái bền vững: AVAILABLE và BOOKED. Hold tạm thời chỉ nằm trên Redis, dưới dạng một key có TTL 15 phút. Khi key hết hạn thì ghế tự động trống lại, nên không cần ghi row HOLDING và không cần Cronjob quét các hold hết hạn.
+## Hai giải pháp trong một nhìn
+
+\`\`\`
+                      Giải pháp 1 (chuẩn)              Giải pháp 2 (tăng tốc)
+Nơi giữ chỗ           Cột status = 'pending' trong DB  Key trên Redis có TTL
+Hết hạn bằng          Cột expired_at + worker          Redis tự xóa key
+Thành phần            Chỉ database                     Database + Redis
+Dùng khi              Phần lớn hệ thống                Rất nhiều người tranh cùng lúc
+\`\`\`
+
+Hãy bắt đầu với giải pháp 1. Chỉ chuyển sang giải pháp 2 khi database thật sự quá tải.
+
+# Giải pháp 1 (chuẩn): Pending State trong database
+
+Tách quá trình thành ba bước độc lập.
+
+## Bước 1: giữ chỗ nhanh (transaction ngắn, dưới 50ms)
+
+\`\`\`sql
+BEGIN;
+SELECT status FROM event_seats
+WHERE event_id = 'event_1' AND seat_id = 'seat_A1' FOR UPDATE;
+-- app kiểm tra: status = 'available'
+UPDATE event_seats
+SET status = 'pending', user_id = 'user_A',
+    expired_at = NOW() + INTERVAL '10 minutes'
+WHERE event_id = 'event_1' AND seat_id = 'seat_A1';
+COMMIT;   -- nhả khóa và kết nối ngay
+\`\`\`
+
+\`FOR UPDATE\` làm người đến sau phải chờ vài chục mili-giây, rồi thấy status đã là \`pending\` và dừng lại.
+
+## Bước 2: gọi cổng thanh toán (không mở DB transaction)
+
+Gọi API thanh toán hoặc cho khách quét mã QR. Lúc này database rảnh, không giữ khóa hay kết nối nào.
+
+## Bước 3: chốt đơn hoặc nhả chỗ (transaction ngắn, dưới 50ms)
+
+\`\`\`sql
+-- Thanh toán thành công (API response hoặc webhook): mở transaction mới
+UPDATE event_seats
+SET status = 'booked', payment_transaction_id = 'pay_123'
+WHERE event_id = 'event_1' AND seat_id = 'seat_A1'
+  AND status = 'pending' AND user_id = 'user_A';
+
+-- Thất bại hoặc quá hạn: trả chỗ lại, thường do worker chạy mỗi phút
+UPDATE event_seats
+SET status = 'available', user_id = NULL, expired_at = NULL
+WHERE status = 'pending' AND expired_at < NOW();
+\`\`\`
+
+Hai chi tiết quan trọng:
+
+1. Đặt \`UNIQUE\` trên \`payment_transaction_id\` để webhook gọi lặp không xử lý hai lần (idempotency).
+2. Nếu UPDATE chốt đơn ảnh hưởng 0 row (chỗ đã hết hạn và bị người khác lấy), phải hoàn tiền cho khách.
+
+## Gọn hơn: một câu UPDATE cho bước 1
+
+Gói điều kiện vào một câu UPDATE và coi chỗ pending đã quá hạn là chỗ trống, nên không phụ thuộc vào việc worker nhả chỗ chạy kịp:
+
+\`\`\`sql
+UPDATE event_seats
+SET status = 'pending', user_id = 'user_A',
+    expired_at = NOW() + INTERVAL '10 minutes'
+WHERE event_id = 'event_1' AND seat_id = 'seat_A1'
+  AND (status = 'available' OR (status = 'pending' AND expired_at < NOW()));
+-- 1 dòng = giữ được, 0 dòng = người khác đang giữ hoặc đã mua
+\`\`\`
+
+Cách này không cần \`FOR UPDATE\` vì UPDATE đã tự khóa dòng.
+
+## Giới hạn của giải pháp 1
+
+Mỗi lần giữ và nhả là một lần ghi vào database, và worker quét \`expired_at\` cần index. Với lượng người tranh cùng một ghế ở mức vừa thì không sao. Khi flash sale khiến hàng chục nghìn request dồn vào cùng vài dòng, database trở thành điểm nghẽn, và đó là lúc cân nhắc giải pháp 2.
+
+# Giải pháp 2 (tăng tốc): Hold trên Redis với TTL
+
+Database chỉ lưu các trạng thái bền vững: available và booked. Hold tạm thời nằm trên Redis dưới dạng một key có TTL. Khi key hết hạn thì ghế tự trống lại, nên không có row pending và không cần worker quét.
 
 ## Data model
 
 \`\`\`sql
 -- trạng thái bền vững: chỉ có hai giá trị
 event_seats(event_id, seat_id, status, user_id, updated_at)
-status IN ('AVAILABLE', 'BOOKED')
+status IN ('available', 'booked')
 \`\`\`
 
 \`\`\`
@@ -249,39 +390,39 @@ value: id của user hoặc order         chủ sở hữu của hold
 TTL:   900 giây
 \`\`\`
 
-## Luồng 1: liệt kê ghế khả dụng
+## Liệt kê ghế khả dụng
 
-Đọc toàn bộ ghế của event từ database, sau đó kiểm tra những ghế AVAILABLE nào đang bị giữ bằng đúng một lệnh MGET.
+Đọc ghế của event từ database, sau đó kiểm tra những ghế available nào đang bị giữ bằng đúng một lệnh MGET.
 
 \`\`\`javascript
 const seats = await db.query('SELECT seat_id, status FROM event_seats WHERE event_id = $1', [eventId]);
-const available = seats.rows.filter(s => s.status === 'AVAILABLE');
+const available = seats.rows.filter(s => s.status === 'available');
 const holds = await redis.mget(available.map(s => \`hold:\${eventId}:\${s.seat_id}\`));
 \`\`\`
 
-BOOKED trong database nghĩa là đã bán. AVAILABLE kèm key Redis nghĩa là đang được giữ. AVAILABLE mà không có key nghĩa là còn trống. Tuyệt đối không dùng KEYS cho việc này: nó quét toàn bộ keyspace và chặn Redis trong lúc chạy.
+booked trong database nghĩa là đã bán. available kèm key Redis nghĩa là đang được giữ. available mà không có key nghĩa là còn trống. Tuyệt đối không dùng KEYS cho việc này: nó quét toàn bộ keyspace và chặn Redis trong lúc chạy.
 
-## Luồng 2: giữ một ghế
+## Giữ một ghế
 
-Sau bước kiểm tra nhanh ghế đang AVAILABLE trong database, claim ghế bằng một lệnh nguyên tử:
+Claim ghế bằng một lệnh nguyên tử:
 
 \`\`\`
 SET hold:event_1:seat_A1 user_A NX EX 900
 \`\`\`
 
-NX nghĩa là "chỉ khi key chưa tồn tại" và EX đặt TTL trong cùng một bước. OK nghĩa là bạn đã giữ được ghế, hãy tạo đơn hàng PENDING. nil nghĩa là người khác nhanh hơn, hãy yêu cầu user chọn ghế khác. Đừng cài đặt bằng GET rồi SET, vì race condition sẽ quay lại ngay.
+NX nghĩa là "chỉ khi key chưa tồn tại" và EX đặt TTL trong cùng một bước. OK nghĩa là bạn đã giữ được ghế, hãy tạo đơn hàng pending. nil nghĩa là người khác nhanh hơn, hãy yêu cầu user chọn ghế khác. Đừng cài đặt bằng GET rồi SET, vì race condition sẽ quay lại ngay.
 
-## Luồng 3: xác nhận thanh toán
+## Xác nhận thanh toán
 
 Khi cổng thanh toán gọi webhook, database quyết định, không phải đồng hồ:
 
 \`\`\`sql
 UPDATE event_seats
-SET status = 'BOOKED', user_id = 'user_A', updated_at = NOW()
-WHERE event_id = 'event_1' AND seat_id = 'seat_A1' AND status = 'AVAILABLE';
+SET status = 'booked', user_id = 'user_A', updated_at = NOW()
+WHERE event_id = 'event_1' AND seat_id = 'seat_A1' AND status = 'available';
 \`\`\`
 
-Điều kiện status chính là một Optimistic Lock. Nếu ảnh hưởng một row thì ghế là của bạn. Nếu ảnh hưởng 0 row thì người khác đã sở hữu, hãy hủy đơn và kích hoạt Auto-Refund. Chỉ sau khi database xác nhận mới nhả key Redis. Làm đúng thứ tự này thì không bao giờ có lúc hold đã mất mà ghế vẫn trông như AVAILABLE.
+Điều kiện status chính là một Optimistic Lock. Nếu ảnh hưởng một row thì ghế là của bạn. Nếu ảnh hưởng 0 row thì người khác đã sở hữu, hãy hủy đơn và hoàn tiền. Chỉ sau khi database xác nhận mới nhả key Redis. Làm đúng thứ tự này thì không bao giờ có lúc hold đã mất mà ghế vẫn trông như available.
 
 Nhả key bằng compare-and-delete, để không xóa nhầm hold mới hơn của người khác:
 
@@ -292,19 +433,11 @@ end
 return 0
 \`\`\`
 
-## Luồng 4: hết hạn và hủy
+## Hết hạn và hủy
 
 Nếu không ai thanh toán trong 900 giây, Redis tự xóa key và lần liệt kê ghế kế tiếp sẽ hiển thị ghế là còn trống. Nếu user chủ động hủy, chạy cùng script compare-and-delete để nhả ngay thay vì chờ hết TTL.
 
-## Các trường hợp biên
-
-### Late webhook
-
-User thanh toán lúc 14:59 và ngân hàng báo về lúc 15:02, sau khi key đã hết hạn. Vì việc xác nhận dựa trên trạng thái database, đơn hàng vẫn thành công nếu trong lúc đó chưa ai mua ghế. Có một điều cần quyết định chủ động: nếu lúc đó có user khác đang giữ ghế, bạn chấp nhận người trả trễ và hoàn tiền cho người đang giữ, hay từ chối người trả trễ? Luồng trên ưu tiên bên nào chạm vào UPDATE có điều kiện trước.
-
-### Lệch đồng hồ phía client
-
-Bộ đếm trên app có thể chạy chậm hơn server. Hãy hiển thị bộ đếm ngắn hơn TTL khoảng 30 giây, ví dụ 14:30 trên màn hình so với 15:00 trên Redis.
+## Trường hợp biên riêng của Redis
 
 ### Redis restart
 
@@ -340,13 +473,36 @@ Script trả về 1 nếu giữ được tất cả ghế và 0 nếu không tha
 
 MGET và Lua Script nhiều key sẽ lỗi CROSSSLOT khi các key nằm ở hash slot khác nhau. Dùng hash tag như \`hold:{event_1}:seat_A1\` để mọi ghế của một event cùng một slot. Đổi lại, một event sẽ chỉ nằm trên một shard.
 
+# Trường hợp biên chung cho cả hai giải pháp
+
+## Late webhook
+
+User thanh toán lúc 14:59 và ngân hàng báo về lúc 15:02, sau khi hold đã hết hạn. Vì việc chốt đơn dựa trên UPDATE có điều kiện ở database, đơn vẫn thành công nếu trong lúc đó chưa ai lấy ghế. Nếu đã có người khác lấy, UPDATE ảnh hưởng 0 row và bạn hoàn tiền cho người trả trễ. Hãy quyết định chính sách này từ đầu: ai chạm vào UPDATE có điều kiện trước thì thắng.
+
+## Lệch đồng hồ phía client
+
+Bộ đếm trên app có thể chạy chậm hơn server. Hãy hiển thị bộ đếm ngắn hơn thời hạn thật khoảng 30 giây, ví dụ 9:30 trên màn hình so với 10:00 ở server.
+
+# So sánh và cách chọn
+
+\`\`\`
+Tiêu chí              Giải pháp 1: Pending trong DB         Giải pháp 2: Redis TTL
+Hết hạn               Cần worker hoặc điều kiện expired_at  Redis tự xóa key, không cần worker
+Thành phần thêm       Không cần gì thêm                     Cần Redis, AOF, xử lý Cluster
+Tải lên database      Mỗi lần giữ và nhả là một lần ghi     Hold không ghi vào DB
+Nguồn sự thật         Một nơi (DB), đơn giản hơn            Hai nơi (Redis và DB), dễ lệch
+Phù hợp               Quy mô vừa, muốn ít thành phần        Lượng người tranh chấp rất lớn
+\`\`\`
+
+Cách chọn: bắt đầu bằng giải pháp 1. Khi database bắt đầu quá tải vì ghi hold liên tục, chuyển phần giữ chỗ sang Redis nhưng vẫn giữ UPDATE có điều kiện ở database làm lớp bảo vệ cuối.
+
 ## Key Takeaways
 
-1. Giữ quyền sở hữu bền vững ở database và hold tạm thời ở Redis kèm TTL, nên hết hạn không cần Cronjob.
-2. Claim bằng SET NX EX, không bao giờ GET rồi SET, và liệt kê khả dụng bằng MGET, không bao giờ dùng KEYS.
-3. Xác nhận thanh toán bằng UPDATE có điều kiện (WHERE status = 'AVAILABLE'), sau đó mới nhả Redis, và hoàn tiền nếu update ảnh hưởng 0 row.
-4. Nhả hold bằng compare-and-delete để chỉ xóa hold của chính mình.
-5. Dùng Lua Script cho hold nhiều ghế kiểu all-or-nothing, AOF everysec cho trường hợp restart, và hash tag trên Redis Cluster.
+1. Không giữ DB transaction qua mạng. Giữ chỗ bằng trạng thái tạm có hạn dùng: transaction ngắn, gọi thanh toán ngoài transaction, rồi transaction ngắn để chốt hoặc nhả.
+2. Giải pháp chuẩn là Pending State trong database kèm \`expired_at\`. Chốt đơn luôn bằng UPDATE có điều kiện, kèm \`UNIQUE\` trên \`payment_transaction_id\` để chống xử lý trùng.
+3. Giải pháp tăng tốc là hold trên Redis bằng \`SET NX EX\`, không bao giờ GET rồi SET, liệt kê bằng MGET, không bao giờ dùng KEYS.
+4. Dù dùng giải pháp nào, database vẫn là nguồn sự thật và UPDATE có điều kiện là lớp chống bán trùng cuối cùng. Update ảnh hưởng 0 row thì hoàn tiền.
+5. Với Redis: nhả hold bằng compare-and-delete, Lua Script cho nhiều ghế, AOF everysec cho trường hợp restart, hash tag trên Cluster.
     `
   },
   {
