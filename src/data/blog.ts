@@ -1815,6 +1815,236 @@ Rủi ro lớn nhất            Quên cdk destroy. Hãy tạo Budget $5 trong a
 5. CI/CD dùng OIDC thay access key, và bật Required reviewers trước prod.
 6. Budget lọc theo tag chỉ hoạt động sau khi bật cost allocation tag.
     `
+  },
+  {
+    id: 16,
+    slug: 'ecs-task-definition-service-fargate-spot',
+    title: "ECS cơ bản: Task Definition, Service, Fargate vs EC2 và Spot cho worker",
+    category: "Cloud Infrastructure",
+    difficulty: "Intermediate",
+    readTime: "7 min read",
+    date: "2026-11-22",
+    featured: false,
+    excerpt: "Bốn khái niệm cốt lõi của Amazon ECS: Task Definition, Service, Fargate vs EC2, và vì sao worker nên chạy Spot còn API chạy On-Demand. Kèm capacity provider, xử lý SIGTERM và cạm bẫy weight không phải fallback.",
+    tags: ["AWS", "ECS", "Fargate", "Spot", "Capacity Provider", "CDK"],
+    content: `
+# ECS cơ bản: Task Definition, Service, Fargate vs EC2 và Spot cho worker
+
+Amazon ECS có nhiều thuật ngữ dễ lẫn. Bài này gom lại bốn ý cốt lõi và một cấu hình thực tế: API chạy On-Demand, worker chạy Spot.
+
+## 1. Task Definition: bản thiết kế
+
+Task Definition mô tả container chạy như thế nào: image, CPU, memory, port, env vars, IAM role, logging. Nó chỉ là bản mô tả, chưa chạy gì cả. Có thể hình dung nó như \`Dockerfile\` cộng \`docker-compose\` cho ECS.
+
+\`\`\`json
+{
+  "family": "api",
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [{
+    "name": "api",
+    "image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/api:1.0.0",
+    "portMappings": [{ "containerPort": 3000 }]
+  }]
+}
+\`\`\`
+
+## 2. Service: giữ task luôn chạy
+
+Service đọc Task Definition và đảm bảo luôn có N task đang chạy. Task chết thì Service tự tạo task mới. Service cũng lo rolling deploy và gắn task vào ALB.
+
+\`\`\`
+desiredCount = 3  ->  Service luôn giữ 3 task
+\`\`\`
+
+Quan hệ giữa ba thứ:
+
+\`\`\`
+Task Definition (what)  ->  Service (keep alive)  ->  Tasks (running containers)
+\`\`\`
+
+## 3. Fargate vs EC2 (launch type)
+
+\`\`\`
+                Fargate                          EC2
+Ý nghĩa         Serverless, không quản lý server Tự quản lý EC2 instances
+Ưu điểm         Ít vận hành, scale đơn giản      Kiểm soát cao: instance type, GPU, binpack, daemon
+Nhược điểm      Giá mỗi vCPU cao hơn, ít tùy chỉnh Phải patch AMI, quản lý capacity
+Hợp với         Team nhỏ, workload thay đổi      Workload lớn, ổn định, cần tối ưu chi phí
+\`\`\`
+
+Nói gọn: muốn ít vận hành thì chọn Fargate, muốn kiểm soát và tối ưu chi phí thì chọn EC2.
+
+## 4. Spot cho worker, On-Demand cho API
+
+Đây là câu hỏi về purchase option, tức là cách mua capacity, và độc lập với việc chọn Fargate hay EC2.
+
+\`\`\`
+Spot        Rẻ hơn nhiều (Fargate Spot tới khoảng 70%, EC2 Spot có thể tới khoảng 90%),
+            nhưng AWS có thể thu hồi sau cảnh báo 2 phút
+On-Demand   Giá đầy đủ, ổn định, không bị thu hồi
+\`\`\`
+
+Vì sao chia như vậy:
+
+- API nhận request trực tiếp từ user. Task bị thu hồi thì request có thể lỗi hoặc latency tăng, nên cần ổn định: On-Demand.
+- Worker xử lý job từ queue (SQS, BullMQ). Bị thu hồi thì job quay lại queue và worker khác xử lý tiếp, nên chịu được gián đoạn: Spot.
+
+Điều kiện để worker chạy Spot an toàn là job phải idempotent và retry được. Worker cũng phải bắt \`SIGTERM\` để dừng gọn:
+
+\`\`\`javascript
+process.on('SIGTERM', async () => {
+  await worker.close(); // finish current job, stop taking new ones
+  process.exit(0);
+});
+\`\`\`
+
+Đặt \`stopTimeout\` trong container definition đủ lớn để job đang chạy kịp xong. Trên Fargate giá trị tối đa là 120 giây.
+
+## Cấu hình thực tế với Capacity Provider
+
+\`\`\`
+api-service     ->  capacity provider: On-Demand (base=2)
+worker-service  ->  capacity provider: Spot (weight=4) + On-Demand (weight=1)
+\`\`\`
+
+## Ví dụ CDK (Fargate)
+
+Cluster bật Fargate capacity providers, API dùng \`FARGATE\`, worker dùng \`FARGATE_SPOT\` là chính:
+
+\`\`\`javascript
+const cluster = new ecs.Cluster(this, 'Cluster', {
+  vpc,
+  enableFargateCapacityProviders: true,
+});
+
+new ecs.FargateService(this, 'ApiService', {
+  cluster,
+  taskDefinition: apiTaskDef,
+  desiredCount: 2,
+  capacityProviderStrategies: [{ capacityProvider: 'FARGATE', weight: 1 }],
+});
+
+new ecs.FargateService(this, 'WorkerService', {
+  cluster,
+  taskDefinition: workerTaskDef,
+  desiredCount: 3,
+  capacityProviderStrategies: [
+    { capacityProvider: 'FARGATE_SPOT', weight: 4 },
+    { capacityProvider: 'FARGATE', weight: 1 },
+  ],
+});
+\`\`\`
+
+Cách map khái niệm sang CDK:
+
+\`\`\`
+Task Definition (blueprint)    FargateTaskDefinition + addContainer
+Service (keep tasks running)   FargateService với desiredCount
+Fargate vs EC2                 Fargate, cluster bật enableFargateCapacityProviders
+On-Demand cho API              capacityProvider: 'FARGATE'
+Spot cho worker                FARGATE_SPOT weight 4, FARGATE weight 1
+\`\`\`
+
+Chạy thử:
+
+\`\`\`bash
+npm i aws-cdk-lib constructs
+npx cdk bootstrap
+npx cdk diff
+npx cdk deploy
+\`\`\`
+
+## base và weight: chia task giữa các provider
+
+Capacity provider strategy là một danh sách provider. Mỗi provider có hai tham số quyết định ECS đặt task ở đâu.
+
+\`\`\`
+base     Số task TỐI THIỂU chạy trên provider này. Được đặt trước.
+weight   Tỷ lệ chia các task CÒN LẠI sau khi đã đặt đủ base.
+\`\`\`
+
+ECS xử lý theo hai bước:
+
+\`\`\`
+Bước 1: đặt đủ số task của base (mặc định base = 0)
+Bước 2: chia phần task còn lại theo tỷ lệ weight
+\`\`\`
+
+### weight: tỷ lệ, không phải số lượng
+
+\`\`\`
+FARGATE_SPOT weight 4
+FARGATE      weight 1
+tổng = 5   ->   Spot 4/5 = 80%,  On-Demand 1/5 = 20%
+\`\`\`
+
+Với \`desiredCount = 10\` thì khoảng 8 task Spot và 2 task On-Demand. Với \`desiredCount = 5\` thì khoảng 4 và 1.
+
+- \`4:1\` và \`8:2\` cho kết quả giống nhau, vì chỉ tỷ lệ mới có ý nghĩa.
+- Số task là số nguyên nên tỷ lệ chỉ gần đúng. Với \`desiredCount = 3\` kết quả có thể lệch một task.
+- \`weight: 0\` nghĩa là provider đó không nhận thêm task nào ngoài phần \`base\`.
+
+### base: đảm bảo mức tối thiểu
+
+\`\`\`javascript
+capacityProviderStrategies: [
+  { capacityProvider: 'FARGATE', base: 2, weight: 0 },
+  { capacityProvider: 'FARGATE_SPOT', weight: 1 },
+]
+\`\`\`
+
+Với \`desiredCount = 10\`: 2 task đầu luôn chạy On-Demand (\`base\`). 8 task còn lại chia theo weight 0:1, tức là cả 8 chạy Spot.
+
+Chỉ một provider trong strategy được đặt \`base\`.
+
+### Khi nào dùng cái nào
+
+\`\`\`
+Mục tiêu                                        Cách dùng
+Chỉ cần rẻ, chia tỷ lệ chi phí/rủi ro           Chỉ dùng weight (ví dụ Spot 4, On-Demand 1)
+Luôn có ít nhất N task ổn định                  base trên FARGATE, weight 0 cho FARGATE
+Phần dư chạy Spot cho rẻ                        weight cho FARGATE_SPOT
+Service chỉ cần một loại capacity               Một provider, weight 1 (như API ở trên)
+\`\`\`
+
+Gợi ý thực tế:
+
+- API: chỉ \`FARGATE\`. Muốn chắc chắn có tối thiểu 2 task sống thì \`base: 2\`, hoặc đơn giản đặt \`desiredCount: 2\`.
+- Worker nhẹ, job ngắn, retry tốt: chỉ weight, ví dụ Spot 4 và On-Demand 1. Phần On-Demand là đệm khi Spot bị thu hồi hàng loạt.
+- Worker quan trọng hơn (job dài, khó retry): dùng \`base\` cho On-Demand để luôn có số worker tối thiểu, phần scale thêm mới chạy Spot.
+
+## Lưu ý quan trọng
+
+1. weight không phải fallback thật. Nó không có nghĩa "dùng Spot trước, hết Spot mới sang On-Demand". Cả hai provider luôn được dùng theo tỷ lệ.
+2. Fargate Spot không tự chuyển sang On-Demand khi hết capacity. ECS chỉ thử đặt task lại (retry placement). Muốn có mức tối thiểu chắc chắn thì phải dùng \`base\`.
+3. Graceful shutdown: worker phải bắt \`SIGTERM\`, \`stopTimeout\` đủ lớn, và job phải idempotent.
+4. Muốn dùng EC2 Spot với binpack thì thay Fargate bằng \`AutoScalingGroup\` cộng \`AsgCapacityProvider\` và dùng \`Ec2Service\`. Code dài hơn và bạn phải tự patch AMI.
+
+## Trade-off và chi phí
+
+\`\`\`
+                 Ưu điểm                       Nhược điểm
+Fargate          Ít vận hành, không patch AMI  Giá mỗi vCPU cao hơn EC2
+Fargate Spot     Rẻ hơn khoảng 70%             Có thể bị thu hồi, chỉ hợp worker stateless
+\`\`\`
+
+\`\`\`
+Hạng mục                 Chi phí tham khảo (ap-northeast-1, chạy 24/7)
+NAT Gateway              Khoảng $35-40/tháng
+ALB                      Khoảng $20/tháng
+\`\`\`
+
+Hai khoản này thường lớn hơn tiền task nhỏ. Hãy kiểm tra lại trang pricing trước khi quyết định. Với môi trường DEV/UAT, nên đưa \`desiredCount\` về 0 ngoài giờ làm việc.
+
+## Key Takeaways
+
+1. Task Definition mô tả cái gì chạy, Service giữ nó luôn chạy.
+2. Fargate hay EC2 quyết định chạy ở đâu, Spot hay On-Demand quyết định trả bao nhiêu và chịu rủi ro nào.
+3. API cần ổn định nên chạy On-Demand, worker idempotent chạy Spot.
+4. Weight chỉ là tỷ lệ, muốn đảm bảo số task On-Demand tối thiểu thì dùng \`base\`.
+5. Spot chỉ an toàn khi worker bắt \`SIGTERM\` và \`stopTimeout\` đủ lớn.
+    `
   }
 ];
 
