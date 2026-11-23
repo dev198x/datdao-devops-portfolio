@@ -1664,7 +1664,7 @@ Mỗi bước của giai đoạn Expand đều có thể quay lui (drop cột ho
     date: "2026-11-20",
     featured: false,
     excerpt: "Những thế mạnh thực sự của AWS CDK qua một lab nhỏ: default an toàn, grant() cho IAM, tách dev/prod bằng code, cdk-nag, unit test và CI/CD với OIDC, kèm cạm bẫy Budget luôn hiện $0.",
-    tags: ["AWS CDK", "TypeScript", "cdk-nag", "IaC", "GitHub Actions", "OIDC"],
+    tags: ["DevOps", "Cloud Infrastructure", "AWS CDK", "TypeScript", "cdk-nag", "IaC", "GitHub Actions", "OIDC"],
     content: `
 # AWS CDK: viết hạ tầng bằng TypeScript, test và kiểm tra bảo mật trước khi deploy
 
@@ -3690,7 +3690,7 @@ Bộ khung này nhỏ nhưng đủ các mảnh của một hệ thống RAG th�
     date: "2026-11-23",
     featured: false,
     excerpt: "Thay access key dài hạn bằng token OIDC ngắn hạn: provider, IAM role, trust policy, workflow, điều kiện sub (dạng ID và dạng tên), một lỗi Not authorized thật và cách chẩn đoán, quy trình đổi dạng sub không gián đoạn và checklist lên production.",
-    tags: ["AWS", "GitHub Actions", "OIDC", "IAM", "STS", "Security", "CI/CD"],
+    tags: ["DevOps", "Cloud Infrastructure", "AWS", "GitHub Actions", "OIDC", "IAM", "STS", "Security", "CI/CD"],
     content: `
 # AWS + GitHub Actions bằng OIDC: bỏ access key khỏi CI/CD
 

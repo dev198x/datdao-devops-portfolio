@@ -51,7 +51,9 @@ const EnhancedBlog: React.FC = () => {
 
     // Filter by category
     if (selectedCategory !== 'All') {
-      filtered = filtered.filter(post => post.category === selectedCategory);
+      filtered = filtered.filter(
+        post => post.category === selectedCategory || post.tags.includes(selectedCategory)
+      );
     }
 
     // Filter by search term
