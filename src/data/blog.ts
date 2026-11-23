@@ -4070,6 +4070,240 @@ Chi phí: gần như **$0**. IAM OIDC provider và STS không tính phí, bạn 
 
 7. Production: dùng GitHub Environments kèm reviewers, tách role theo môi trường, và least privilege.
 `
+  },
+  {
+    id: 23,
+    slug: 'aws-sso-vs-aws-login-local-credentials',
+    title: "Temporary credentials cho local dev: IAM Identity Center (SSO) và aws login",
+    category: "Cloud Infrastructure",
+    difficulty: "Intermediate",
+    readTime: "8 min read",
+    date: "2026-11-23",
+    featured: false,
+    excerpt: "Bỏ access key dài hạn khỏi máy dev: so sánh IAM Identity Center (SSO) và aws login, lệnh cấu hình, dùng với tool cũ, thứ tự ưu tiên credentials và các lỗi hay gặp khi debug.",
+    tags: ["DevOps", "Cloud Infrastructure", "AWS", "IAM Identity Center", "SSO", "AWS CLI", "Security"],
+    content: `
+# Temporary credentials cho local dev: IAM Identity Center (SSO) và aws login
+
+Khi chạy \`aws s3 ls\` từ máy cá nhân, cách dễ nhất là tạo access key cho IAM user rồi \`aws configure\`. Cách đó để lại một khóa dài hạn nằm trong \`~/.aws/credentials\`: lỡ commit nhầm, lỡ copy máy, hoặc nghỉ việc mà quên thu hồi là thành rủi ro. Phần CI/CD đã có OIDC để bỏ access key. Bài này nói về phía còn lại: **máy của developer**.
+
+Có hai cách lấy credentials tạm thời mà không cần access key: **IAM Identity Center (SSO)** và lệnh mới **\`aws login\`**. Bài so sánh hai cách, kèm lệnh cụ thể và các lỗi hay gặp.
+
+## 1. Chọn cách nào
+
+\`\`\`
+                        IAM Identity Center (SSO)             aws login
+Phù hợp                 Công ty, nhiều account/role           Cá nhân, 1 account
+                        (Organizations)
+Quản lý user            Tập trung (Permission Set, group,     Dùng chính phương thức đăng nhập
+                        IdP/SSO)                              Console
+Setup                   Bật Identity Center, gán Permission   Gần như không cần setup
+                        Set
+Khuyến nghị cho team    Có                                    Không, chỉ cho dev nhanh
+\`\`\`
+
+Cách chọn ngắn gọn: làm việc trong tổ chức có nhiều AWS account thì dùng **SSO**. Cá nhân hoặc sandbox thì dùng **\`aws login\`**. Với CI/CD thì dùng OIDC, không dùng cả hai cách này.
+
+## 2. Cách 1: IAM Identity Center (SSO)
+
+Điều kiện: AWS CLI v2, tổ chức đã bật Identity Center và gán user vào account kèm một Permission Set.
+
+### Bước 1: cấu hình SSO session (một lần)
+
+\`\`\`bash
+aws configure sso
+\`\`\`
+
+CLI hỏi lần lượt:
+
+\`\`\`
+SSO session name: my-org
+SSO start URL: https://<your-subdomain>.awsapps.com/start
+SSO region: ap-southeast-1
+SSO registration scopes: sso:account:access
+\`\`\`
+
+Trình duyệt mở ra để bạn đăng nhập và approve. Sau đó CLI cho chọn account, role, region mặc định và tên profile (ví dụ \`dev\`).
+
+Kết quả ghi vào \`~/.aws/config\`:
+
+\`\`\`ini
+[sso-session my-org]
+sso_start_url = https://<your-subdomain>.awsapps.com/start
+sso_region = ap-southeast-1
+sso_registration_scopes = sso:account:access
+
+[profile dev]
+sso_session = my-org
+sso_account_id = 111111111111
+sso_role_name = DeveloperAccess
+region = ap-southeast-1
+
+[profile prod]
+sso_session = my-org
+sso_account_id = 222222222222
+sso_role_name = ReadOnlyAccess
+region = ap-northeast-1
+\`\`\`
+
+Điểm hay của cấu trúc này: một \`sso-session\` dùng chung cho nhiều profile. Bạn login một lần là dùng được cho mọi account, và mỗi profile chỉ khai báo account nào, role nào.
+
+Để ý là trong file này không có access key hay token nào. Các giá trị trên đều không phải secret, token thật nằm ở cache (xem lưu ý bên dưới).
+
+### Bước 2: login và dùng
+
+\`\`\`bash
+aws sso login --sso-session my-org   # hoặc: aws sso login --profile dev
+
+aws sts get-caller-identity --profile dev
+aws s3 ls --profile prod
+
+# Hoặc đặt mặc định cho terminal hiện tại
+export AWS_PROFILE=dev
+\`\`\`
+
+### Bước 3: logout
+
+\`\`\`bash
+aws sso logout
+\`\`\`
+
+### Dùng với tool không hỗ trợ SSO
+
+Một số tool cũ (Terraform đời cũ, script tự viết) không đọc được profile SSO. Khi đó xuất credentials tạm ra biến môi trường:
+
+\`\`\`bash
+eval $(aws configure export-credentials --profile dev --format env)
+\`\`\`
+
+Hoặc dùng \`credential_process\` trong file config để tool tự gọi AWS CLI lấy credentials.
+
+AWS SDK v3 cho Node.js tự đọc profile SSO, không cần code đặc biệt:
+
+\`\`\`javascript
+import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({ region: "ap-southeast-1" }); // dùng AWS_PROFILE
+console.log(await s3.send(new ListBucketsCommand({})));
+\`\`\`
+
+### Lưu ý khi dùng SSO
+
+Session hết hạn theo cấu hình của Identity Center (mặc định 8 giờ, tối đa 90 ngày). Hết hạn thì chạy lại \`aws sso login\`.
+
+Token cache nằm ở \`~/.aws/sso/cache\`. Đó là nơi cần bảo vệ, đừng copy thư mục này đi đâu.
+
+Lỗi \`Token has expired and refresh failed\` nghĩa là cần login lại.
+
+## 3. Cách 2: aws login
+
+\`aws login\` là lệnh mới, dùng thông tin đăng nhập **AWS Management Console** để lấy credentials tạm thời, không cần tạo access key. Lệnh yêu cầu **AWS CLI 2.32.0 trở lên**.
+
+\`\`\`bash
+aws --version          # kiểm tra >= 2.32.0
+aws login              # mở trình duyệt, chọn session/đăng nhập
+aws sts get-caller-identity
+\`\`\`
+
+Trên trình duyệt, bạn chọn một trong hai:
+
+Đang có Console session (IAM user hoặc federated role) thì chọn **Continue with an active session**.
+
+Chưa đăng nhập thì chọn **Root or IAM user** và đăng nhập.
+
+Mỗi lần gọi \`aws login\`, CLI lấy credentials tạm kèm một refresh token ứng với console session bạn chọn. Chừng nào refresh token còn hạn, CLI tự làm mới credentials.
+
+### Nhiều profile
+
+\`\`\`bash
+aws login --profile sandbox
+aws sts get-caller-identity --profile sandbox
+\`\`\`
+
+### Máy không có browser (SSH, remote dev)
+
+\`\`\`bash
+aws login --remote
+\`\`\`
+
+Cờ \`--remote\` tắt local callback server. CLI hiển thị một URL, bạn mở URL đó ở máy có browser, đăng nhập, rồi dán authorization code lại vào CLI.
+
+### Logout
+
+\`\`\`bash
+aws logout            # profile hiện tại
+aws logout --all      # tất cả profile dùng login
+\`\`\`
+
+### Đặc điểm
+
+Credentials được CLI và SDK tự refresh, tối đa **12 giờ** theo session.
+
+Cache ở \`~/.aws/login/cache\`, đổi được bằng biến môi trường \`AWS_LOGIN_CACHE_DIRECTORY\`.
+
+Hoạt động với AWS CLI, SDK và PowerShell. **SDK cũ** có thể chưa hỗ trợ, khi đó dùng \`credential_process\` trỏ về AWS CLI.
+
+Quyền dùng lệnh được kiểm soát bởi hai IAM action \`signin:AuthorizeOAuth2Access\` và \`signin:CreateOAuth2Token\`.
+
+### Lỗi thường gặp với aws login
+
+\`\`\`
+Lỗi                                         Nguyên nhân / cách xử lý
+ExpiredToken / AccessDenied sau khi login   Profile còn static key cũ trong ~/.aws/credentials
+                                            hoặc config, và nó được ưu tiên hơn. Xóa key cũ,
+                                            kiểm tra bằng aws configure list
+Lệnh aws login không tồn tại                CLI cũ hơn 2.32.0, cần nâng cấp
+SDK báo không tìm thấy credentials          SDK cũ, dùng credential_process
+\`\`\`
+
+Nguyên nhân đầu tiên là cái bẫy phổ biến nhất: người dùng đã \`aws configure\` từ trước, key cũ vẫn nằm trong file, nên dù \`aws login\` thành công thì CLI vẫn dùng key cũ. Đây cũng là lý do nên xóa key cũ đi thay vì để lại.
+
+## 4. Thứ tự ưu tiên credentials (cần nhớ khi debug)
+
+Khi AWS CLI hoặc SDK tìm credentials, nó đi theo một thứ tự và dùng nguồn đầu tiên tìm thấy:
+
+1. Tham số trên dòng lệnh, ví dụ \`--profile\`.
+
+2. Biến môi trường, ví dụ \`AWS_ACCESS_KEY_ID\`, \`AWS_PROFILE\`.
+
+3. Shared credentials và config file (theo profile).
+
+4. Container credentials hoặc EC2 instance role.
+
+Hệ quả thực tế: nếu \`aws sts get-caller-identity\` trả về sai identity, hãy kiểm tra xem biến môi trường \`AWS_ACCESS_KEY_ID\` có còn sót trong terminal không, rồi chạy:
+
+\`\`\`bash
+aws configure list
+\`\`\`
+
+Lệnh này cho biết giá trị đang dùng đến từ đâu (biến môi trường, file hay profile). Đây là lệnh đầu tiên nên chạy mỗi khi credentials hành xử lạ.
+
+## 5. Khuyến nghị
+
+Team hoặc multi-account: dùng **Identity Center kèm \`aws configure sso\`**, bật MFA và gán Permission Set theo least privilege.
+
+Cá nhân hoặc sandbox: dùng \`aws login\`, không cần tạo access key.
+
+CI/CD: dùng GitHub Actions OIDC, không dùng cả hai cách trên.
+
+Tránh tạo access key dài hạn cho người dùng nếu có cách khác.
+
+Chi phí: IAM Identity Center và \`aws login\` đều **miễn phí**.
+
+## Tóm tắt
+
+1. Đừng để access key dài hạn trên máy dev. Dùng credentials tạm thời: SSO cho tổ chức, \`aws login\` cho cá nhân.
+
+2. SSO: \`aws configure sso\` một lần, \`aws sso login\` mỗi khi hết hạn. Một \`sso-session\` dùng chung cho nhiều profile và nhiều account.
+
+3. \`aws login\` cần CLI từ 2.32.0, dùng thông tin đăng nhập Console, credentials tối đa 12 giờ, có \`--remote\` cho máy không có browser.
+
+4. Lỗi hay gặp nhất là static key cũ còn trong file hoặc biến môi trường, và nó thắng profile mới. Dùng \`aws configure list\` để biết credentials đến từ đâu.
+
+5. Tool cũ không hiểu SSO thì dùng \`aws configure export-credentials\` hoặc \`credential_process\`.
+
+6. Máy dev dùng SSO hoặc \`aws login\`, CI/CD dùng OIDC: toàn bộ luồng không còn access key dài hạn.
+`
   }
 ];
 
