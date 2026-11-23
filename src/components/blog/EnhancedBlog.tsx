@@ -101,7 +101,7 @@ const EnhancedBlog: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12"
         >
           <StatsCard
             title="Total Articles"
@@ -113,12 +113,6 @@ const EnhancedBlog: React.FC = () => {
             title="Categories"
             value={new Set(blogPosts.map((post) => post.category)).size}
             icon={<Tag className="w-6 h-6" />}
-            color="completed"
-          />
-          <StatsCard
-            title="Featured"
-            value={featuredPosts.length}
-            icon={<Star className="w-6 h-6" />}
             color="completed"
           />
           <StatsCard

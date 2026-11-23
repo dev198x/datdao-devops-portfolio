@@ -3,7 +3,9 @@ import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
+import ini from 'highlight.js/lib/languages/ini';
 import lua from 'highlight.js/lib/languages/lua';
+import python from 'highlight.js/lib/languages/python';
 import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 
@@ -11,7 +13,9 @@ import typescript from 'highlight.js/lib/languages/typescript';
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('json', json);
+hljs.registerLanguage('ini', ini);
 hljs.registerLanguage('lua', lua);
+hljs.registerLanguage('python', python);
 hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('typescript', typescript);
 
@@ -24,6 +28,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
   js: 'javascript',
   json: 'json',
   lua: 'lua',
+  python: 'python',
+  py: 'python',
+  toml: 'ini',
   sql: 'sql',
   typescript: 'typescript',
   ts: 'typescript',
