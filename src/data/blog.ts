@@ -3679,6 +3679,397 @@ Truy xuất chỉ kiểm tra đúng **file**, chưa kiểm tra đúng **chunk**,
 
 Bộ khung này nhỏ nhưng đủ các mảnh của một hệ thống RAG thật. Muốn đi tiếp, hướng đáng làm nhất là tăng corpus để retrieval thành bài kiểm tra có ý nghĩa, thêm reranker, và đo \`recall\` theo chunk thay vì theo file.
 `
+  },
+  {
+    id: 22,
+    slug: 'aws-github-actions-oidc',
+    title: "AWS + GitHub Actions bằng OIDC: bỏ access key khỏi CI/CD",
+    category: "Cloud Infrastructure",
+    difficulty: "Intermediate",
+    readTime: "11 min read",
+    date: "2026-11-23",
+    featured: false,
+    excerpt: "Thay access key dài hạn bằng token OIDC ngắn hạn: provider, IAM role, trust policy, workflow, điều kiện sub (dạng ID và dạng tên), một lỗi Not authorized thật và cách chẩn đoán, quy trình đổi dạng sub không gián đoạn và checklist lên production.",
+    tags: ["AWS", "GitHub Actions", "OIDC", "IAM", "STS", "Security", "CI/CD"],
+    content: `
+# AWS + GitHub Actions bằng OIDC: bỏ access key khỏi CI/CD
+
+Cách quen thuộc nhất để cho GitHub Actions deploy lên AWS là tạo một IAM user, lấy \`AWS_ACCESS_KEY_ID\` và \`AWS_SECRET_ACCESS_KEY\`, rồi dán vào GitHub Secrets. Cách này chạy được, nhưng bạn phải giữ một khóa dài hạn: nó có thể lộ qua log, qua fork, qua một action bị chiếm quyền, và phải nhớ rotate định kỳ.
+
+**OIDC** (OpenID Connect) bỏ hẳn khóa đó. Workflow xin một token ngắn hạn từ GitHub, AWS kiểm tra token rồi cấp credentials tạm thời. Bài này đi qua một dự án demo thật (một workflow, một trust policy, một script nhỏ) và một lỗi thật mình gặp khi chạy nó.
+
+## 1. Luồng hoạt động
+
+\`\`\`
+GitHub Actions ──(JWT/OIDC)──▶ AWS STS ──(AssumeRoleWithWebIdentity)──▶ Temp credentials (1h)
+\`\`\`
+
+Ba bước:
+
+1. Job chạy và xin GitHub một **JWT** ký bằng khóa của GitHub. Token chứa các claim như repo, branch, environment.
+
+2. Job gửi token cho **AWS STS** và nói "tôi muốn assume role này" (\`AssumeRoleWithWebIdentity\`).
+
+3. STS đối chiếu token với **trust policy** của role. Khớp thì trả credentials tạm thời, mặc định hết hạn sau 1 giờ.
+
+Không có secret nào nằm trong repo hay trong GitHub Secrets. Credentials chỉ tồn tại trong lúc job chạy.
+
+## 2. Các thành phần cần có
+
+Dự án demo chỉ có vài file, mỗi file đóng một vai trò:
+
+\`\`\`
+.github/workflows/oidc-demo.yml   Workflow: assume role, chạy sts get-caller-identity và s3 ls
+trust-policy.json                 Trust policy của IAM role (giới hạn theo repo + branch main)
+scripts/setup-gh-variables.sh     Tạo Actions Variables AWS_ACCOUNT_ID, AWS_ROLE_NAME bằng gh
+docs/                             Hướng dẫn từng bước, lỗi thường gặp
+\`\`\`
+
+Phía AWS cần hai thứ:
+
+**OIDC Identity Provider**: nói với AWS rằng "tôi tin token do \`token.actions.githubusercontent.com\` ký". Mỗi account chỉ tạo một lần.
+
+**IAM Role** kèm **trust policy**: quy định ai được assume role (repo nào, branch nào) và **permission policy**: role đó làm được gì.
+
+Hãy phân biệt hai loại policy. Trust policy trả lời "ai được vào", permission policy trả lời "vào rồi được làm gì".
+
+## 3. Bước 1: tạo OIDC provider
+
+\`\`\`bash
+aws iam create-open-id-connect-provider \\
+  --url https://token.actions.githubusercontent.com \\
+  --client-id-list sts.amazonaws.com
+\`\`\`
+
+Trước đây lệnh này cần \`--thumbprint-list\`. AWS hiện không còn yêu cầu thumbprint cho GitHub, nên bạn bỏ qua được. Nếu account đã có provider này rồi thì không tạo lại.
+
+## 4. Bước 2: tạo IAM role với trust policy
+
+Đây là bước quan trọng nhất. Trước hết kiểm tra repo của bạn dùng dạng \`sub\` nào (mục 6 giải thích vì sao việc này quan trọng):
+
+\`\`\`bash
+gh api repos/<ORG>/<REPO>/actions/oidc/customization/sub
+\`\`\`
+
+Rồi viết \`trust-policy.json\` (thay \`ACCOUNT_ID\`, \`ORG\`, \`ORG_ID\`, \`REPO\`, \`REPO_ID\`):
+
+\`\`\`json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:ORG@ORG_ID/REPO@REPO_ID:ref:refs/heads/main"
+        }
+      }
+    }
+  ]
+}
+\`\`\`
+
+Đọc từng phần:
+
+\`Principal.Federated\`: chỉ tới OIDC provider vừa tạo ở bước 1.
+
+\`Action\`: \`sts:AssumeRoleWithWebIdentity\`, đúng hành động mà workflow sẽ gọi.
+
+\`aud\` (audience): phải là \`sts.amazonaws.com\`, tức token được phát cho STS chứ không phải cho dịch vụ khác.
+
+\`sub\` (subject): **điều kiện quyết định**. Nó giới hạn đúng repo và đúng branch \`main\`.
+
+Tạo role và gắn quyền:
+
+\`\`\`bash
+aws iam create-role \\
+  --role-name github-actions-oidc-demo \\
+  --assume-role-policy-document file://trust-policy.json
+
+# Demo: quyền read-only S3 (production: dùng least privilege)
+aws iam attach-role-policy \\
+  --role-name github-actions-oidc-demo \\
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+\`\`\`
+
+\`AmazonS3ReadOnlyAccess\` chỉ hợp cho demo. Production nên viết policy riêng, chỉ đúng hành động và đúng resource mà pipeline cần.
+
+## 5. Bước 3: workflow
+
+Workflow không hard-code account ID và tên role, mà đọc từ **GitHub Actions Variables**:
+
+\`\`\`
+Variable          Ví dụ                      Mô tả
+AWS_ACCOUNT_ID    123456789012               AWS account chứa role
+AWS_ROLE_NAME     github-actions-oidc-demo   Tên IAM role cần assume
+\`\`\`
+
+Đặt bằng \`gh\` (hoặc vào Settings, Secrets and variables, Actions, Variables):
+
+\`\`\`bash
+gh variable set AWS_ACCOUNT_ID --body "<ACCOUNT_ID>"
+gh variable set AWS_ROLE_NAME  --body "github-actions-oidc-demo"
+# Theo environment: thêm --env production
+\`\`\`
+
+Dùng Variables thay vì Secrets vì đây không phải thông tin bí mật. Secrets bị mask trong log nên khó debug hơn.
+
+Workflow:
+
+\`\`\`yaml
+name: OIDC Demo
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write # bắt buộc để xin OIDC token
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::\${{ vars.AWS_ACCOUNT_ID }}:role/\${{ vars.AWS_ROLE_NAME }}
+          aws-region: ap-southeast-1
+
+      - name: Verify identity
+        run: aws sts get-caller-identity
+
+      - name: List S3 buckets
+        run: aws s3 ls
+\`\`\`
+
+Ba điểm cần chú ý:
+
+\`permissions: id-token: write\` là bắt buộc. Thiếu dòng này, job không xin được token và lỗi sẽ là \`Credentials could not be loaded\`. Đồng thời giữ \`contents: read\` để quyền ở mức tối thiểu.
+
+\`aws-actions/configure-aws-credentials\` làm giúp việc xin token, gọi STS và đặt credentials tạm vào biến môi trường cho các bước sau.
+
+Bước \`Verify identity\` là cách kiểm tra nhanh nhất. Nếu ARN trả về có dạng \`assumed-role/github-actions-oidc-demo/...\` thì cấu hình đã đúng.
+
+## 6. Claim \`sub\` và lỗi mình gặp thật
+
+Khi chạy lần đầu, bước \`Configure AWS credentials\` lỗi:
+
+\`\`\`
+Not authorized to perform sts:AssumeRoleWithWebIdentity
+\`\`\`
+
+AWS trả cùng một thông báo này cho nhiều nguyên nhân, nên mình loại trừ lần lượt: variables (log in đúng role ARN), role và provider (đều tồn tại), nhánh và event (push lên \`main\`), \`aud\`. Thủ phạm còn lại là \`sub\`.
+
+**Nguyên nhân:** repo bật \`use_immutable_subject\`, nên GitHub đặt \`sub\` bằng **ID số** của owner và repo, còn trust policy mình viết bằng **tên**:
+
+\`\`\`
+use_immutable_subject: false   repo:ORG/REPO:ref:refs/heads/main
+use_immutable_subject: true    repo:ORG@ORG_ID/REPO@REPO_ID:ref:refs/heads/main
+\`\`\`
+
+Hai chuỗi này không bao giờ khớp nhau, nên STS từ chối. Cách lấy đúng phần prefix:
+
+\`\`\`bash
+gh api repos/<ORG>/<REPO>/actions/oidc/customization/sub --jq .sub_claim_prefix
+# repo:ORG@ORG_ID/REPO@REPO_ID
+\`\`\`
+
+Ghép thêm phần ref (ví dụ \`:ref:refs/heads/main\`) vào cuối, sửa \`trust-policy.json\`, rồi cập nhật role:
+
+\`\`\`bash
+aws iam update-assume-role-policy \\
+  --role-name github-actions-oidc-demo \\
+  --policy-document file://trust-policy.json
+\`\`\`
+
+Push lại và workflow chạy thành công.
+
+Một lưu ý trung thực: mình suy ra giá trị \`sub\` từ \`sub_claim_prefix\` chứ chưa in token thật ra để xem. Việc workflow chạy được sau khi sửa là bằng chứng gián tiếp. Nếu bạn muốn chắc chắn, thêm một bước tạm in \`sub\` của token (giá trị này không phải secret) rồi xóa đi.
+
+### Vì sao nên giữ dạng ID
+
+\`\`\`
+                                       Dạng tên      Dạng ID
+Dễ đọc, dễ viết                        Có            Không (tra ID một lần)
+An toàn khi repo bị xóa và tạo lại     Không         Có
+Giữ nguyên khi đổi tên repo            Không         Có
+\`\`\`
+
+Với dạng tên, nếu repo bị xóa và người khác tạo lại một repo cùng tên, họ assume được role của bạn. Dạng ID không bị vậy vì \`REPO_ID\` mới sẽ khác. Hai ID này là định danh công khai, không phải secret.
+
+## 7. Đổi giữa dạng ID và dạng tên mà không làm gián đoạn
+
+Giả sử bạn muốn đổi \`use_immutable_subject\` của repo (ví dụ từ ID sang tên). Nếu đổi cài đặt rồi mới sửa trust policy, sẽ có một khoảng thời gian workflow bị từ chối. Cách an toàn là để trust policy chấp nhận **cả hai dạng** trước, đổi cài đặt sau, bỏ dạng cũ cuối cùng.
+
+**Bước 0: chuẩn bị.** Kiểm tra đang dùng đúng tài khoản và lưu lại trạng thái hiện tại:
+
+\`\`\`bash
+gh auth status
+aws sts get-caller-identity --query Account --output text
+gh api repos/<ORG>/<REPO>/actions/oidc/customization/sub
+\`\`\`
+
+**Bước 1: trust policy chấp nhận cả hai dạng.** Khi \`sub\` là một mảng, các giá trị được hiểu là OR:
+
+\`\`\`json
+"StringLike": {
+  "token.actions.githubusercontent.com:sub": [
+    "repo:ORG@ORG_ID/REPO@REPO_ID:ref:refs/heads/main",
+    "repo:ORG/REPO:ref:refs/heads/main"
+  ]
+}
+\`\`\`
+
+\`\`\`bash
+aws iam update-assume-role-policy \\
+  --role-name github-actions-oidc-demo \\
+  --policy-document file://trust-policy.json
+\`\`\`
+
+**Bước 2: đổi cài đặt của repo.**
+
+\`\`\`bash
+gh api -X PUT repos/<ORG>/<REPO>/actions/oidc/customization/sub \\
+  -F use_default=true -F use_immutable_subject=false
+
+gh api repos/<ORG>/<REPO>/actions/oidc/customization/sub
+# mong đợi: "use_immutable_subject": false
+\`\`\`
+
+Endpoint này nhận field \`use_immutable_subject\` (boolean) theo tài liệu GitHub. Cần \`gh\` đăng nhập đúng tài khoản có quyền write trên repo. Nếu lệnh lỗi, đổi trong UI: Settings, Actions, General, OpenID Connect token.
+
+**Bước 3: chạy workflow để xác nhận.** Workflow demo chỉ có trigger \`push\`, nên dùng \`git commit --allow-empty\` rồi push, hoặc \`gh run rerun <RUN_ID>\`, rồi theo dõi bằng \`gh run watch\`.
+
+**Bước 4: bỏ dạng cũ khỏi trust policy.** Chỉ làm sau khi bước 3 thành công. Giữ lại đúng một giá trị rồi chạy lại \`update-assume-role-policy\` và chạy workflow thêm một lần nữa.
+
+**Rollback.** Nếu bước nào lỗi, đưa cài đặt về trạng thái cũ:
+
+\`\`\`bash
+gh api -X PUT repos/<ORG>/<REPO>/actions/oidc/customization/sub \\
+  -F use_default=true -F use_immutable_subject=true
+\`\`\`
+
+Vì trust policy ở bước 1 vẫn chấp nhận dạng ID nên workflow chạy lại bình thường.
+
+Điểm mấu chốt: mọi thay đổi đều quay lại được, và ở từng bước trust policy luôn chấp nhận trạng thái hiện tại của repo. Cảnh báo cũ vẫn đúng: dạng tên mất lớp bảo vệ trước việc repo bị xóa và tạo lại trùng tên, nên chỉ nên dùng cho demo cá nhân.
+
+Quy trình này đã được viết vào tài liệu của dự án demo, nhưng mình chưa thấy kết quả chạy hết cả 4 bước, nên hãy coi đây là quy trình đã thiết kế chứ chưa được kiểm chứng đầy đủ.
+
+## 8. Các mẫu \`sub\` thường dùng
+
+Ký hiệu \`R\` là \`ORG@ORG_ID/REPO@REPO_ID\` (dạng ID):
+
+\`\`\`
+Mục đích                 Giá trị sub
+Chỉ branch main          repo:R:ref:refs/heads/main
+Chỉ GitHub Environment   repo:R:environment:production
+Pull request             repo:R:pull_request
+Mọi branch trong repo    repo:R:*
+\`\`\`
+
+Cẩn thận với dòng cuối. \`repo:R:*\` vẫn giới hạn trong một repo, nhưng cho mọi branch assume role, kể cả branch ai đó tự tạo. Còn nếu bạn bỏ điều kiện \`sub\`, hoặc viết \`repo:*\`, thì **repo bất kỳ trên GitHub** đều assume được role của bạn. Đây là lỗi cấu hình nguy hiểm nhất của OIDC.
+
+## 9. Checklist chẩn đoán khi gặp \`Not authorized\`
+
+Kiểm tra theo thứ tự:
+
+1. Account đúng chưa: \`aws sts get-caller-identity --query Account\` phải khớp \`vars.AWS_ACCOUNT_ID\`.
+
+2. Role và provider có tồn tại không (role không tồn tại cũng báo đúng lỗi này):
+
+\`\`\`bash
+aws iam get-role --role-name <ROLE_NAME> --query 'Role.AssumeRolePolicyDocument'
+aws iam list-open-id-connect-providers
+\`\`\`
+
+3. Dạng \`sub\` của repo: chạy \`gh api .../oidc/customization/sub\`, so với giá trị trong trust policy.
+
+4. Ref và event của run: \`gh run view <RUN_ID> --json event,headBranch\`. \`sub\` đổi theo branch, environment hoặc pull request.
+
+5. Còn nghi ngờ: in \`sub\` của token bằng một bước tạm.
+
+## 10. Lỗi thường gặp
+
+\`\`\`
+Lỗi                                              Nguyên nhân
+Credentials could not be loaded                  Thiếu permissions: id-token: write
+Not authorized to perform ...WithWebIdentity     sub không khớp (repo, branch, environment, dạng ID/tên),
+                                                 hoặc role không tồn tại
+No OpenIDConnect provider found                  Chưa tạo provider trong account đó
+role-to-assume sai (arn:aws:iam:::role/)         Chưa đặt AWS_ACCOUNT_ID / AWS_ROLE_NAME,
+                                                 hoặc đặt ở environment khác với job
+PR từ fork không chạy được                       Hành vi bảo mật mặc định: fork không nhận OIDC token
+\`\`\`
+
+## 11. Lên production
+
+Demo chỉ có một role và một branch. Với production, nên làm thêm:
+
+**GitHub Environments**: dùng \`environment: production\` kèm required reviewers, rồi ràng buộc \`sub\` theo environment (\`repo:R:environment:production\`). Như vậy cần có người duyệt thì pipeline mới lấy được quyền deploy.
+
+**Tách role theo môi trường và theo quyền**: ví dụ \`terraform-plan\` chỉ đọc, \`deploy-ecs\` chỉ được đụng vào ECS. Đừng dùng một role đủ quyền cho mọi pipeline.
+
+**Least privilege**: viết policy theo đúng hành động và resource. Có thể đặt \`--max-session-duration\` ngắn nếu cần.
+
+**Nhiều AWS account**: tạo provider và role bằng Terraform hoặc StackSets, mỗi account một role riêng, và đặt \`AWS_ACCOUNT_ID\` / \`AWS_ROLE_NAME\` theo từng GitHub Environment.
+
+**Script hóa phần lặp lại**: script \`setup-gh-variables.sh\` trong demo kiểm tra account ID (đủ 12 chữ số) và tên role, đặt hai variable rồi liệt kê lại để xác nhận:
+
+\`\`\`bash
+# Repo hiện tại, role mặc định
+scripts/setup-gh-variables.sh -a <ACCOUNT_ID>
+
+# Chỉ định role, repo và environment
+scripts/setup-gh-variables.sh -a <ACCOUNT_ID> -r <ROLE_NAME> -R <ORG>/<REPO> -e production
+\`\`\`
+
+## 12. Ưu và nhược điểm
+
+Ưu điểm:
+
+Không có secret dài hạn, nên không phải rotate và giảm rủi ro rò rỉ.
+
+Credentials tự hết hạn.
+
+Kiểm soát chi tiết theo repo, branch, environment, và audit được qua CloudTrail.
+
+Nhược điểm:
+
+Cấu hình trust policy ban đầu phức tạp hơn dùng access key.
+
+Cần một role cho mỗi môi trường, nên với nhiều account hãy dùng IaC.
+
+Sai điều kiện \`sub\` có thể mở lỗ hổng bảo mật.
+
+Chi phí: gần như **$0**. IAM OIDC provider và STS không tính phí, bạn chỉ trả cho tài nguyên AWS mà workflow dùng.
+
+## Tóm tắt
+
+1. OIDC thay access key dài hạn bằng token ngắn hạn: GitHub ký JWT, STS đổi lấy credentials tạm (1 giờ).
+
+2. Cần ba thứ: OIDC provider (một lần mỗi account), IAM role kèm trust policy, và \`permissions: id-token: write\` trong workflow.
+
+3. Điều kiện \`sub\` trong trust policy là điểm bảo mật quan trọng nhất. Không dùng \`repo:*\`, không bỏ điều kiện này.
+
+4. Lỗi \`Not authorized to perform sts:AssumeRoleWithWebIdentity\` rất chung chung. Hãy kiểm tra theo thứ tự: account, role và provider, dạng \`sub\`, ref và event.
+
+5. Kiểm tra repo có bật \`use_immutable_subject\` hay không bằng \`gh api\`, rồi viết \`sub\` đúng dạng. Nên giữ dạng ID cho production.
+
+6. Muốn đổi dạng \`sub\` thì để trust policy chấp nhận cả hai dạng trước, đổi cài đặt repo sau, bỏ dạng cũ cuối cùng, và luôn có đường rollback.
+
+7. Production: dùng GitHub Environments kèm reviewers, tách role theo môi trường, và least privilege.
+`
   }
 ];
 

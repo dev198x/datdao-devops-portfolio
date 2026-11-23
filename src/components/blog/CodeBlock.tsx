@@ -9,6 +9,7 @@ import lua from 'highlight.js/lib/languages/lua';
 import python from 'highlight.js/lib/languages/python';
 import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
+import yaml from 'highlight.js/lib/languages/yaml';
 
 // Only the languages used in blog posts are bundled (keeps the JS size small).
 hljs.registerLanguage('bash', bash);
@@ -20,6 +21,7 @@ hljs.registerLanguage('lua', lua);
 hljs.registerLanguage('python', python);
 hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('yaml', yaml);
 
 // Label shown in the block header, keyed by the fence language.
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -38,6 +40,8 @@ const LANGUAGE_LABELS: Record<string, string> = {
   sql: 'sql',
   typescript: 'typescript',
   ts: 'typescript',
+  yaml: 'yaml',
+  yml: 'yaml',
 };
 
 const ENTITIES: Record<string, string> = {
