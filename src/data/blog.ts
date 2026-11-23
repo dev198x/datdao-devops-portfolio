@@ -2924,10 +2924,10 @@ Bộ ba này miễn phí, mã nguồn mở, và đủ để bắt đầu mọi d
     title: "Vibe coding với Claude: 2 cấp độ cho người không rành kỹ thuật và senior",
     category: "DevOps Tools",
     difficulty: "Intermediate",
-    readTime: "8 min read",
+    readTime: "10 min read",
     date: "2026-11-23",
     featured: false,
-    excerpt: "Hướng dẫn vibe coding với Claude chia hai level: người không rành kỹ thuật dùng Claude.ai và Artifacts, senior dùng Claude Code với CLAUDE.md, Plan, Implement, Verify, hooks và guardrails.",
+    excerpt: "Hướng dẫn vibe coding với Claude chia hai level: người không rành kỹ thuật dùng Claude.ai và Artifacts, senior dùng Claude Code với CLAUDE.md, Plan, Implement, Verify, hooks, cùng nguyên tắc 2 lớp hàng rào (mềm bằng prompt, cứng bằng quyền tối thiểu).",
     tags: ["Claude", "Claude Code", "Vibe Coding", "AI", "Productivity"],
     content: `
 # Vibe coding với Claude: 2 cấp độ cho người không rành kỹ thuật và senior
@@ -2935,6 +2935,60 @@ Bộ ba này miễn phí, mã nguồn mở, và đủ để bắt đầu mọi d
 **Vibe coding** là mô tả điều bạn muốn bằng ngôn ngữ tự nhiên, để AI viết code, rồi bạn kiểm tra kết quả và yêu cầu sửa lại. Cùng một cách làm, nhưng hai nhóm người dùng khác nhau ở một điểm: **mức độ kiểm soát** mà bạn giữ lại.
 
 Người không rành kỹ thuật giữ quyền quyết định "cần làm gì" và kiểm tra bằng cách chạy thử. Senior giữ thêm quyền quyết định "làm thế nào": thiết kế, review diff, test tự động, bảo mật. Bài này chia làm hai level theo đúng cách đó.
+
+## Nguyên tắc chung: luôn có 2 lớp hàng rào
+
+Dù ở level nào, đừng dựa vào một lớp bảo vệ duy nhất. Hãy luôn dựng hai lớp.
+
+### Hàng rào mềm: chỉ dẫn bằng prompt
+
+Là mọi điều bạn **nói** với Claude về việc nó được làm và không được làm: prompt, \`CLAUDE.md\`, mục "Don'ts". Ví dụ: "chỉ đọc, không sửa dữ liệu", "không chạy lệnh deploy", "không đọc file .env".
+
+Lớp này rẻ, nhanh và ngăn được phần lớn sai sót thông thường. Nhưng nó chỉ là lời dặn. Claude có thể hiểu sai, quên khi context quá dài, hoặc bị một tài liệu, trang web hay issue chứa chỉ thị độc hại (prompt injection) lái đi. Nếu Claude làm trái, không có gì ngăn nó về mặt kỹ thuật.
+
+### Hàng rào cứng: giới hạn quyền ở mức tối thiểu vật lý
+
+Là quyền của chính tài khoản mà Claude dùng, được cấp đúng và đủ để hoàn thành công việc tương ứng, không hơn. "Vật lý" nghĩa là việc không được phép thì **không thể** làm: dù Claude hiểu sai hay bị lừa, hệ thống vẫn từ chối vì tài khoản không có quyền đó.
+
+\`\`\`
+Việc cần làm              Tài khoản cấp cho Claude
+Phân tích dữ liệu DB      User DB chỉ có SELECT trên các bảng cần dùng
+Đọc báo cáo trên S3       IAM policy chỉ s3:GetObject trên đúng một bucket/prefix
+Review pull request       Token GitHub chỉ đọc code và PR của đúng repo đó
+Đọc ticket Jira           Tài khoản/token chỉ đọc, giới hạn trong một project
+\`\`\`
+
+Ví dụ với PostgreSQL (do người có quyền admin tạo, không phải do Claude):
+
+\`\`\`sql
+CREATE ROLE claude_ro LOGIN PASSWORD '<lấy từ secrets manager>';
+GRANT CONNECT ON DATABASE app TO claude_ro;
+GRANT USAGE ON SCHEMA public TO claude_ro;
+GRANT SELECT ON orders, products TO claude_ro;   -- chỉ các bảng cần
+\`\`\`
+
+Hàng rào ở đây là việc **không cấp** quyền ghi và không cấp các bảng chứa dữ liệu cá nhân khi việc không cần. Đừng thay nó bằng một thiết lập session như \`default_transaction_read_only\`: session có thể tự tắt thiết lập đó.
+
+Ví dụ với AWS, chỉ cho đọc một thư mục báo cáo:
+
+\`\`\`json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::example-reports-bucket/monthly/*"
+  }]
+}
+\`\`\`
+
+Cách cấp quyền: bắt đầu từ không có quyền nào, thêm đúng quyền cần để xong việc, và thu hồi khi xong. Không dùng tài khoản cá nhân hay tài khoản admin của bạn, nhất là trên production. Đưa credential cho Claude qua biến môi trường hoặc secrets manager, không dán vào chat.
+
+### Hai lớp phối hợp với nhau
+
+Hàng rào mềm giúp Claude làm đúng ý bạn. Hàng rào cứng bảo đảm khi nó làm sai thì thiệt hại vẫn nằm trong giới hạn chấp nhận được. Câu hỏi kiểm tra: "nếu Claude làm điều tệ nhất trong phạm vi quyền này, thiệt hại tối đa là gì?" Nếu câu trả lời không chấp nhận được, hãy thu hẹp quyền, đừng thêm lời dặn.
+
+Quy tắc cho phép/chặn lệnh và hooks của Claude Code nằm giữa hai lớp: chúng do công cụ thực thi chứ không phải lời dặn, nhưng chỉ kiểm soát các thao tác đi qua Claude Code. Một credential còn hiệu lực vẫn dùng được qua đường khác (script, công cụ khác), nên hàng rào cứng cuối cùng vẫn là chính quyền của tài khoản.
 
 ## Level 1: dành cho người không rành kỹ thuật
 
@@ -2973,7 +3027,9 @@ Câu cuối rất đáng giữ. Nó buộc Claude hỏi lại những chỗ còn
 
 ### Lưu ý quan trọng
 
-Không dán mật khẩu, API key hoặc dữ liệu khách hàng thật vào chat. Khi cần thử, dùng dữ liệu giả.
+Không dán mật khẩu, API key hoặc dữ liệu khách hàng thật vào chat. Khi cần thử, dùng dữ liệu giả. Đây chính là hàng rào cứng đơn giản nhất ở level này: Claude không thể làm lộ hay làm hỏng thứ nó không có.
+
+Khi cần nối với dữ liệu hoặc dịch vụ thật, nhờ một developer tạo tài khoản chỉ-đọc riêng cho việc đó, thay vì dùng tài khoản của bạn.
 
 Kết quả dùng nội bộ hoặc làm demo thì ổn. Nếu có người dùng thật hoặc dữ liệu nhạy cảm (thông tin cá nhân, thanh toán), hãy nhờ một developer review trước khi đưa lên production. Code chạy được chưa có nghĩa là an toàn.
 
@@ -3062,7 +3118,11 @@ Slash commands tự định nghĩa: gói các task lặp lại (tạo endpoint, 
 
 ### 5. Guardrails
 
-Quyền tối thiểu: chỉ cho phép những lệnh cần thiết. Không cho chạy lệnh phá hủy hay deploy production.
+Áp dụng đủ hai lớp ở phần "2 lớp hàng rào".
+
+Hàng rào mềm: ghi vào \`CLAUDE.md\` và prompt những điều không được làm (lệnh phá hủy, deploy production, đọc \`.env\`).
+
+Hàng rào cứng: Claude chỉ dùng tài khoản chỉ-đọc cho database, token có phạm vi hẹp cho API bên ngoài (GitHub, Jira, cloud), và môi trường nó chạy không có credential production. Không cho chạy lệnh phá hủy hay deploy production bằng chính quyền của tài khoản, đừng chỉ dựa vào lời dặn.
 
 Secrets quản lý bằng Secrets Manager hoặc biến môi trường, không để trong repo, và không cho Claude đọc file \`.env\`.
 
@@ -3089,7 +3149,7 @@ Chi phí               Gói Claude thông thường      Gói Pro/Max hoặc API
 
 3. Level 2: ghi quy ước vào \`CLAUDE.md\`, đi theo Plan, Implement, Verify, và review diff như review code của đồng nghiệp.
 
-4. Hooks, subagents, MCP và CI giúp tự động hóa, nhưng phải đi kèm quyền tối thiểu và quản lý secrets.
+4. Luôn dựng 2 lớp hàng rào: mềm (chỉ dẫn bằng prompt và \`CLAUDE.md\`) và cứng (tài khoản Claude dùng chỉ có quyền tối thiểu, ví dụ DB chỉ đọc, API token đúng phạm vi). Hooks, subagents, MCP và CI giúp tự động hóa, nhưng phải chạy bên trong hàng rào này.
 
 5. Ở cả hai level, người chịu trách nhiệm cho kết quả cuối cùng vẫn là bạn, không phải AI.
 `
