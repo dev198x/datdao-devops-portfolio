@@ -2546,15 +2546,15 @@ Lab chạy trên tài khoản sandbox và được \`cdk destroy\` sau khi đo. 
     title: "Học Python từ đầu với uv, ruff và pytest",
     category: "DevOps Tools",
     difficulty: "Intermediate",
-    readTime: "10 min read",
+    readTime: "14 min read",
     date: "2026-11-23",
     featured: false,
-    excerpt: "Dựng một dự án Python hoàn chỉnh chỉ với 3 công cụ: uv quản lý Python và thư viện, ruff lint và format, pytest chạy test. Giải thích từng file trong dự án kèm code và output chạy thật.",
-    tags: ["Python", "uv", "ruff", "pytest", "Beginner"],
+    excerpt: "Dựng một dự án Python hoàn chỉnh chỉ với 3 công cụ: uv quản lý Python và thư viện, ruff lint và format, pytest chạy test. Giải thích từng file trong dự án, rồi đóng gói một REST API nhỏ (FastAPI) vào Docker, kèm code và output chạy thật.",
+    tags: ["Python", "uv", "ruff", "pytest", "FastAPI", "Docker"],
     content: `
 # Học Python từ đầu với uv, ruff và pytest
 
-Bài này dành cho người mới. Mục tiêu: sau khi đọc, bạn tự dựng được một dự án Python hoàn chỉnh (có code, test, kiểm tra chất lượng code) chỉ với **3 công cụ**: \`uv\`, \`ruff\` và \`pytest\`. Không cần \`pip\`, \`venv\`, \`pyenv\`, \`flake8\`, \`black\`, \`isort\` riêng lẻ nữa.
+Bài này dành cho người mới. Mục tiêu: sau khi đọc, bạn tự dựng được một dự án Python hoàn chỉnh (có code, test, kiểm tra chất lượng code) chỉ với **3 công cụ**: \`uv\`, \`ruff\` và \`pytest\`, rồi đóng gói một REST API nhỏ bằng Docker. Không cần \`pip\`, \`venv\`, \`pyenv\`, \`flake8\`, \`black\`, \`isort\` riêng lẻ nữa.
 
 Các lệnh và output trong bài được chạy thật trên macOS với \`uv 0.11.21\`, \`pytest 9.2.0\`, \`ruff 0.17.6\`, Python 3.13 (ngày 2026-11-23). Phiên bản của bạn có thể khác chút.
 
@@ -2883,9 +2883,213 @@ Bạn có thể gom thành một script nhỏ hoặc dùng cho CI. Ví dụ GitH
 
 Phiên bản action (\`@v6\`) có thể đã đổi, hãy kiểm tra tài liệu của action trước khi dùng.
 
-## 9. Commit gì, bỏ gì
+## 9. Đóng gói một REST API nhỏ vào Docker
 
-Commit: \`pyproject.toml\`, \`uv.lock\`, \`.python-version\`, \`src/\`, \`tests/\`, \`README.md\`, \`.gitignore\`.
+Phần này biến dự án \`greeter\` thành một REST API và đóng gói bằng Docker, để chạy giống hệt nhau trên máy bạn, CI và server. Các lệnh và output dưới đây đã chạy thật (FastAPI 0.165.0, uvicorn 0.54.0, Docker Desktop trên macOS).
+
+### Bước 1: thêm thư viện
+
+\`\`\`bash
+uv add fastapi uvicorn      # thư viện chạy thật: framework web và server
+uv add --dev httpx2         # chỉ để test API
+\`\`\`
+
+\`fastapi\` là framework, \`uvicorn\` là server chạy nó. Hai thư viện này vào \`dependencies\`, còn thư viện test vào nhóm \`dev\`. Với Starlette 1.10.0, dùng \`httpx\` cho \`TestClient\` in ra cảnh báo deprecated và gợi ý cài \`httpx2\`, nên bài dùng \`httpx2\`.
+
+### Bước 2: viết API
+
+\`\`\`python
+# src/greeter/api.py
+from fastapi import FastAPI, HTTPException
+
+from greeter.core import greet
+
+app = FastAPI(title="greeter")
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/greet/{name}")
+def greet_endpoint(name: str) -> dict[str, str]:
+    try:
+        return {"message": greet(name)}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="name must not be empty") from exc
+\`\`\`
+
+Hai endpoint: \`/health\` để kiểm tra service còn sống, \`/greet/{name}\` dùng lại hàm \`greet\` ở \`core.py\`. Nhờ tách logic khỏi API từ đầu, hàm \`greet\` không cần sửa gì.
+
+Khối \`try/except\` có lý do. Lúc đầu mình bỏ nó, và gọi \`/greet/%20\` (tên chỉ có dấu cách) thì \`greet\` ném \`ValueError\`, API trả \`500 Internal Server Error\`. Lỗi do dữ liệu người dùng gửi lên phải là \`4xx\`, không phải \`5xx\`, nên ta đổi nó thành \`422\` với thông báo ngắn gọn, không lộ chi tiết nội bộ.
+
+Chạy thử cục bộ:
+
+\`\`\`bash
+uv run uvicorn greeter.api:app --reload
+\`\`\`
+
+\`\`\`bash
+curl -s localhost:8000/health
+curl -s localhost:8000/greet/An
+curl -s -w " http=%{http_code}\\n" "localhost:8000/greet/%20"
+\`\`\`
+
+\`\`\`
+{"status":"ok"}
+{"message":"Hello, An!"}
+{"detail":"name must not be empty"} http=422
+\`\`\`
+
+\`greeter.api:app\` nghĩa là "trong module \`greeter.api\`, lấy biến \`app\`". \`--reload\` tự khởi động lại khi bạn sửa code, chỉ dùng khi phát triển.
+
+### Bước 3: viết test cho API
+
+\`\`\`python
+# tests/test_api.py
+from fastapi.testclient import TestClient
+
+from greeter.api import app
+
+client = TestClient(app)
+
+
+def test_health() -> None:
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_greet() -> None:
+    response = client.get("/greet/An")
+    assert response.status_code == 200
+    assert response.json() == {"message": "Hello, An!"}
+
+
+def test_greet_blank_name_returns_422() -> None:
+    response = client.get("/greet/%20")
+    assert response.status_code == 422
+\`\`\`
+
+\`TestClient\` gọi thẳng vào ứng dụng trong bộ nhớ, không cần mở cổng hay chạy server. Chạy lại cả ba công cụ:
+
+\`\`\`bash
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+\`\`\`
+
+\`\`\`
+tests/test_api.py ...                                                    [ 50%]
+tests/test_core.py ...                                                   [100%]
+
+============================== 6 passed in 0.52s ===============================
+\`\`\`
+
+Chỉ khi cả ba lệnh đều qua mới đóng gói. Đóng gói code còn lỗi chỉ làm lỗi đó đi xa hơn.
+
+### Bước 4: viết Dockerfile
+
+\`\`\`dockerfile
+FROM python:3.13-slim
+
+# uv binary, pinned to the version used in development
+COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /bin/
+
+ENV UV_COMPILE_BYTECODE=1 \\
+    UV_LINK_MODE=copy \\
+    UV_PYTHON_DOWNLOADS=never \\
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Layer 1: third-party dependencies only (cached until pyproject.toml / uv.lock change)
+RUN --mount=type=cache,target=/root/.cache/uv \\
+    --mount=type=bind,source=uv.lock,target=uv.lock \\
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \\
+    uv sync --locked --no-dev --no-install-project
+
+# Layer 2: the project itself (changes often)
+COPY pyproject.toml uv.lock README.md ./
+COPY src ./src
+RUN --mount=type=cache,target=/root/.cache/uv \\
+    uv sync --locked --no-dev --no-editable
+
+# Run as a non-root user
+RUN useradd --system --uid 10001 --no-create-home app
+USER app
+
+ENV PATH="/app/.venv/bin:$PATH"
+EXPOSE 8000
+CMD ["uvicorn", "greeter.api:app", "--host", "0.0.0.0", "--port", "8000"]
+\`\`\`
+
+Giải thích các phần quan trọng:
+
+\`COPY --from=ghcr.io/astral-sh/uv:0.11.21 ...\` lấy file chạy \`uv\` từ image chính thức của Astral, ghim đúng phiên bản bạn dùng khi phát triển để build lặp lại được. Không cần cài uv bằng \`pip\` hay \`curl\` trong image.
+
+\`uv sync --locked\` cài đúng phiên bản trong \`uv.lock\` và báo lỗi nếu \`uv.lock\` đã lỗi thời, thay vì âm thầm cập nhật. \`--no-dev\` bỏ pytest, ruff và httpx2 khỏi image vì lúc chạy thật không cần.
+
+Hai lớp cài đặt tách nhau để tận dụng cache của Docker. Lớp 1 chỉ cần \`pyproject.toml\` và \`uv.lock\` (cờ \`--no-install-project\` bỏ qua code của bạn), nên chỉ chạy lại khi bạn đổi thư viện. Lớp 2 copy code và cài dự án, chạy lại mỗi khi sửa code nhưng rất nhanh vì thư viện đã có sẵn.
+
+\`--no-editable\` cài dự án như một package thật vào \`.venv\`, không phụ thuộc thư mục \`src\` lúc chạy.
+
+\`UV_COMPILE_BYTECODE=1\` biên dịch sẵn bytecode lúc build để container khởi động nhanh hơn. \`UV_PYTHON_DOWNLOADS=never\` bảo uv dùng Python có sẵn trong image, không tải thêm bản khác.
+
+\`USER app\` chạy ứng dụng bằng user thường (uid 10001) thay vì root. Nếu ai đó khai thác được lỗi trong ứng dụng, họ không có quyền root trong container.
+
+\`--host 0.0.0.0\` bắt buộc trong container: mặc định uvicorn chỉ lắng nghe \`127.0.0.1\` bên trong container nên không thể truy cập từ bên ngoài.
+
+Thêm file \`.dockerignore\` để không đưa rác và bí mật vào image:
+
+\`\`\`
+.venv
+.git
+__pycache__/
+*.py[oc]
+.pytest_cache/
+.ruff_cache/
+tests/
+.env
+\`\`\`
+
+### Bước 5: build và chạy
+
+\`\`\`bash
+docker build -t greeter:dev .
+docker run -d --rm --name greeter -p 127.0.0.1:8000:8000 greeter:dev
+\`\`\`
+
+\`-p 127.0.0.1:8000:8000\` chỉ mở cổng trên máy bạn, người khác trong mạng không truy cập được. Thử gọi:
+
+\`\`\`bash
+curl -s localhost:8000/health
+curl -s localhost:8000/greet/An
+docker exec greeter id -u
+\`\`\`
+
+\`\`\`
+{"status":"ok"}
+{"message":"Hello, An!"}
+10001
+\`\`\`
+
+Dòng cuối xác nhận tiến trình chạy bằng user 10001, không phải root. Dọn dẹp:
+
+\`\`\`bash
+docker rm -f greeter
+\`\`\`
+
+Kích thước image trong lần chạy thử này khoảng 300 MB, chủ yếu là Python và các thư viện. Sau khi sửa một dòng trong \`core.py\` rồi build lại, Docker báo \`CACHED\` cho lớp cài thư viện và chỉ chạy lại lớp 2, đúng như thiết kế.
+
+### Những điều nên làm tiếp
+
+Image này đủ để học và chạy thử, chưa phải cấu hình production hoàn chỉnh. Khi đưa lên production nên bổ sung: quét lỗ hổng cho image (ví dụ Trivy), thêm \`HEALTHCHECK\` hoặc probe trong Kubernetes dùng endpoint \`/health\`, đặt giới hạn CPU và bộ nhớ, và không bao giờ đưa secret vào image (truyền qua biến môi trường hoặc secrets manager lúc chạy). Có thể giảm kích thước thêm bằng multi-stage build.
+
+## 10. Commit gì, bỏ gì
+
+Commit: \`pyproject.toml\`, \`uv.lock\`, \`.python-version\`, \`src/\`, \`tests/\`, \`README.md\`, \`.gitignore\`, \`Dockerfile\`, \`.dockerignore\`.
 
 Không commit: \`.venv/\`, \`__pycache__/\`, \`.pytest_cache/\`, \`.ruff_cache/\`, file \`.env\` chứa secret. Hai thư mục cache cuối chưa nằm trong \`.gitignore\` mặc định của \`uv init\`, hãy thêm vào:
 
@@ -2894,7 +3098,7 @@ Không commit: \`.venv/\`, \`__pycache__/\`, \`.pytest_cache/\`, \`.ruff_cache/\
 .ruff_cache/
 \`\`\`
 
-## 10. Lỗi người mới hay gặp
+## 11. Lỗi người mới hay gặp
 
 \`ModuleNotFoundError: No module named 'greeter.core'\`: file chưa được tạo, hoặc bạn chạy \`python\` trực tiếp thay vì \`uv run\`. Luôn chạy qua \`uv run\`.
 
@@ -2914,6 +3118,8 @@ Quên \`--dev\` khi thêm pytest/ruff: chúng bị cài như thư viện chạy 
 4. \`pytest\` cho độ đúng: hàm \`test_*\`, \`assert\`, \`parametrize\`, \`raises\`.
 5. \`ruff\` cho độ sạch: \`ruff check --fix\` và \`ruff format\`; dùng bản \`--check\` trong CI.
 6. Quy trình mỗi lần sửa: format, check, test.
+
+7. Khi cần chạy ở nơi khác, đóng gói bằng Docker: \`uv sync --locked --no-dev\`, tách lớp thư viện khỏi lớp code để tận dụng cache, và chạy bằng user không phải root.
 
 Bộ ba này miễn phí, mã nguồn mở, và đủ để bắt đầu mọi dự án Python từ script nhỏ đến service. Khi dự án lớn hơn mới cần thêm công cụ như kiểm tra kiểu (type checker) hay pre-commit.
 `

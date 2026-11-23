@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
+import dockerfile from 'highlight.js/lib/languages/dockerfile';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import ini from 'highlight.js/lib/languages/ini';
@@ -11,6 +12,7 @@ import typescript from 'highlight.js/lib/languages/typescript';
 
 // Only the languages used in blog posts are bundled (keeps the JS size small).
 hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('dockerfile', dockerfile);
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('ini', ini);
@@ -24,6 +26,8 @@ const LANGUAGE_LABELS: Record<string, string> = {
   bash: 'bash',
   sh: 'bash',
   shell: 'bash',
+  dockerfile: 'dockerfile',
+  docker: 'dockerfile',
   javascript: 'javascript',
   js: 'javascript',
   json: 'json',
