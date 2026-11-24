@@ -6,15 +6,27 @@ import { AnimatedBackground, TechBadge } from '../components/visual/VisualCompon
 import CodeBlock from '../components/blog/CodeBlock';
 import { getBlogPostById, getBlogPostBySlug } from '../data/blog';
 
-// Turns `inline code` spans inside a text line into <code> elements.
-const renderInline = (text: string): React.ReactNode[] =>
+// `inline code` spans -> <code>.
+const renderCode = (text: string, keyPrefix: string): React.ReactNode[] =>
   text.split(/(`[^`]+`)/g).map((part, idx) =>
     part.length > 2 && part.startsWith('`') && part.endsWith('`') ? (
-      <code key={idx} className="px-1.5 py-0.5 bg-gray-800 text-green-400 rounded text-[0.9em] font-mono">
+      <code key={`${keyPrefix}-${idx}`} className="px-1.5 py-0.5 bg-gray-800 text-green-400 rounded text-[0.9em] font-mono">
         {part.slice(1, -1)}
       </code>
     ) : (
       part
+    )
+  );
+
+// **bold** -> <strong> (may contain `inline code`), everything else goes through renderCode.
+const renderInline = (text: string): React.ReactNode[] =>
+  text.split(/(\*\*[^*]+\*\*)/g).map((part, idx) =>
+    part.length > 4 && part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={idx} className="font-bold text-lg text-neutral-200">
+        {renderCode(part.slice(2, -2), `b${idx}`)}
+      </strong>
+    ) : (
+      <React.Fragment key={idx}>{renderCode(part, String(idx))}</React.Fragment>
     )
   );
 
@@ -53,6 +65,37 @@ const renderContent = (content: string): React.ReactNode[] => {
       elements.push(<h2 key={elements.length} className="text-2xl font-bold text-neutral-200 mb-3 mt-6">{line.substring(3)}</h2>);
     } else if (line.startsWith('### ')) {
       elements.push(<h3 key={elements.length} className="text-xl font-bold text-neutral-200 mb-2 mt-4">{line.substring(4)}</h3>);
+    } else if (/^- /.test(line)) {
+      // Consecutive "- item" lines become one bulleted list.
+      const items: string[] = [];
+      while (i < lines.length && /^- /.test(lines[i])) {
+        items.push(lines[i].slice(2));
+        i++;
+      }
+      elements.push(
+        <ul key={elements.length} className="list-disc pl-6 mb-4 space-y-1 text-gray-300 leading-relaxed">
+          {items.map((item, idx) => (
+            <li key={idx}>{renderInline(item)}</li>
+          ))}
+        </ul>
+      );
+      continue;
+    } else if (/^\d+\. /.test(line)) {
+      // Consecutive "1. item" lines become one numbered list (starts at the first number).
+      const start = parseInt(line, 10);
+      const items: string[] = [];
+      while (i < lines.length && /^\d+\. /.test(lines[i])) {
+        items.push(lines[i].replace(/^\d+\. /, ''));
+        i++;
+      }
+      elements.push(
+        <ol key={elements.length} start={start} className="list-decimal pl-6 mb-4 space-y-1 text-gray-300 leading-relaxed">
+          {items.map((item, idx) => (
+            <li key={idx}>{renderInline(item)}</li>
+          ))}
+        </ol>
+      );
+      continue;
     } else if (line.trim()) {
       elements.push(<p key={elements.length} className="text-gray-300 leading-relaxed mb-4">{renderInline(line)}</p>);
     } else {

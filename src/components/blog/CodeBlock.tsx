@@ -6,18 +6,40 @@ import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import ini from 'highlight.js/lib/languages/ini';
 import lua from 'highlight.js/lib/languages/lua';
+import markdown from 'highlight.js/lib/languages/markdown';
 import python from 'highlight.js/lib/languages/python';
 import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 import yaml from 'highlight.js/lib/languages/yaml';
+import type { HLJSApi, Language } from 'highlight.js';
+
+// highlight.js ships no HCL (Terraform) grammar, so define a small one: comments, strings,
+// block keywords, literals and numbers are enough for the blog's examples.
+const hcl = (api: HLJSApi): Language => ({
+  name: 'HCL',
+  keywords: {
+    keyword: 'resource variable output provider terraform module data locals backend required_providers',
+    literal: 'true false null',
+  },
+  contains: [
+    api.HASH_COMMENT_MODE,
+    api.C_LINE_COMMENT_MODE,
+    api.C_BLOCK_COMMENT_MODE,
+    api.QUOTE_STRING_MODE,
+    api.C_NUMBER_MODE,
+    { className: 'attr', begin: /^\s*[A-Za-z_][\w-]*(?=\s*=)/, relevance: 0 },
+  ],
+});
 
 // Only the languages used in blog posts are bundled (keeps the JS size small).
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('dockerfile', dockerfile);
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('json', json);
+hljs.registerLanguage('hcl', hcl);
 hljs.registerLanguage('ini', ini);
 hljs.registerLanguage('lua', lua);
+hljs.registerLanguage('markdown', markdown);
 hljs.registerLanguage('python', python);
 hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('typescript', typescript);
@@ -34,9 +56,15 @@ const LANGUAGE_LABELS: Record<string, string> = {
   js: 'javascript',
   json: 'json',
   lua: 'lua',
+  markdown: 'markdown',
+  md: 'markdown',
   python: 'python',
   py: 'python',
   toml: 'ini',
+  ini: 'ini',
+  hcl: 'hcl',
+  terraform: 'hcl',
+  tf: 'hcl',
   sql: 'sql',
   typescript: 'typescript',
   ts: 'typescript',
