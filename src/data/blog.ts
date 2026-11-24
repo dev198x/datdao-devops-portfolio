@@ -96,7 +96,7 @@ module "vpc" {
 
 ## Kết luận
 
-Áp dụng các best practice này giúp bạn duy trì hạ tầng Terraform có khả năng mở rộng, an toàn và dễ bảo trì.
+Áp dụng các best practice này giúp bạn duy trì hạ tầng Terraform **có khả năng mở rộng, an toàn và dễ bảo trì**.
     `
   },
   {
@@ -270,12 +270,12 @@ Pessimistic Locking là lựa chọn đúng khi xung đột có khả năng cao 
 
 ## Key Takeaways
 
-1. \`SELECT ... FOR UPDATE\` chỉ tuần tự hóa các transaction tranh nhau cùng những row đó, và khóa tồn tại đến khi COMMIT hoặc ROLLBACK.
-2. Dùng NOWAIT để báo lỗi nhanh và SKIP LOCKED cho các queue worker chạy song song.
-3. Đánh index cho mệnh đề WHERE, khóa nhiều row theo thứ tự nhất quán và giữ transaction ngắn.
-4. Cấu hình lock, statement và idle-in-transaction timeout một cách chủ động, vì mặc định của PostgreSQL là không giới hạn.
-5. Coi lỗi deadlock là lỗi có thể retry.
-6. \`BEGIN\` chỉ gom lệnh, còn \`FOR UPDATE\` mới chặn người khác. Nếu gói được điều kiện vào \`UPDATE ... WHERE\` thì không cần \`FOR UPDATE\`.
+1. **\`SELECT ... FOR UPDATE\` chỉ tuần tự hóa các transaction tranh nhau cùng những row đó**, và khóa tồn tại đến khi COMMIT hoặc ROLLBACK.
+2. **Dùng NOWAIT để báo lỗi nhanh và SKIP LOCKED cho các queue worker chạy song song**.
+3. **Đánh index cho mệnh đề WHERE**, khóa nhiều row theo thứ tự nhất quán và giữ transaction ngắn.
+4. **Cấu hình lock, statement và idle-in-transaction timeout một cách chủ động**, vì mặc định của PostgreSQL là không giới hạn.
+5. **Coi lỗi deadlock là lỗi có thể retry**.
+6. **\`BEGIN\` chỉ gom lệnh**, còn \`FOR UPDATE\` mới chặn người khác. Nếu gói được điều kiện vào \`UPDATE ... WHERE\` thì không cần \`FOR UPDATE\`.
     `
   },
   {
@@ -498,11 +498,11 @@ Cách chọn: bắt đầu bằng giải pháp 1. Khi database bắt đầu quá
 
 ## Key Takeaways
 
-1. Không giữ DB transaction qua mạng. Giữ chỗ bằng trạng thái tạm có hạn dùng: transaction ngắn, gọi thanh toán ngoài transaction, rồi transaction ngắn để chốt hoặc nhả.
-2. Giải pháp chuẩn là Pending State trong database kèm \`expired_at\`. Chốt đơn luôn bằng UPDATE có điều kiện, kèm \`UNIQUE\` trên \`payment_transaction_id\` để chống xử lý trùng.
-3. Giải pháp tăng tốc là hold trên Redis bằng \`SET NX EX\`, không bao giờ GET rồi SET, liệt kê bằng MGET, không bao giờ dùng KEYS.
-4. Dù dùng giải pháp nào, database vẫn là nguồn sự thật và UPDATE có điều kiện là lớp chống bán trùng cuối cùng. Update ảnh hưởng 0 row thì hoàn tiền.
-5. Với Redis: nhả hold bằng compare-and-delete, Lua Script cho nhiều ghế, AOF everysec cho trường hợp restart, hash tag trên Cluster.
+1. **Không giữ DB transaction qua mạng**. Giữ chỗ bằng trạng thái tạm có hạn dùng: transaction ngắn, gọi thanh toán ngoài transaction, rồi transaction ngắn để chốt hoặc nhả.
+2. **Giải pháp chuẩn là Pending State trong database kèm \`expired_at\`**. Chốt đơn luôn bằng UPDATE có điều kiện, kèm \`UNIQUE\` trên \`payment_transaction_id\` để chống xử lý trùng.
+3. **Giải pháp tăng tốc là hold trên Redis bằng \`SET NX EX\`**, không bao giờ GET rồi SET, liệt kê bằng MGET, không bao giờ dùng KEYS.
+4. Dù dùng giải pháp nào, **database vẫn là nguồn sự thật** và UPDATE có điều kiện là lớp chống bán trùng cuối cùng. Update ảnh hưởng 0 row thì hoàn tiền.
+5. **Với Redis: nhả hold bằng compare-and-delete, Lua Script cho nhiều ghế, AOF everysec cho trường hợp restart, hash tag trên Cluster**.
     `
   },
   {
@@ -728,12 +728,12 @@ curl -X POST localhost:3000/payments -H 'Content-Type: application/json' \\
 
 ## Key Takeaways
 
-1. Idempotency Key biến "gửi lại nhiều lần" thành "chỉ xử lý một lần". Client tạo một key cho mỗi ý định thanh toán và dùng lại key đó khi retry.
-2. Lưu key trong database cùng với dữ liệu nghiệp vụ, dùng UNIQUE và \`ON CONFLICT\` thay vì check-then-insert.
-3. Gặp key đã có thì: đang xử lý trả 409 hoặc 202, đã xong trả lại kết quả cũ, khác nội dung request trả 422.
-4. Dùng State Machine với \`UPDATE\` có điều kiện status thay cho cờ boolean, để webhook và response đồng bộ không ghi đè nhau.
-5. Không gọi cổng thanh toán bên trong transaction, và truyền mã bất biến sang cổng thanh toán.
-6. Reconciliation là lưới an toàn cho timeout và webhook bị mất.
+1. **Idempotency Key biến "gửi lại nhiều lần" thành "chỉ xử lý một lần"**. Client tạo một key cho mỗi ý định thanh toán và dùng lại key đó khi retry.
+2. **Lưu key trong database cùng với dữ liệu nghiệp vụ**, dùng UNIQUE và \`ON CONFLICT\` thay vì check-then-insert.
+3. **Gặp key đã có thì**: đang xử lý trả 409 hoặc 202, đã xong trả lại kết quả cũ, khác nội dung request trả 422.
+4. **Dùng State Machine với \`UPDATE\` có điều kiện status thay cho cờ boolean**, để webhook và response đồng bộ không ghi đè nhau.
+5. **Không gọi cổng thanh toán bên trong transaction**, và truyền mã bất biến sang cổng thanh toán.
+6. **Reconciliation là lưới an toàn cho timeout và webhook bị mất**.
     `
   },
   {
@@ -982,11 +982,11 @@ EXCLUDE constraint (PG)      Có                    Thấp          Gọn nhất
 
 ## Key Takeaways
 
-1. Công thức trùng lịch: \`newStart < existingEnd AND newEnd > existingStart\`, dùng khoảng nửa mở để các lịch liền kề không bị coi là trùng.
-2. Để database lọc bằng \`EXISTS\` kèm index \`(resource_id, start_time, end_time)\`, đừng kéo dữ liệu về lặp trong code.
-3. Kiểm tra \`start < end\`, loại trừ chính lịch đang sửa khi reschedule, bỏ qua lịch đã hủy, và lưu giờ bằng \`TIMESTAMPTZ\`.
-4. Buffer time chỉ là cộng thêm khoảng nghỉ vào hai vế so sánh.
-5. Check-then-insert không an toàn khi đồng thời: dùng EXCLUDE constraint trên PostgreSQL, hoặc khóa row resource trong transaction trên các DB khác.
+1. **Công thức trùng lịch**: \`newStart < existingEnd AND newEnd > existingStart\`, dùng khoảng nửa mở để các lịch liền kề không bị coi là trùng.
+2. **Để database lọc bằng \`EXISTS\` kèm index \`(resource_id, start_time, end_time)\`**, đừng kéo dữ liệu về lặp trong code.
+3. **Kiểm tra \`start < end\`**, loại trừ chính lịch đang sửa khi reschedule, bỏ qua lịch đã hủy, và lưu giờ bằng \`TIMESTAMPTZ\`.
+4. **Buffer time chỉ là cộng thêm khoảng nghỉ vào hai vế so sánh**.
+5. **Check-then-insert không an toàn khi đồng thời**: dùng EXCLUDE constraint trên PostgreSQL, hoặc khóa row resource trong transaction trên các DB khác.
     `
   },
   {
@@ -1233,11 +1233,11 @@ Advisory lock đặc biệt hữu ích cho ví dụ cấp số chứng từ ở 
 
 ## Key Takeaways
 
-1. \`LOCK TABLE ... IN <mode> MODE\` chỉ chạy trong transaction và tự nhả khi COMMIT hoặc ROLLBACK. Mặc định là ACCESS EXCLUSIVE.
-2. Chỉ ACCESS EXCLUSIVE chặn cả đọc. Các chế độ SHARE, SHARE ROW EXCLUSIVE và EXCLUSIVE vẫn cho SELECT thường chạy.
-3. Dùng cho migration, batch lớn, tuần tự hóa toàn bảng hoặc chuỗi bước cần bảng ổn định.
-4. Hàng chờ lock là rủi ro thật: một lock đang chờ cũng chặn các truy vấn đến sau. Luôn dùng NOWAIT hoặc \`lock_timeout\`.
-5. Có row lock, advisory lock, constraint hoặc \`CONCURRENTLY\` đáp ứng được thì ưu tiên chúng.
+1. **\`LOCK TABLE ... IN <mode> MODE\` chỉ chạy trong transaction và tự nhả khi COMMIT hoặc ROLLBACK**. Mặc định là ACCESS EXCLUSIVE.
+2. **Chỉ ACCESS EXCLUSIVE chặn cả đọc**. Các chế độ SHARE, SHARE ROW EXCLUSIVE và EXCLUSIVE vẫn cho SELECT thường chạy.
+3. **Dùng cho migration, batch lớn, tuần tự hóa toàn bảng** hoặc chuỗi bước cần bảng ổn định.
+4. **Hàng chờ lock là rủi ro thật**: một lock đang chờ cũng chặn các truy vấn đến sau. Luôn dùng NOWAIT hoặc \`lock_timeout\`.
+5. **Có row lock, advisory lock, constraint hoặc \`CONCURRENTLY\` đáp ứng được thì ưu tiên chúng**.
     `
   },
   {
@@ -1398,11 +1398,11 @@ Advisory lock      Một con số tự đặt    Không                  Khóa m
 
 ## Key Takeaways
 
-1. Advisory lock là ổ khóa mang tên một con số do bạn tự đặt, PostgreSQL không gắn nó vào bảng hay dòng nào.
-2. Ưu tiên \`pg_advisory_xact_lock\`: khóa tự nhả khi COMMIT hoặc ROLLBACK, không sợ quên.
-3. Dùng \`pg_try_advisory_lock\` cho cron job hoặc tác vụ có thể bỏ qua, dùng bản chờ cho việc bắt buộc tuần tự.
-4. Rất hợp để khóa theo \`user_id\` hoặc theo tên tác vụ, kể cả khi dòng dữ liệu chưa tồn tại.
-5. Đừng dùng khóa kiểu session với connection pool theo transaction, và hãy ghi lại các số quy ước để không bị trùng.
+1. **Advisory lock là ổ khóa mang tên một con số do bạn tự đặt**, PostgreSQL không gắn nó vào bảng hay dòng nào.
+2. **Ưu tiên \`pg_advisory_xact_lock\`**: khóa tự nhả khi COMMIT hoặc ROLLBACK, không sợ quên.
+3. **Dùng \`pg_try_advisory_lock\` cho cron job hoặc tác vụ có thể bỏ qua**, dùng bản chờ cho việc bắt buộc tuần tự.
+4. **Rất hợp để khóa theo \`user_id\` hoặc theo tên tác vụ**, kể cả khi dòng dữ liệu chưa tồn tại.
+5. **Đừng dùng khóa kiểu session với connection pool theo transaction**, và hãy ghi lại các số quy ước để không bị trùng.
     `
   },
   {
@@ -1647,11 +1647,11 @@ Mỗi bước của giai đoạn Expand đều có thể quay lui (drop cột ho
 
 ## Key Takeaways
 
-1. Chia thay đổi lớn thành các bước tương thích ngược: Expand, Migrate, Contract.
-2. Luôn đặt \`lock_timeout\` ngắn kèm retry, và \`statement_timeout\` cho DDL, để một transaction dài không kéo sập cả hệ thống.
-3. Thêm index bằng \`CONCURRENTLY\`, thêm ràng buộc bằng \`NOT VALID\` rồi \`VALIDATE\`.
-4. Đổi tên cột hay đổi kiểu cần rewrite thì dùng cột mới, trigger đồng bộ và backfill theo batch, đừng đổi trực tiếp.
-5. Test trên bản clone, chạy ngoài giờ cao điểm, có người trực và có rollback plan. Chỉ bước Contract là không quay lại được.
+1. **Chia thay đổi lớn thành các bước tương thích ngược**: Expand, Migrate, Contract.
+2. **Luôn đặt \`lock_timeout\` ngắn kèm retry**, và \`statement_timeout\` cho DDL, để một transaction dài không kéo sập cả hệ thống.
+3. **Thêm index bằng \`CONCURRENTLY\`**, thêm ràng buộc bằng \`NOT VALID\` rồi \`VALIDATE\`.
+4. **Đổi tên cột hay đổi kiểu cần rewrite thì dùng cột mới**, trigger đồng bộ và backfill theo batch, đừng đổi trực tiếp.
+5. Test trên bản clone, chạy ngoài giờ cao điểm, có người trực và có rollback plan. **Chỉ bước Contract là không quay lại được.**
     `
   },
   {
@@ -1777,7 +1777,7 @@ CDK chưa có L2 construct cho AWS Budgets, nên phải dùng L1 \`CfnBudget\` (
 costFilters: { TagKeyValue: ['user:Project$cdk-lab'] },
 \`\`\`
 
-Cạm bẫy: tag \`Project\` phải được bật làm *cost allocation tag* trong Billing console, và dữ liệu chỉ có sau khoảng 24 giờ. Quên bước này thì budget luôn hiện $0 và không bao giờ cảnh báo, trong khi mọi thứ trông vẫn bình thường. Nhớ cũng truyền email thật bằng \`-c alertEmail=<email>\`, vì deploy bằng email giả thì cảnh báo không tới bạn.
+Cạm bẫy: tag \`Project\` phải được bật làm "cost allocation tag" trong Billing console, và dữ liệu chỉ có sau khoảng 24 giờ. Quên bước này thì budget luôn hiện $0 và không bao giờ cảnh báo, trong khi mọi thứ trông vẫn bình thường. Nhớ cũng truyền email thật bằng \`-c alertEmail=<email>\`, vì deploy bằng email giả thì cảnh báo không tới bạn.
 
 ## Chạy thử, không tốn tiền
 
@@ -1808,12 +1808,12 @@ Rủi ro lớn nhất            Quên cdk destroy. Hãy tạo Budget $5 trong a
 
 ## Key Takeaways
 
-1. CDK sinh template CloudFormation, nên test, cdk-nag và \`cdk diff\` chạy được trước khi tốn tiền.
-2. L2 construct cho default an toàn, và \`grant*()\` cho IAM least privilege chỉ một dòng.
-3. Code thật nghĩa là dùng biến và điều kiện để tách dev/prod, đặc biệt \`RemovalPolicy\`.
-4. cdk-nag chặn lỗi bảo mật chung, unit test chặn quy tắc riêng. Acknowledge luôn kèm lý do.
-5. CI/CD dùng OIDC thay access key, và bật Required reviewers trước prod.
-6. Budget lọc theo tag chỉ hoạt động sau khi bật cost allocation tag.
+1. **CDK sinh template CloudFormation**, nên test, cdk-nag và \`cdk diff\` chạy được trước khi tốn tiền.
+2. **L2 construct cho default an toàn**, và \`grant*()\` cho IAM least privilege chỉ một dòng.
+3. **Code thật nghĩa là dùng biến và điều kiện để tách dev/prod**, đặc biệt \`RemovalPolicy\`.
+4. **cdk-nag chặn lỗi bảo mật chung**, unit test chặn quy tắc riêng. Acknowledge luôn kèm lý do.
+5. **CI/CD dùng OIDC thay access key**, và bật Required reviewers trước prod.
+6. **Budget lọc theo tag chỉ hoạt động sau khi bật cost allocation tag**.
     `
   },
   {
@@ -2043,11 +2043,11 @@ Hai khoản này thường lớn hơn tiền task nhỏ. Hãy kiểm tra lại t
 
 ## Key Takeaways
 
-1. Task Definition mô tả cái gì chạy, Service giữ nó luôn chạy.
-2. Fargate hay EC2 quyết định chạy ở đâu, Spot hay On-Demand quyết định trả bao nhiêu và chịu rủi ro nào.
-3. API cần ổn định nên chạy On-Demand, worker idempotent chạy Spot.
-4. Weight chỉ là tỷ lệ, muốn đảm bảo số task On-Demand tối thiểu thì dùng \`base\`.
-5. Spot chỉ an toàn khi worker bắt \`SIGTERM\` và \`stopTimeout\` đủ lớn.
+1. **Task Definition mô tả cái gì chạy**, Service giữ nó luôn chạy.
+2. **Fargate hay EC2 quyết định chạy ở đâu**, Spot hay On-Demand quyết định trả bao nhiêu và chịu rủi ro nào.
+3. **API cần ổn định** nên chạy On-Demand, worker idempotent chạy Spot.
+4. **Weight chỉ là tỷ lệ**, muốn đảm bảo số task On-Demand tối thiểu thì dùng \`base\`.
+5. **Spot chỉ an toàn khi worker bắt \`SIGTERM\` và \`stopTimeout\` đủ lớn**.
     `
   },
   {
@@ -2277,11 +2277,11 @@ Tuần 4  Webhook PSP + HMAC, async invoke + Failure queue + alarm, job đối s
 
 ## Key Takeaways
 
-1. Thiết kế chỉ cần HTTP API, 3 Lambda, 3 bảng DynamoDB và 1 queue lỗi, khoảng $25-40/tháng.
-2. Bước cần user chờ (tạo payment, lấy URL OTP) gọi đồng bộ. Bước không ai chờ (webhook, cập nhật order) dùng async invoke.
-3. Idempotency và cập nhật có điều kiện ở mọi bước, vì PSP retry webhook và Lambda async có thể giao trùng.
-4. Route webhook public bảo vệ bằng HMAC trên raw body. Dữ liệu thẻ và OTP không đi qua hệ thống của bạn.
-5. Luôn có alarm cho Failure queue và job đối soát với PSP, vì order có thể không lên PAID dù đã trừ tiền.
+1. **Thiết kế chỉ cần HTTP API**, 3 Lambda, 3 bảng DynamoDB và 1 queue lỗi, khoảng $25-40/tháng.
+2. **Bước cần user chờ (tạo payment, lấy URL OTP) gọi đồng bộ**. Bước không ai chờ (webhook, cập nhật order) dùng async invoke.
+3. **Idempotency và cập nhật có điều kiện ở mọi bước**, vì PSP retry webhook và Lambda async có thể giao trùng.
+4. **Route webhook public bảo vệ bằng HMAC trên raw body**. Dữ liệu thẻ và OTP không đi qua hệ thống của bạn.
+5. **Luôn có alarm cho Failure queue và job đối soát với PSP**, vì order có thể không lên PAID dù đã trừ tiền.
     `
   },
   {
@@ -2532,12 +2532,12 @@ Lab chạy trên tài khoản sandbox và được \`cdk destroy\` sau khi đo. 
 
 ## Key Takeaways
 
-1. Đo \`Init Duration\` và \`Duration\` từ dòng \`REPORT\`, đừng tối ưu theo trực giác.
-2. Client ngoài handler là thay đổi rẻ nhất, giảm Duration khoảng 12% ở cold start và có lợi cả warm start.
-3. Lazy load thư viện chỉ dùng ở nhánh hiếm giảm Init khoảng 27% trong lab, chi phí dồn sang request đầu cần nó.
-4. Tăng memory không giảm Init nhưng giảm mạnh Duration; chọn điểm rẻ nhất bằng power tuning.
-5. Minify và SDK external chỉ làm package nhỏ hơn, không giảm Init trong lab này.
-6. Provisioned Concurrency là lựa chọn cuối cùng và đắt nhất; SnapStart chưa hỗ trợ Node.js.
+1. **Đo \`Init Duration\` và \`Duration\` từ dòng \`REPORT\`**, đừng tối ưu theo trực giác.
+2. **Client ngoài handler là thay đổi rẻ nhất**, giảm Duration khoảng 12% ở cold start và có lợi cả warm start.
+3. **Lazy load thư viện chỉ dùng ở nhánh hiếm giảm Init khoảng 27% trong lab**, chi phí dồn sang request đầu cần nó.
+4. **Tăng memory không giảm Init nhưng giảm mạnh Duration; chọn điểm rẻ nhất bằng power tuning**.
+5. **Minify và SDK external chỉ làm package nhỏ hơn**, không giảm Init trong lab này.
+6. **Provisioned Concurrency là lựa chọn cuối cùng và đắt nhất; SnapStart chưa hỗ trợ Node.js**.
     `
   },
   {
@@ -3128,7 +3128,7 @@ Bộ ba này miễn phí, mã nguồn mở, và đủ để bắt đầu mọi d
     id: 20,
     slug: 'vibe-coding-with-claude-two-levels',
     title: "Vibe coding với Claude: 2 cấp độ cho người không rành kỹ thuật và senior",
-    category: "DevOps Tools",
+    category: "AI-Agent",
     difficulty: "Intermediate",
     readTime: "10 min read",
     date: "2026-11-23",
@@ -3364,7 +3364,7 @@ Chi phí               Gói Claude thông thường      Gói Pro/Max hoặc API
     id: 21,
     slug: 'rag-lab-nodejs-concepts-and-lessons',
     title: "RAG từ đầu với Node.js: khái niệm, thành phần và bài học từ một dự án thật",
-    category: "Full-Stack",
+    category: "AI-Agent",
     difficulty: "Intermediate",
     readTime: "14 min read",
     date: "2026-11-23",
@@ -4303,6 +4303,379 @@ Chi phí: IAM Identity Center và \`aws login\` đều **miễn phí**.
 5. Tool cũ không hiểu SSO thì dùng \`aws configure export-credentials\` hoặc \`credential_process\`.
 
 6. Máy dev dùng SSO hoặc \`aws login\`, CI/CD dùng OIDC: toàn bộ luồng không còn access key dài hạn.
+`
+  },
+  {
+    id: 24,
+    slug: 'spec-driven-development-with-coding-agent',
+    title: "Spec-Driven Development với Coding Agent: spec.md là nguồn sự thật duy nhất",
+    category: "AI-Agent",
+    difficulty: "Intermediate",
+    readTime: "7 min read",
+    date: "2026-11-24",
+    featured: false,
+    excerpt: "Quy trình làm việc với coding agent lấy spec.md làm nguồn sự thật: viết spec có ID, review, lập plan, test trước code, verify và cập nhật spec. Kèm mẫu spec, prompt, mẹo vận hành và ưu nhược điểm.",
+    tags: ["Claude Code", "AI", "Spec-Driven Development", "Testing", "Productivity"],
+    content: `
+# Spec-Driven Development với Coding Agent: spec.md là nguồn sự thật duy nhất
+
+Ý chính: **\`spec.md\` là nguồn sự thật duy nhất**. Agent không được tự suy đoán yêu cầu. **Mọi thay đổi hành vi phải sửa spec trước, rồi mới sửa code.**
+
+**Lý do:** khi chỉ đưa cho agent một câu mô tả mơ hồ, nó sẽ **tự điền chỗ trống bằng giả định của nó**. Kết quả chạy được nhưng sai ý, và bạn chỉ phát hiện sau khi đã đọc xong cả đống diff. **Viết spec trước biến "đoán ý" thành "đối chiếu với tiêu chí đã chốt".**
+
+## 1. Quy trình
+
+1. **Viết spec:** mục tiêu, phạm vi, ràng buộc, tiêu chí nghiệm thu có thể kiểm chứng.
+2. **Review spec:** con người chốt. Có thể nhờ agent phản biện, tìm chỗ mơ hồ.
+3. **Agent lập plan:** chia task nhỏ, mỗi task trỏ về một mục trong spec.
+4. **Agent viết test trước, rồi code:** test sinh ra từ acceptance criteria.
+5. **Verify:** chạy lint, test, build và đối chiếu với spec.
+6. **Cập nhật spec** nếu phát hiện thiếu sót, sau đó mới sửa code.
+
+Bước 6 là chỗ nhiều người bỏ qua. **Nếu code đi trước spec thì spec thành tài liệu cũ** và mất vai trò nguồn sự thật.
+
+## 2. Mẫu spec.md
+
+Ví dụ cho tính năng retry webhook:
+
+\`\`\`markdown
+# Feature: Webhook retry with exponential backoff
+
+## Goal
+Retry failed webhook deliveries to avoid data loss.
+
+## Scope
+- In: retry logic, delivery log, dead-letter after max attempts
+- Out: UI, signature verification (see spec-signature.md)
+
+## Constraints
+- Node.js 20, NestJS, PostgreSQL, Redis (BullMQ)
+- No new dependencies without approval
+- Idempotent: same \`event_id\` must never be delivered twice successfully
+
+## Behavior
+- R1: Retry on 5xx/timeout, not on 4xx (except 429)
+- R2: Backoff 2^n * 1s, max 6 attempts, jitter ±20%
+- R3: After max attempts → status DEAD, emit metric \`webhook_dead_total\`
+
+## Acceptance Criteria
+- [ ] AC1: 500 response → retried 6 times, then DEAD
+- [ ] AC2: 400 response → no retry, status FAILED
+- [ ] AC3: Duplicate \`event_id\` → single successful delivery
+- [ ] AC4: Coverage >= 80% for retry.service.ts
+
+## Out-of-spec behavior
+If anything is ambiguous, STOP and ask. Do not assume.
+\`\`\`
+
+Những điểm đáng chú ý của mẫu này:
+
+1. **Scope** có cả "In" và "Out", và trỏ sang spec khác cho phần ngoài phạm vi. Nhờ vậy agent không tự làm thêm.
+2. **Constraints** chặn trước các quyết định hay bị agent tự ý: thư viện mới, stack, tính idempotent.
+3. **Mỗi hành vi (R1, R2, R3) và mỗi tiêu chí nghiệm thu (AC1 đến AC4) có ID**, và tiêu chí nào cũng **kiểm chứng được** bằng test hoặc số đo.
+4. Mục **"Out-of-spec behavior"** cho agent biết phải làm gì khi gặp chỗ spec không nói tới: **dừng lại và hỏi**.
+
+## 3. Prompt cho agent
+
+Bước đầu, chưa cho viết code:
+
+\`\`\`text
+Read spec.md. Do not write code yet.
+1. List ambiguities or missing edge cases.
+2. Produce a task plan: each task maps to R*/AC* IDs.
+Wait for my approval before implementing.
+\`\`\`
+
+Sau khi duyệt plan, giao từng task một:
+
+\`\`\`text
+Implement task 1 only. Write failing tests for AC1-AC2 first,
+then code. Run \`npm test\` and report against each AC.
+If the spec must change, propose the diff to spec.md first.
+\`\`\`
+
+Hai prompt này ép agent đi đúng thứ tự: hỏi trước, plan trước, test trước, báo cáo theo từng AC, và đề xuất sửa spec thay vì lặng lẽ đổi hành vi.
+
+## 4. Mẹo vận hành
+
+1. **Đánh ID** (R1, AC1) để truy vết task, test và commit.
+2. **Trỏ spec trong** \`CLAUDE.md\` (hoặc \`AGENTS.md\`): "Always follow spec.md. Never implement behavior not in the spec."
+3. **Một spec nhỏ cho mỗi feature**, tránh một file khổng lồ. Ví dụ \`specs/webhook-retry.md\`.
+4. **Commit theo task**, message ghi ID: \`feat(webhook): retry backoff [R1,R2]\`.
+5. **Definition of Done nằm trong spec:** test pass, lint pass, metric có mặt.
+
+## 5. Ưu, nhược điểm và chi phí
+
+Ưu điểm:
+
+1. **Giảm hallucination và scope creep.**
+2. **Dễ review:** so diff với spec thay vì đoán ý định.
+3. **Test bám sát yêu cầu** vì sinh từ acceptance criteria.
+4. **Tái sử dụng** được giữa nhiều agent và nhiều session, vì ngữ cảnh nằm trong file chứ không nằm trong cuộc chat.
+
+Nhược điểm:
+
+1. **Tốn thời gian** viết spec ban đầu.
+2. **Spec dễ lỗi thời** nếu không kỷ luật cập nhật.
+3. **Quá mức cần thiết với task nhỏ** (sửa typo, đổi màu nút, đổi tên biến).
+
+**Chi phí:** thêm khoảng **15 đến 30 phút** cho mỗi feature trung bình. Bù lại số vòng sửa lại giảm, nên thường tiết kiệm cả token lẫn thời gian tổng.
+
+## Tóm tắt
+
+1. **spec.md là nguồn sự thật duy nhất.** Muốn đổi hành vi thì sửa spec trước, code sau.
+2. **Spec gồm** mục tiêu, phạm vi, ràng buộc, hành vi (R*) và tiêu chí nghiệm thu (AC*) kiểm chứng được.
+3. Cho agent **liệt kê điểm mơ hồ và lập plan trước**, bạn duyệt rồi mới cho code.
+4. **Test viết trước** từ AC, mỗi lần giao một task, báo cáo theo từng AC.
+5. **Một spec nhỏ cho mỗi feature, commit theo task kèm ID**, và trỏ spec trong CLAUDE.md.
+6. **Dùng cho feature có hành vi cần đúng** (API, luồng dữ liệu, thanh toán). Với task nhỏ thì không cần.
+`
+  },
+  {
+    id: 25,
+    slug: 'spec-driven-refund-idempotency-key',
+    title: "Spec-Driven cho một task thật: Idempotency-Key cho POST /orders/{order-id}/refund",
+    category: "AI-Agent",
+    difficulty: "Advanced",
+    readTime: "12 min read",
+    date: "2026-11-24",
+    featured: false,
+    excerpt: "Ví dụ spec.md hoàn chỉnh cho một task nhạy cảm: thêm Idempotency-Key cho endpoint hoàn tiền. Có hành vi R1 đến R11, data model, tiêu chí nghiệm thu AC1 đến AC11, rollout hai phase, các quyết định thiết kế và prompt giao cho agent.",
+    tags: ["Claude Code", "AI-Agent", "Spec-Driven Development", "Idempotency", "NestJS", "PostgreSQL"],
+    content: `
+# Spec-Driven cho một task thật: Idempotency-Key cho POST /orders/{order-id}/refund
+
+Bài trước nói về quy trình Spec-Driven Development nói chung. Bài này áp dụng nó vào **một task cụ thể**: thêm \`Idempotency-Key\` cho endpoint hoàn tiền. Đây là loại task mà để agent tự đoán rất nguy hiểm, vì sai một chi tiết là hoàn tiền hai lần.
+
+Cách đọc bài: spec được chia thành nhiều khối theo mục. Ghép các khối \`markdown\` theo thứ tự thành một file \`specs/refund-idempotency.md\`. Các mục đánh dấu \`[CONFIRM]\` là **giả định cần bạn chốt trước khi giao cho agent**.
+
+## 1. Bài toán
+
+Endpoint hiện tại tạo refund rồi gọi payment provider. Khi client retry (timeout, mạng lỗi, double-click), có nguy cơ **hoàn tiền 2 lần**.
+
+Mục tiêu: cùng một \`Idempotency-Key\` gửi nhiều lần chỉ tạo đúng 1 refund, và các lần sau nhận lại response của lần đầu. Về nguyên lý idempotency key, xem thêm bài "Idempotency Key: Tránh Trừ Tiền 2 Lần". Bài này tập trung vào việc viết spec để agent triển khai đúng.
+
+## 2. Spec phần 1: bối cảnh, phạm vi, ràng buộc
+
+\`\`\`markdown
+# Feature: Idempotency-Key for POST /orders/{order-id}/refund
+
+## Context
+Endpoint hiện tại tạo refund và gọi payment provider. Khi client retry
+(timeout, mạng lỗi, double-click), có nguy cơ hoàn tiền 2 lần.
+
+## Goal
+Cùng một \`Idempotency-Key\` gửi nhiều lần chỉ tạo đúng 1 refund,
+và các lần sau nhận lại response của lần đầu.
+
+## Scope
+- In: header \`Idempotency-Key\`, lưu trữ key + response, xử lý concurrent request,
+  truyền key xuống payment provider, metrics, migration
+- Out: các endpoint khác (thiết kế để tái sử dụng sau, nhưng KHÔNG áp dụng ở task này),
+  thay đổi business logic refund, UI
+
+## Constraints
+- Stack: Node.js 20, NestJS, PostgreSQL, Redis [CONFIRM]
+- Không đổi response schema hiện tại của endpoint (backward compatible)
+- Không thêm dependency mới nếu chưa được duyệt
+- Migration phải chạy được khi không có downtime (chỉ thêm bảng/index)
+- Không log giá trị đầy đủ của key hoặc body (PII)
+
+## Definitions
+- **Scope key**: \`(merchant_id/user_id, method, route_template, idempotency_key)\` [CONFIRM tenant field]
+- **Fingerprint**: SHA-256 của \`order_id + canonical(request body)\`
+- **Record states**: \`IN_PROGRESS\` | \`COMPLETED\`
+\`\`\`
+
+Những điểm đáng chú ý:
+
+1. **Scope có "Out" rõ ràng**: "thiết kế để tái sử dụng sau, nhưng KHÔNG áp dụng ở task này" chặn agent tự mở rộng sang các endpoint khác.
+2. **Constraints chặn trước các quyết định hay bị agent tự ý**: dependency mới, đổi response schema, migration gây downtime, log dữ liệu nhạy cảm.
+3. **Definitions chốt thuật ngữ trước khi viết hành vi**: "scope key" và "fingerprint" được định nghĩa một lần, các mục sau chỉ gọi tên.
+
+## 3. Spec phần 2: hành vi (R1 đến R11)
+
+\`\`\`markdown
+## Behavior
+- R1: Header \`Idempotency-Key\` (string, 16–255 ký tự, khuyến nghị UUIDv4).
+  Thiếu header → [CONFIRM: phase 1 optional, hành vi như cũ + log warning;
+  phase 2 required → 400].
+- R2: Request đầu tiên với key mới: insert record \`IN_PROGRESS\` (atomic, unique constraint)
+  rồi mới xử lý refund.
+- R3: Xử lý xong → cập nhật record \`COMPLETED\`, lưu \`status_code\` + \`response_body\`
+  trong cùng DB transaction với refund record.
+- R4: Cùng key + cùng fingerprint + \`COMPLETED\` → trả lại đúng status code/body đã lưu,
+  thêm header \`Idempotent-Replayed: true\`. KHÔNG gọi lại payment provider.
+- R5: Cùng key + fingerprint khác → \`422\` code \`IDEMPOTENCY_KEY_REUSED\`.
+- R6: Cùng key + đang \`IN_PROGRESS\` → \`409\` code \`IDEMPOTENCY_IN_PROGRESS\`
+  kèm header \`Retry-After: 2\`.
+- R7: Chỉ lưu kết quả \`2xx\` và lỗi nghiệp vụ deterministic (\`400\`, \`404\`, \`422\`).
+  Với \`5xx\`/timeout: xoá record (hoặc đánh dấu \`FAILED_RETRYABLE\`) để client retry được.
+- R8: Record \`IN_PROGRESS\` quá \`lock_timeout\` (30s) được coi là stale
+  và có thể được takeover. Takeover phải kiểm tra trạng thái refund thực tế
+  (theo \`order_id\` + provider idempotency key) trước khi xử lý lại.
+- R9: TTL record = 24h, dọn bằng job định kỳ (không dùng DELETE lớn một lần).
+- R10: Truyền \`Idempotency-Key\` (hoặc key dẫn xuất ổn định) xuống payment provider
+  để chống double refund ở tầng ngoài.
+- R11: Business rule hiện có (tổng refund ≤ số tiền còn lại của order) giữ nguyên
+  và vẫn được kiểm tra trong transaction.
+\`\`\`
+
+Bốn hành vi khó nhất, đáng dành thời gian review:
+
+1. **R2, R3: unique constraint làm lock, và kết quả lưu cùng transaction với refund.** Nhờ vậy không có trạng thái "đã refund mà chưa ghi nhận".
+2. **R5: fingerprint để phát hiện key bị dùng lại cho request khác.** Nếu không, client gửi nhầm cùng key với số tiền khác sẽ nhận lại response cũ mà không biết.
+3. **R7: không cache lỗi 5xx.** Cache lỗi tạm thời sẽ khiến client không bao giờ retry thành công được.
+4. **R8, R10: takeover record stale phải kiểm tra trạng thái thật, và key phải xuống tới provider.** Đây là hai phòng tuyến chống double refund khi DB và provider lệch trạng thái.
+
+## 4. Spec phần 3: data model
+
+\`\`\`sql
+CREATE TABLE idempotency_keys (
+  id               BIGSERIAL PRIMARY KEY,
+  tenant_id        TEXT        NOT NULL,
+  route            TEXT        NOT NULL,           -- 'POST /orders/:id/refund'
+  idem_key         TEXT        NOT NULL,
+  fingerprint      CHAR(64)    NOT NULL,
+  state            TEXT        NOT NULL CHECK (state IN ('IN_PROGRESS','COMPLETED')),
+  status_code      INT,
+  response_body    JSONB,
+  locked_at        TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at       TIMESTAMPTZ NOT NULL,
+  UNIQUE (tenant_id, route, idem_key)
+);
+CREATE INDEX idx_idem_expires_at ON idempotency_keys (expires_at);
+\`\`\`
+
+Ràng buộc \`UNIQUE (tenant_id, route, idem_key)\` chính là cơ chế lock của R2, và \`tenant_id\` nằm trong đó để key của tenant A không replay được cho tenant B (AC9). Index trên \`expires_at\` phục vụ job dọn dẹp R9. Migration này chỉ **thêm bảng và index**, đúng ràng buộc "không downtime".
+
+## 5. Spec phần 4: API contract
+
+Request mẫu:
+
+\`\`\`http
+POST /orders/{order-id}/refund
+Idempotency-Key: 7b1f0c5e-3a52-4f0e-9d3b-1c2f6a8e9b10
+Content-Type: application/json
+
+{ "amount": 1000, "reason": "customer_request" }
+\`\`\`
+
+Các trường hợp response, thêm vào cuối spec:
+
+\`\`\`markdown
+## API Contract
+| Case | Status | Body / Header |
+|---|---|---|
+| First success | 201 | như hiện tại |
+| Replay | 201 (stored) | \`Idempotent-Replayed: true\` |
+| Key reused, body khác | 422 | \`{ "code": "IDEMPOTENCY_KEY_REUSED" }\` |
+| In progress | 409 | \`{ "code": "IDEMPOTENCY_IN_PROGRESS" }\` + \`Retry-After\` |
+| Key sai định dạng | 400 | \`{ "code": "IDEMPOTENCY_KEY_INVALID" }\` |
+\`\`\`
+
+## 6. Spec phần 5: tiêu chí nghiệm thu và kế hoạch test
+
+\`\`\`markdown
+## Acceptance Criteria
+- [ ] AC1 (R2,R3): Gửi 1 request mới → 1 refund record, 1 idempotency record \`COMPLETED\`
+- [ ] AC2 (R4): Gửi lại cùng key+body → response giống hệt, refund count vẫn = 1,
+      provider được gọi đúng 1 lần
+- [ ] AC3 (R5): Cùng key, \`amount\` khác → 422, không có refund mới
+- [ ] AC4 (R6): 10 request song song cùng key → đúng 1 refund; các request còn lại
+      nhận 409 hoặc replay; không có double refund
+- [ ] AC5 (R7): Provider trả 500 → không lưu kết quả; retry cùng key xử lý lại được
+- [ ] AC6 (R8): Record \`IN_PROGRESS\` stale → takeover không tạo refund trùng
+- [ ] AC7 (R1): Key sai định dạng → 400; thiếu key → hành vi theo phase đã chốt
+- [ ] AC8 (R10): Provider nhận idempotency key ổn định qua các lần retry
+- [ ] AC9: Key của tenant A không replay được cho tenant B
+- [ ] AC10: Test hiện có của endpoint vẫn pass, không đổi response schema
+- [ ] AC11: Coverage ≥ 80% cho \`idempotency.service.ts\` và \`refund.controller.ts\`
+
+## Test Plan
+- Unit: fingerprint canonicalization, state machine, validate key
+- Integration (Testcontainers PostgreSQL): AC1–AC6, AC9
+- Concurrency test: \`Promise.all\` 10 request cùng key (AC4)
+- Mock provider: inject 200 / 500 / timeout (AC2, AC5, AC8)
+\`\`\`
+
+Mỗi AC trỏ về một R (hoặc là điều kiện chung như AC9 đến AC11), và có đúng một cách kiểm chứng. **AC4 là tiêu chí quan trọng nhất**: 10 request song song cùng key phải ra đúng 1 refund. Nó buộc agent giải quyết race condition thật thay vì chỉ viết code "trông đúng".
+
+## 7. Spec phần 6: quan sát, rollout, Definition of Done
+
+\`\`\`markdown
+## Observability
+- Metrics: \`idempotency_replay_total\`, \`idempotency_conflict_total{type}\`,
+  \`idempotency_inflight_gauge\`, \`idempotency_cleanup_deleted_total\`
+- Log (structured): \`idem_key_hash\` (8 ký tự đầu của SHA-256), \`order_id\`, \`state\`
+- Alert: \`idempotency_conflict_total{type="reused"}\` tăng đột biến
+
+## Rollout
+1. Deploy migration (additive)
+2. Deploy code, phase 1: header optional
+3. Thông báo client, theo dõi tỷ lệ request có key
+4. Phase 2: bật required qua feature flag \`REFUND_IDEMPOTENCY_REQUIRED\`
+- Rollback: tắt flag; bảng giữ nguyên
+
+## Definition of Done
+- [ ] Tất cả AC pass, \`npm run lint && npm test && npm run build\` xanh
+- [ ] Migration review xong
+- [ ] OpenAPI cập nhật (header, 409, 422)
+- [ ] Metrics hiển thị trên dashboard
+- [ ] Spec được cập nhật nếu hành vi thay đổi trong lúc implement
+
+## Open Questions
+- Q1: Phase 1 có cho phép thiếu header không? [CONFIRM]
+- Q2: Provider nào, và có hỗ trợ idempotency key native không? [CONFIRM]
+- Q3: Có cần lưu \`response_body\` đầy đủ hay chỉ \`refund_id\` rồi build lại response? [CONFIRM]
+- Q4: TTL 24h đã đủ với chính sách retry của client chưa? [CONFIRM]
+
+## Agent Rules
+- Nếu spec mơ hồ hoặc thiếu, DỪNG và hỏi. Không tự giả định.
+- Mỗi commit trỏ về ID: \`feat(refund): idempotency lock [R2,R6]\`
+- Đổi hành vi → đề xuất diff \`spec.md\` trước khi sửa code.
+\`\`\`
+
+Ba điểm đáng chú ý:
+
+1. **Log chỉ ghi \`idem_key_hash\` (8 ký tự đầu của SHA-256)**, không ghi key đầy đủ, đúng ràng buộc PII ở phần Constraints.
+2. **Rollout theo hai phase với feature flag.** Phase 1 cho phép thiếu header để client có thời gian cập nhật, phase 2 mới bắt buộc. Rollback chỉ là tắt flag.
+3. **Open Questions là phần quan trọng nhất trước khi giao việc.** Bốn câu hỏi này là chỗ agent sẽ phải giả định nếu bạn không trả lời.
+
+## 8. Các quyết định thiết kế chính
+
+1. **PostgreSQL unique constraint làm lock.** Lý do: atomic, nằm cùng transaction với refund, không phụ thuộc Redis. Đánh đổi: thêm một lượt ghi DB, throughput thấp hơn Redis \`SET NX\`.
+2. **Fingerprint để phát hiện key reuse.** Lý do: tránh replay nhầm response cho request khác. Đánh đổi: cần canonicalize body (sort key, chuẩn hóa số).
+3. **Không cache 5xx.** Lý do: cho phép client retry sau lỗi tạm thời. Đánh đổi: cần R8 và R10 để tránh double refund khi takeover.
+4. **Truyền key xuống provider (R10).** Lý do: phòng tuyến thứ hai khi DB và provider lệch trạng thái. Đánh đổi: phụ thuộc provider có hỗ trợ (Q2).
+
+**Chi phí ước tính:** khoảng **1 đến 2 ngày công cho phase 1** (migration, service, test song song), cộng thêm một job cleanup nhỏ.
+
+## 9. Prompt giao cho agent
+
+Việc đầu tiên không phải là viết code, mà là bắt agent hỏi lại các mục \`[CONFIRM]\`:
+
+\`\`\`text
+Read specs/refund-idempotency.md. Do not write code yet.
+1. List ambiguities and resolve each [CONFIRM] item as a question to me.
+2. Inspect the existing refund controller/service and note where the
+   transaction boundary and provider call are.
+3. Produce a task plan mapped to R*/AC* IDs.
+Wait for my approval.
+\`\`\`
+
+Bước 2 rất đáng làm: ranh giới transaction và vị trí gọi provider trong code hiện tại quyết định R3 có thực hiện được "cùng transaction" hay không. Sau khi bạn trả lời các câu hỏi và duyệt plan, giao từng task theo quy trình ở bài trước: test cho AC trước, rồi code, rồi báo cáo theo từng AC.
+
+## Tóm tắt
+
+1. **Task nhạy cảm như hoàn tiền cần spec chi tiết**, vì chỗ nào spec bỏ trống thì agent sẽ tự giả định.
+2. **Chia spec thành các mục nhỏ có ID**: hành vi R1 đến R11, tiêu chí AC1 đến AC11, mỗi AC trỏ về một R.
+3. **Đánh dấu \`[CONFIRM]\` cho mọi giả định** và gom thành Open Questions để bạn chốt trước khi giao việc.
+4. **AC song song (10 request cùng key) là tiêu chí cốt lõi**: nó ép agent xử lý race condition thật.
+5. **Hai phòng tuyến chống double refund**: unique constraint ở DB và idempotency key ở provider.
+6. **Rollout hai phase với feature flag**, log không chứa key đầy đủ, migration chỉ thêm bảng.
+7. **Prompt đầu tiên cho agent là "đọc, hỏi, lập plan, chờ duyệt"**, không phải "viết code".
 `
   }
 ];
