@@ -38,7 +38,7 @@ import {
 
 import { blogPosts, type BlogPost } from '../../data/blog';
 
-const categories = ['DevOps', 'Cloud Infrastructure', 'Full-Stack'];
+const categories = ['DevOps', 'Cloud Infrastructure', 'Full-Stack', 'AI-Agent'];
 
 const EnhancedBlog: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');

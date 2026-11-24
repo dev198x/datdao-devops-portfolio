@@ -26,6 +26,7 @@ const categoryColors = {
   'DevOps Tools': 'bg-amber-50 text-amber-700 border-amber-200',
   Security: 'bg-rose-50 text-rose-700 border-rose-200',
   Database: 'bg-slate-100 text-slate-700 border-slate-200',
+  'AI-Agent': 'bg-cyan-50 text-cyan-700 border-cyan-200',
 };
 
 const statusColors = {
