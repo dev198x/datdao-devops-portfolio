@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" font-family="ui-monospace, Menlo, monospace" font-size="14">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <rect width="900" height="360" fill="#f8fafc"/>
+
+  <rect x="20" y="130" width="110" height="60" rx="8" fill="#e2e8f0" stroke="#64748b"/>
+  <text x="75" y="165" text-anchor="middle" fill="#0f172a">Client</text>
+
+  <rect x="170" y="130" width="140" height="60" rx="8" fill="#ede9fe" stroke="#7c3aed"/>
+  <text x="240" y="156" text-anchor="middle" fill="#0f172a">Order Service</text>
+  <text x="240" y="176" text-anchor="middle" fill="#475569" font-size="12">POST /orders</text>
+
+  <rect x="350" y="50" width="200" height="220" rx="10" fill="#dbeafe" stroke="#2563eb"/>
+  <text x="450" y="76" text-anchor="middle" fill="#0f172a" font-weight="bold">PostgreSQL</text>
+  <text x="450" y="94" text-anchor="middle" fill="#475569" font-size="12">1 transaction</text>
+  <rect x="370" y="115" width="160" height="50" rx="6" fill="#fff" stroke="#2563eb"/>
+  <text x="450" y="146" text-anchor="middle" fill="#0f172a">orders</text>
+  <rect x="370" y="190" width="160" height="50" rx="6" fill="#fff" stroke="#2563eb"/>
+  <text x="450" y="221" text-anchor="middle" fill="#0f172a">outbox_events</text>
+
+  <rect x="590" y="130" width="130" height="60" rx="8" fill="#fef3c7" stroke="#d97706"/>
+  <text x="655" y="156" text-anchor="middle" fill="#0f172a">Outbox Worker</text>
+  <text x="655" y="176" text-anchor="middle" fill="#475569" font-size="12">poll + publish</text>
+
+  <rect x="760" y="130" width="120" height="60" rx="8" fill="#ffedd5" stroke="#ea580c"/>
+  <text x="820" y="165" text-anchor="middle" fill="#0f172a">RabbitMQ</text>
+
+  <rect x="760" y="230" width="120" height="30" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="820" y="250" text-anchor="middle" fill="#0f172a" font-size="12">Payment</text>
+  <rect x="760" y="268" width="120" height="30" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="820" y="288" text-anchor="middle" fill="#0f172a" font-size="12">Inventory</text>
+  <rect x="760" y="306" width="120" height="30" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="820" y="326" text-anchor="middle" fill="#0f172a" font-size="12">Notification</text>
+
+  <line x1="130" y1="160" x2="168" y2="160" stroke="#0f766e" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="310" y1="160" x2="348" y2="160" stroke="#0f766e" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="550" y1="160" x2="588" y2="160" stroke="#0f766e" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="720" y1="160" x2="758" y2="160" stroke="#0f766e" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="820" y1="190" x2="820" y2="228" stroke="#0f766e" stroke-width="2" marker-end="url(#a)"/>
+</svg>

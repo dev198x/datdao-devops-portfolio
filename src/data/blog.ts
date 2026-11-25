@@ -4677,6 +4677,309 @@ Bước 2 rất đáng làm: ranh giới transaction và vị trí gọi provide
 6. **Rollout hai phase với feature flag**, log không chứa key đầy đủ, migration chỉ thêm bảng.
 7. **Prompt đầu tiên cho agent là "đọc, hỏi, lập plan, chờ duyệt"**, không phải "viết code".
 `
+  },
+  {
+    id: 26,
+    slug: 'transactional-outbox-pattern-nodejs-postgresql-rabbitmq',
+    title: "Transactional Outbox Pattern: Không mất event khi lưu DB và gửi RabbitMQ (Node.js + PostgreSQL)",
+    category: "Database",
+    difficulty: "Intermediate",
+    readTime: "11 min read",
+    date: "2026-11-25",
+    featured: false,
+    excerpt: "Dual Write Problem là gì và vì sao lưu đơn hàng rồi publish event có thể làm mất event. Cách giải quyết bằng Transactional Outbox: bảng outbox_events, worker polling với FOR UPDATE SKIP LOCKED, duplicate message và Idempotent Consumer.",
+    tags: ["Outbox Pattern", "Microservices", "PostgreSQL", "RabbitMQ", "Node.js", "Idempotency", "Distributed Systems"],
+    content: `
+# Transactional Outbox Pattern: Không mất event khi lưu DB và gửi RabbitMQ
+
+**Outbox Pattern** (đầy đủ là Transactional Outbox Pattern) là một mẫu thiết kế trong microservices và hệ thống phân tán. Nó đảm bảo việc **lưu dữ liệu vào database** và **gửi event sang message broker** diễn ra nhất quán, không bị mất message khi gặp sự cố mạng hoặc crash.
+
+Bài này dùng ví dụ một hệ thống E-commerce chạy Node.js, PostgreSQL và RabbitMQ.
+
+## 1. Bài toán: Dual Write Problem
+
+Khi khách đặt hàng, hệ thống cần làm hai việc:
+
+1. Lưu đơn hàng vào PostgreSQL.
+2. Gửi event \`OrderCreated\` sang RabbitMQ để các service khác (Payment, Notification, Inventory) xử lý.
+
+Code ngây thơ trông như sau:
+
+\`\`\`typescript
+async function createOrder(data: CreateOrderDto) {
+  // 1. Save order to PostgreSQL
+  const order = await orderRepository.save(data);
+
+  // 2. Publish event to RabbitMQ
+  await rabbitMQ.publish('OrderCreated', order);
+
+  return order;
+}
+\`\`\`
+
+Tình huống nguy hiểm khi RabbitMQ bị downtime:
+
+1. **PostgreSQL**: lưu Order ID = 1001 thành công.
+2. **RabbitMQ**: publish \`OrderCreated\` thất bại vì broker down.
+3. **Kết quả**: đơn hàng đã tồn tại nhưng Payment Service không nhận được event. Có đơn hàng mà không có thanh toán.
+
+Đảo thứ tự (publish trước, lưu DB sau) cũng không cứu được: nếu publish thành công mà lưu DB thất bại, các service khác sẽ xử lý một đơn hàng không tồn tại.
+
+Đây là **Dual Write Problem**: ghi vào hai hệ thống khác nhau mà không có transaction chung bao phủ cả hai.
+
+## 2. Giải pháp: Transactional Outbox
+
+Ý tưởng:
+
+**Không publish trực tiếp trong lúc tạo đơn. Hãy lưu event vào một bảng outbox ngay trong cùng transaction với đơn hàng, rồi để một tiến trình riêng đọc bảng này và gửi sang RabbitMQ.**
+
+Hai bảng cùng được ghi trong một transaction: hoặc cả hai cùng commit, hoặc cả hai cùng rollback.
+
+![Outbox Pattern architecture](/images/outbox-pattern.svg)
+
+Luồng xử lý:
+
+\`\`\`text
+Client -> POST /orders
+  Order Service: BEGIN
+    INSERT orders
+    INSERT outbox_events (status = PENDING)
+  COMMIT
+
+Outbox Worker: đọc event PENDING -> publish RabbitMQ -> đánh dấu PUBLISHED
+RabbitMQ -> Payment, Inventory, Notification
+\`\`\`
+
+## 3. Cài đặt với Node.js + PostgreSQL
+
+### Bước 1: Tạo bảng
+
+\`\`\`sql
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    customer_id INT NOT NULL,
+    status VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE outbox_events (
+    id BIGSERIAL PRIMARY KEY,
+    event_type VARCHAR(100) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    published_at TIMESTAMP
+);
+
+-- Worker chỉ quét event chưa gửi: partial index giữ index nhỏ
+CREATE INDEX idx_outbox_pending ON outbox_events (id) WHERE status = 'PENDING';
+\`\`\`
+
+### Bước 2: Tạo Order và Outbox Event trong cùng transaction
+
+Điểm quan trọng nhất: **hai INSERT phải nằm trong cùng một transaction.**
+
+\`\`\`typescript
+async function createOrder(customerId: number) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Insert order
+    const result = await client.query(
+      \`INSERT INTO orders (customer_id, status)
+       VALUES ($1, 'PENDING')
+       RETURNING *\`,
+      [customerId]
+    );
+    const order = result.rows[0];
+
+    // 2. Insert event into outbox
+    await client.query(
+      \`INSERT INTO outbox_events (event_type, payload)
+       VALUES ($1, $2)\`,
+      [
+        'OrderCreated',
+        JSON.stringify({ orderId: order.id, customerId: order.customer_id }),
+      ]
+    );
+
+    // 3. Commit both records
+    await client.query('COMMIT');
+    return order;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+\`\`\`
+
+Nếu INSERT order thành công nhưng INSERT outbox lỗi, transaction rollback và không có đơn hàng nào được lưu.
+
+### Bước 3: Outbox Worker gửi event sang RabbitMQ
+
+Bản đơn giản nhất để hiểu ý tưởng:
+
+\`\`\`typescript
+async function processOutbox() {
+  const events = await pool.query(\`
+    SELECT * FROM outbox_events
+    WHERE status = 'PENDING'
+    ORDER BY id
+    LIMIT 100
+  \`);
+
+  for (const event of events.rows) {
+    try {
+      await rabbitMQ.publish(event.event_type, event.payload);
+      await pool.query(
+        \`UPDATE outbox_events
+         SET status = 'PUBLISHED', published_at = NOW()
+         WHERE id = $1\`,
+        [event.id]
+      );
+    } catch (error) {
+      console.error('Publish failed:', event.id);
+    }
+  }
+}
+\`\`\`
+
+Bản này **chưa dùng được cho production**: nếu chạy hai worker, cả hai sẽ đọc cùng một event và gửi trùng. Phần sau sẽ sửa.
+
+### Bước 4: Worker an toàn khi chạy nhiều instance
+
+Dùng \`FOR UPDATE SKIP LOCKED\` để mỗi worker khoá các dòng nó lấy, và worker khác bỏ qua các dòng đang bị khoá:
+
+\`\`\`typescript
+async function processOutboxBatch(batchSize = 100) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      \`SELECT id, event_type, payload
+       FROM outbox_events
+       WHERE status = 'PENDING'
+       ORDER BY id
+       LIMIT $1
+       FOR UPDATE SKIP LOCKED\`,
+      [batchSize]
+    );
+
+    for (const event of rows) {
+      // messageId = id của event, để consumer khử trùng
+      // publish() phải chờ publisher confirm từ RabbitMQ
+      await rabbitMQ.publish(event.event_type, event.payload, {
+        messageId: String(event.id),
+        persistent: true,
+      });
+
+      await client.query(
+        \`UPDATE outbox_events
+         SET status = 'PUBLISHED', published_at = NOW()
+         WHERE id = $1\`,
+        [event.id]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+\`\`\`
+
+Lưu ý khi đưa vào production:
+
+- **Publisher confirms**: bật confirm channel của RabbitMQ và chỉ đánh dấu PUBLISHED sau khi broker xác nhận đã nhận.
+- **Giữ batch nhỏ**: transaction mở trong lúc gọi broker, nên batch lớn hoặc broker chậm sẽ giữ khoá lâu.
+- **Retry có giới hạn**: thêm cột \`attempts\` và \`last_error\`, chuyển event lỗi nhiều lần sang trạng thái FAILED để điều tra thay vì kẹt vĩnh viễn.
+- **Thứ tự event**: nhiều worker song song không đảm bảo thứ tự toàn cục. Nếu cần thứ tự theo từng order, dùng routing key hoặc partition theo \`aggregate_id\`.
+
+## 4. Điều gì xảy ra khi có sự cố?
+
+Giả sử Order 1001 đã lưu và outbox event đang ở trạng thái PENDING:
+
+- **RabbitMQ downtime**: event vẫn nằm trong bảng outbox.
+- **Worker crash**: event vẫn còn trong DB.
+- **Network lỗi**: worker retry ở lượt quét sau.
+- **Worker restart**: đọc lại các event PENDING.
+- **Publish thành công**: đánh dấu PUBLISHED.
+
+Đây là ưu điểm cốt lõi: event không thể mất sau khi transaction đã commit.
+
+## 5. Vấn đề quan trọng: Duplicate Message
+
+Có một tình huống bạn phải xử lý:
+
+1. Worker publish thành công sang RabbitMQ.
+2. RabbitMQ nhận message.
+3. Worker crash **trước khi** update \`status = 'PUBLISHED'\`.
+4. Worker restart và publish lại event đó.
+
+Kết quả là consumer nhận **cùng một event hai lần**. Vì vậy Outbox luôn đi kèm **Idempotent Consumer**. Ví dụ Payment Service:
+
+\`\`\`typescript
+async function handleOrderCreated(event: OutboxEvent) {
+  await db.transaction(async (tx) => {
+    // Unique constraint trên event_id: insert trùng sẽ bị bỏ qua
+    const inserted = await tx.query(
+      \`INSERT INTO processed_events (event_id)
+       VALUES ($1)
+       ON CONFLICT (event_id) DO NOTHING
+       RETURNING event_id\`,
+      [event.id]
+    );
+
+    if (inserted.rowCount === 0) {
+      return; // đã xử lý rồi
+    }
+
+    await processPayment(tx, event.payload);
+  });
+}
+\`\`\`
+
+Cách này tốt hơn kiểu "kiểm tra tồn tại rồi mới insert" vì **không có race condition**: unique constraint và việc xử lý payment nằm trong cùng một transaction, nên hai consumer xử lý đồng thời cũng chỉ một bên thành công.
+
+## 6. Polling Worker hay CDC?
+
+- **Polling Worker (bài này)**: đơn giản, chỉ cần PostgreSQL. Nhược điểm: có độ trễ bằng chu kỳ quét và tạo tải đọc lên DB.
+- **CDC (Change Data Capture) với Debezium + PostgreSQL WAL**: đọc thay đổi từ write-ahead log, gần như real-time, không cần quét bảng. Nhược điểm: thêm hạ tầng (Kafka Connect hoặc Debezium Server) và vận hành phức tạp hơn.
+
+Khuyến nghị: bắt đầu bằng polling. Chỉ chuyển sang CDC khi độ trễ hoặc tải quét trở thành vấn đề thật.
+
+**Chi phí ước tính:** khoảng **1 đến 2 ngày công** để thêm Outbox vào một service hiện có (bảng, worker, test), cộng thêm việc sửa consumer cho idempotent.
+
+## 7. Bài tập thực hành
+
+Mini project: Order Service + Transactional Outbox, dùng Node.js (NestJS hoặc Express), PostgreSQL, RabbitMQ và Docker Compose.
+
+1. Tạo bảng \`orders\` và \`outbox_events\`.
+2. Viết API \`POST /orders\` với DB transaction.
+3. Viết Outbox Worker đọc event PENDING.
+4. Publish \`OrderCreated\` sang RabbitMQ.
+5. Tắt RabbitMQ, tạo order, kiểm tra event vẫn nằm trong outbox.
+6. Bật lại RabbitMQ, kiểm tra worker gửi event thành công.
+7. Mô phỏng worker crash sau publish, kiểm tra duplicate message.
+8. Viết Idempotent Consumer và kiểm tra duplicate bị bỏ qua.
+
+## Tóm tắt
+
+1. **Dual Write Problem**: ghi DB rồi publish broker không atomic, nên có thể mất hoặc sinh event sai.
+2. **Outbox**: lưu event vào bảng outbox cùng transaction với dữ liệu nghiệp vụ, rồi để worker gửi sau.
+3. **Outbox cho At-Least-Once, không phải Exactly-Once**: duplicate là điều chắc chắn sẽ xảy ra.
+4. **Consumer phải idempotent**: dùng unique constraint trên event id, cùng transaction với xử lý nghiệp vụ.
+5. **Worker production**: \`FOR UPDATE SKIP LOCKED\`, publisher confirms, retry có giới hạn.
+6. **Dọn dẹp**: xoá hoặc archive event PUBLISHED định kỳ để bảng outbox không phình mãi.
+7. **CDC (Debezium)** là bước nâng cấp sau, không phải điểm khởi đầu.
+`
   }
 ];
 
